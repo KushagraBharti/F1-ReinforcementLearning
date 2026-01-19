@@ -1,4 +1,8 @@
-import gym, json
+import json
+try:
+    import gymnasium as gym
+except ModuleNotFoundError:  # fallback for older setups
+    import gym
 from ray.rllib import evaluate
 from ray.tune.registry import register_env
 from race import Race
