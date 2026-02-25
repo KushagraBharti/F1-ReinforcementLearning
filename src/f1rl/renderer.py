@@ -156,7 +156,8 @@ class PygameRenderer:
         if image is None:
             pygame.draw.circle(surface, RED, (int(car_state.x), int(car_state.y)), 8)
             return
-        rotated = pygame.transform.rotate(image, car_state.heading_deg)
+        draw_heading = car_state.heading_deg + self.config.track.car_sprite_heading_offset_deg
+        rotated = pygame.transform.rotate(image, draw_heading)
         rect = rotated.get_rect(center=(car_state.x, car_state.y))
         surface.blit(rotated, rect.topleft)
 

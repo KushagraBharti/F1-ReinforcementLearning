@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import gymnasium as gym
@@ -28,7 +29,8 @@ class F1RaceEnv(gym.Env[np.ndarray, np.ndarray]):
         super().__init__()
         self.config = EnvConfig.from_dict(env_config)
         self.track: TrackDefinition = build_track(self.config.track)
-        self.car: CarState = new_car_state(self.config.start_pos, self.config.start_heading_deg)
+        self._default_spawn_heading_deg = self._compute_spawn_heading(self.config.start_pos)
+        self.car: CarState = new_car_state(self.config.start_pos, self._resolve_start_heading(None))
         self.renderer: PygameRenderer | None = None
         self.terminated = False
         self.truncated = False
@@ -44,6 +46,24 @@ class F1RaceEnv(gym.Env[np.ndarray, np.ndarray]):
             shape=(sensor_count + 1,),
             dtype=np.float32,
         )
+
+    def _compute_spawn_heading(self, start_pos: tuple[float, float]) -> float:
+        # Align spawn heading with the direction from spawn to first target checkpoint midpoint.
+        goal = self.track.get_goal(1)
+        target_x = float((goal[0] + goal[2]) * 0.5)
+        target_y = float((goal[1] + goal[3]) * 0.5)
+        dx = target_x - float(start_pos[0])
+        dy = target_y - float(start_pos[1])
+        if abs(dx) < 1e-6 and abs(dy) < 1e-6:
+            return 0.0
+        return float(math.degrees(math.atan2(-dy, dx)))
+
+    def _resolve_start_heading(self, option_heading: Any) -> float:
+        if option_heading is not None:
+            return float(option_heading)
+        if self.config.start_heading_deg is not None:
+            return float(self.config.start_heading_deg)
+        return float(self._default_spawn_heading_deg)
 
     def _goal_transition(self, movement: np.ndarray) -> tuple[int, bool]:
         next_goal = self.track.get_goal(self.car.next_goal_idx)
@@ -124,7 +144,8 @@ class F1RaceEnv(gym.Env[np.ndarray, np.ndarray]):
         else:
             start_pos = self.config.start_pos
 
-        start_heading = float(options.get("start_heading_deg", self.config.start_heading_deg)) if options else self.config.start_heading_deg
+        option_heading = options.get("start_heading_deg") if options else None
+        start_heading = self._resolve_start_heading(option_heading)
         self.car = new_car_state(start_pos=start_pos, heading_deg=start_heading)
         self.terminated = False
         self.truncated = False

@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from f1rl.constants import DEFAULT_START_HEADING_DEG, DEFAULT_START_POS, IMAGES_DIR, WINDOW_SIZE
+from f1rl.constants import DEFAULT_START_POS, IMAGES_DIR, WINDOW_SIZE
 
 
 @dataclass(slots=True)
@@ -41,6 +41,9 @@ class TrackConfig:
     background_image: Path = IMAGES_DIR / "Monza_background.png"
     car_image: Path = IMAGES_DIR / "ferrari.png"
     car_off_image: Path = IMAGES_DIR / "ferrari_off.png"
+    # Car sprite points up in source image, while world heading 0 deg points right.
+    # Offset keeps rendered nose aligned with physics/sensor forward direction.
+    car_sprite_heading_offset_deg: float = -90.0
     num_goals: int = 120
     threshold: int = 225
     render_scale: float = 1.0 / 1.3
@@ -67,7 +70,8 @@ class EnvConfig:
     render_mode: str | None = None
     seed: int | None = None
     start_pos: tuple[float, float] = DEFAULT_START_POS
-    start_heading_deg: float = DEFAULT_START_HEADING_DEG
+    # If None, heading is auto-aligned to the first checkpoint direction at reset.
+    start_heading_deg: float | None = None
     headless: bool = False
     dynamics: DynamicsConfig = field(default_factory=DynamicsConfig)
     reward: RewardConfig = field(default_factory=RewardConfig)
