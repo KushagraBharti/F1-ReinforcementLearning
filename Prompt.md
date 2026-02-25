@@ -18,7 +18,7 @@ Modernize and stabilize this repository into a reproducible Python project for:
 7. Rewrite README for clone-to-run developer UX.
 
 ## Constraints
-- Python 3.11+.
+- Python 3.12.x for full RL workflows on Windows (Ray 2.54 wheel compatibility).
 - Use `uv` for dependency management.
 - Gymnasium API compliance (`reset -> (obs, info)`, `step -> (obs, reward, terminated, truncated, info)`).
 - RL stack: RLlib + PyTorch.
@@ -28,9 +28,10 @@ Modernize and stabilize this repository into a reproducible Python project for:
 
 ## Done Criteria
 - Manual mode launches and controls work.
+- Deterministic scripted controller is available for headless/manual smoke runs.
 - RL smoke training runs end-to-end and saves checkpoint.
 - Checkpoint load and inference rollout work.
 - Headless rollout and render smoke commands run.
+- Artifact cleanup command with retention policy is implemented.
 - Tests and practical lint/type checks pass.
 - README and required repo docs are updated and accurate.
-

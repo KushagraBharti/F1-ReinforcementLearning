@@ -18,17 +18,18 @@
 5. Maintain compatibility shims for legacy script names when straightforward.
 6. Avoid broad rewrites when a focused migration can preserve behavior.
 
-## Technical Decisions (Initial)
+## Technical Decisions (Current)
 - Use package layout: `src/f1rl/`.
 - Use Gymnasium API and environment checker.
 - Use RLlib PPO with PyTorch for smoke and baseline training flows.
+- Python baseline: `3.12.x` (latest Ray 2.54.0-compatible on Windows).
 - Use standard-library logging with JSONL metrics exports.
-- Use pytest + ruff + mypy for practical quality gates.
+- Use pytest + ruff + pyright for practical quality gates.
 
 ## Command Conventions
 - Setup: `uv sync --active --all-extras`
 - Manual: `uv run python -m f1rl.manual`
 - Smoke train: `uv run python -m f1rl.train --mode smoke`
 - Eval: `uv run python -m f1rl.eval --checkpoint latest`
+- Cleanup: `uv run python -m f1rl.clean_artifacts`
 - Full validation: `uv run python -m f1rl.validate`
-

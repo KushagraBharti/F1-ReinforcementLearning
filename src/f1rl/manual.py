@@ -9,6 +9,7 @@ import numpy as np
 import pygame
 
 from f1rl.config import EnvConfig, to_dict
+from f1rl.controllers import ScriptedController
 from f1rl.env import F1RaceEnv
 
 
@@ -28,13 +29,6 @@ def keyboard_action(keys: pygame.key.ScancodeWrapper) -> np.ndarray:
     return np.array([steering, throttle], dtype=np.float32)
 
 
-def autopilot_action(step: int) -> np.ndarray:
-    # Simple periodic steering to keep the vehicle moving for smoke checks.
-    steering = float(np.sin(step / 40.0))
-    throttle = 0.8
-    return np.array([steering, throttle], dtype=np.float32)
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manual F1 driving mode")
     parser.add_argument("--max-steps", type=int, default=1200, help="Steps per episode before reset.")
@@ -43,9 +37,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=7, help="Random seed for env reset.")
     parser.add_argument("--headless", action="store_true", help="Disable display window.")
     parser.add_argument(
-        "--autodrive",
-        action="store_true",
-        help="Use deterministic automated controls (recommended for smoke tests).",
+        "--controller",
+        choices=["human", "scripted"],
+        default=None,
+        help="Input controller. Defaults to human with display, scripted in headless mode.",
     )
     parser.add_argument("--draw-goals", action="store_true", help="Render goal checkpoint lines.")
     parser.add_argument("--draw-track-lines", action="store_true", help="Render contour line overlays.")
@@ -69,12 +64,20 @@ def build_env_config(args: argparse.Namespace) -> dict:
 
 def run_manual(args: argparse.Namespace) -> int:
     env = F1RaceEnv(build_env_config(args))
+    controller_mode = args.controller or ("scripted" if args.headless else "human")
+    if controller_mode == "human" and args.headless:
+        controller_mode = "scripted"
+    scripted_controller = (
+        ScriptedController(goals=env.track.goals.copy()) if controller_mode == "scripted" else None
+    )
     try:
         running = True
         total_steps = 0
         for episode in range(args.episodes):
             obs, info = env.reset(seed=args.seed + episode)
-            _ = obs, info
+            _ = info
+            if scripted_controller is not None:
+                scripted_controller.reset()
             if env.config.render.enabled:
                 env.render()
 
@@ -93,15 +96,12 @@ def run_manual(args: argparse.Namespace) -> int:
                 if not running:
                     break
 
-                if args.autodrive:
-                    action = autopilot_action(total_steps)
+                if scripted_controller is not None:
+                    action = scripted_controller.action(obs, info)
                 else:
-                    if args.headless:
-                        action = autopilot_action(total_steps)
-                    else:
-                        action = keyboard_action(pygame.key.get_pressed())
+                    action = keyboard_action(pygame.key.get_pressed())
 
-                _, _, terminated, truncated, _ = env.step(action)
+                obs, _, terminated, truncated, info = env.step(action)
                 total_steps += 1
                 if env.config.render.enabled:
                     env.render()

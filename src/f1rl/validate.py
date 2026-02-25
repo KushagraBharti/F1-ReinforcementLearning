@@ -52,8 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     run_env_checker()
 
     python = sys.executable
-    run_command([python, "-m", "f1rl.manual", "--headless", "--autodrive", "--max-steps", "80"])
+    run_command([python, "-m", "f1rl.manual", "--headless", "--controller", "scripted", "--max-steps", "80"])
     run_command([python, "-m", "f1rl.rollout", "--policy", "random", "--headless", "--steps", "120"])
+    run_command([python, "-m", "f1rl.clean_artifacts", "--keep-runs-per-prefix", "2", "--keep-days", "7"])
 
     if not args.skip_train:
         run_command([python, "-m", "f1rl.train", "--mode", "smoke", "--iterations", "1"])

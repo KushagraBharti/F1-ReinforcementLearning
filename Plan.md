@@ -6,6 +6,7 @@
 - Milestone 2: Completed
 - Milestone 3: Completed
 - Milestone 4: Completed
+- Milestone 5: Completed
 
 ## Milestone 0: Baseline and Planning
 ### Acceptance Criteria
@@ -38,7 +39,7 @@
 
 ### Validation Commands
 1. `uv run pytest -q tests/test_env_api.py`
-2. `uv run python -m f1rl.manual --headless --max-steps 60 --autodrive`
+2. `uv run python -m f1rl.manual --headless --max-steps 60 --controller scripted`
 3. `uv run python -m f1rl.rollout --steps 120 --headless --policy random`
 
 ## Milestone 3: RLlib Training + Checkpoints + Inference
@@ -66,3 +67,18 @@
 2. `uv run pyright src/f1rl`
 3. `uv run pytest -q`
 4. `uv run python -m f1rl.validate`
+
+## Milestone 5: Python/Ray Upgrade + Controller + Artifact Retention
+### Acceptance Criteria
+- Runtime upgraded to latest Ray-compatible Python on Windows (`3.12.x`).
+- RLlib upgraded to latest stable Ray build available (`2.54.0`).
+- Manual smoke uses deterministic scripted controller (`--controller scripted`).
+- New artifact cleanup command with retention policy and dry-run/apply behavior.
+- README/docs/validation updated for upgraded stack and new workflows.
+
+### Validation Commands
+1. `.\\.venv\\Scripts\\python.exe --version`
+2. `uv run python -c "import ray; print(ray.__version__)"`
+3. `uv run python -m f1rl.manual --headless --controller scripted --max-steps 80`
+4. `uv run python -m f1rl.clean_artifacts --keep-runs-per-prefix 3 --keep-days 14 --json`
+5. `uv run python -m f1rl.validate`

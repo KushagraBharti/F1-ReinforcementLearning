@@ -9,15 +9,14 @@ Top-down 2D F1-style driving simulator with:
 
 ## Requirements
 - OS: Windows/Linux/macOS (project developed on Windows)
-- Python: `3.11 - 3.13`  
-  `Ray` currently does not provide reliable wheels for Python `3.14+` in this setup.
+- Python: `3.12.x` (required for latest Ray RLlib on Windows)
 - Conda (recommended)
 - `uv` package manager
 
 ## Setup
 1. Create and activate a conda env:
 ```powershell
-conda create -n f1rl python=3.11 -y
+conda create -n f1rl python=3.12 -y
 conda activate f1rl
 ```
 
@@ -45,7 +44,7 @@ Controls:
 
 Headless manual smoke:
 ```powershell
-uv run python -m f1rl.manual --headless --autodrive --max-steps 80
+uv run python -m f1rl.manual --headless --controller scripted --max-steps 80
 ```
 
 ### Smoke Training
@@ -106,6 +105,16 @@ End-to-end validation:
 uv run python -m f1rl.validate
 ```
 
+Artifact cleanup (dry-run):
+```powershell
+uv run python -m f1rl.clean_artifacts --keep-runs-per-prefix 3 --keep-days 14
+```
+
+Artifact cleanup (apply):
+```powershell
+uv run python -m f1rl.clean_artifacts --apply --keep-runs-per-prefix 3 --keep-days 14
+```
+
 ## Artifacts and Outputs
 Artifacts are written under:
 - `artifacts/train-smoke-*/`  
@@ -125,6 +134,7 @@ src/f1rl/
   train.py           # RLlib PPO training entrypoint
   eval.py            # checkpoint evaluation entrypoint
   rollout.py         # random/checkpoint rollout runner
+  clean_artifacts.py # retention-policy cleanup command
   validate.py        # end-to-end validation script
   artifacts.py       # artifact/checkpoint path helpers
   logging_utils.py   # structured logging
@@ -142,10 +152,11 @@ Old script names still work and delegate to modern modules:
 
 ## Troubleshooting
 
-### `ray` install fails with Python 3.14
-Use Python 3.11-3.13. Recreate env and rerun:
+### `ray` install fails with Python 3.13/3.14 on Windows
+Latest Ray (`2.54.0`) currently ships Windows wheels for CPython 3.10-3.12 only.
+Recreate env on Python 3.12 and rerun:
 ```powershell
-conda create -n f1rl python=3.11 -y
+conda create -n f1rl python=3.12 -y
 conda activate f1rl
 uv sync --active --all-extras
 ```
@@ -155,7 +166,7 @@ uv sync --active --all-extras
 - Check local graphics/display access.
 
 ### RLlib warning spam about deprecations
-Ray emits deprecation warnings for some internal loggers/checkpoints in 2.49.x.  
+Ray emits deprecation warnings for some internal loggers/checkpoints in 2.54.x.  
 Training and evaluation still work; warnings are expected for this version line.
 
 ## Required Project Memory Docs

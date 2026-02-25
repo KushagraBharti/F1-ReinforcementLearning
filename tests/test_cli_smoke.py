@@ -9,7 +9,7 @@ def run_module(module: str, *args: str) -> None:
 
 
 def test_manual_headless_smoke() -> None:
-    run_module("f1rl.manual", "--headless", "--autodrive", "--max-steps", "60")
+    run_module("f1rl.manual", "--headless", "--controller", "scripted", "--max-steps", "60")
 
 
 def test_rollout_random_headless_smoke() -> None:
