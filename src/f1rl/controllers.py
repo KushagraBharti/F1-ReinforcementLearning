@@ -9,26 +9,23 @@ import numpy as np
 
 @dataclass(slots=True)
 class ScriptedController:
-    """Sensor-based deterministic controller.
+    """Sensor-based deterministic controller."""
 
-    The policy uses left/right clearance balancing for steering and front clearance
-    for throttle scheduling. It keeps behavior deterministic for smoke tests.
-    """
-
+    sensor_count: int
     steering_gain: float = 2.2
     steering_d_gain: float = 0.9
-    cruise_throttle: float = 0.12
-    caution_throttle: float = 0.06
-    brake_throttle: float = 0.00
-    min_throttle: float = 0.00
-    caution_front: float = 0.40
-    brake_front: float = 0.24
-    high_speed_ratio: float = 0.95
-    stuck_speed_ratio: float = 0.03
-    stuck_front_ratio: float = 0.20
-    stuck_steps: int = 12
+    cruise_throttle: float = 0.18
+    caution_throttle: float = 0.08
+    brake_throttle: float = 0.0
+    min_throttle: float = 0.0
+    caution_front: float = 0.38
+    brake_front: float = 0.22
+    high_speed_ratio: float = 0.92
+    stuck_speed_ratio: float = 0.04
+    stuck_front_ratio: float = 0.18
+    stuck_steps: int = 18
     recovery_steer: float = 0.85
-    recovery_throttle: float = 0.45
+    recovery_throttle: float = -0.45
     goals: np.ndarray | None = None
     lookahead_goals: int = 3
     heading_gain: float = 1.6
@@ -44,11 +41,10 @@ class ScriptedController:
         self._stuck_counter = 0
         self._recovery_direction = 1
 
-    @staticmethod
-    def _normalize_observation(obs: np.ndarray) -> tuple[np.ndarray, float]:
-        sensors = np.asarray(obs[:-1], dtype=np.float32)
+    def _normalize_observation(self, obs: np.ndarray) -> tuple[np.ndarray, float]:
+        sensors = np.asarray(obs[: self.sensor_count], dtype=np.float32)
         sensors = np.clip((sensors + 1.0) * 0.5, 0.0, 1.0)
-        speed_ratio = float(np.clip((float(obs[-1]) + 1.0) * 0.5, 0.0, 1.0))
+        speed_ratio = float(np.clip(abs(float(obs[self.sensor_count])), 0.0, 1.0))
         return sensors, speed_ratio
 
     @staticmethod
@@ -58,7 +54,8 @@ class ScriptedController:
     def _goal_steering(self, info: dict[str, float] | None) -> float | None:
         if self.goals is None or info is None:
             return None
-        if "x" not in info or "y" not in info or "heading_deg" not in info or "next_goal_idx" not in info:
+        required_keys = {"x", "y", "heading_deg", "next_goal_idx"}
+        if not required_keys.issubset(info):
             return None
 
         goal_index = (int(info["next_goal_idx"]) + self.lookahead_goals) % self.goals.shape[0]
@@ -87,7 +84,6 @@ class ScriptedController:
         right_clear = float(np.mean(sensors[:mid])) if mid > 0 else front
         left_clear = float(np.mean(sensors[mid + 1 :])) if mid + 1 < sensors.shape[0] else front
 
-        # Positive error means there is more space on the left side.
         center_error = left_clear - right_clear
         derivative = center_error - self._prev_error
         self._prev_error = center_error
@@ -100,7 +96,7 @@ class ScriptedController:
         if goal_steering is None:
             steering = sensor_steering
         else:
-            steering = np.clip(0.25 * sensor_steering + 0.75 * goal_steering, -1.0, 1.0)
+            steering = np.clip(0.3 * sensor_steering + 0.7 * goal_steering, -1.0, 1.0)
 
         if front < self.brake_front:
             throttle = self.brake_throttle
@@ -109,13 +105,11 @@ class ScriptedController:
         else:
             throttle = self.cruise_throttle
 
-        # Reduce throttle on aggressive turns or when already near max speed.
-        throttle *= max(0.45, 1.0 - 0.40 * abs(float(steering)))
-        if speed_ratio > self.high_speed_ratio and front < 0.75:
+        throttle *= max(0.4, 1.0 - 0.45 * abs(float(steering)))
+        if speed_ratio > self.high_speed_ratio and front < 0.7:
             throttle = min(throttle, self.caution_throttle)
         throttle = max(self.min_throttle, throttle)
 
-        # Deterministic recovery behavior if the car is effectively stalled.
         if speed_ratio < self.stuck_speed_ratio and front < self.stuck_front_ratio:
             self._stuck_counter += 1
         else:

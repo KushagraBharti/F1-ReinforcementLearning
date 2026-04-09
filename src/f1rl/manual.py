@@ -68,7 +68,9 @@ def run_manual(args: argparse.Namespace) -> int:
     if controller_mode == "human" and args.headless:
         controller_mode = "scripted"
     scripted_controller = (
-        ScriptedController(goals=env.track.goals.copy()) if controller_mode == "scripted" else None
+        ScriptedController(sensor_count=env.sensor_count, goals=env.track.goals.copy())
+        if controller_mode == "scripted"
+        else None
     )
     try:
         running = True

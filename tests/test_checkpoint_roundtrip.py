@@ -17,3 +17,4 @@ def test_checkpoint_roundtrip_smoke() -> None:
     assert (
         eval_result.returncode == 0
     ), f"eval failed:\nstdout={eval_result.stdout}\nstderr={eval_result.stderr}"
+    assert "backend=artifact" in eval_result.stdout

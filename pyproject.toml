@@ -19,7 +19,8 @@ dependencies = [
 [project.optional-dependencies]
 train = [
   "ray[rllib]>=2.54.0,<2.55.0",
-  "torch>=2.3.0",
+  "gputil>=1.4.0",
+  "torch>=2.10.0,<2.11.0",
 ]
 viz = [
   "imageio>=2.36.0",
@@ -36,8 +37,11 @@ f1-manual = "f1rl.manual:main"
 f1-rollout = "f1rl.rollout:main"
 f1-train = "f1rl.train:main"
 f1-eval = "f1rl.eval:main"
+f1-benchmark = "f1rl.benchmark:main"
+f1-optimize = "f1rl.optimize:main"
 f1-validate = "f1rl.validate:main"
 f1-clean-artifacts = "f1rl.clean_artifacts:main"
+f1-hardware-check = "f1rl.hardware_check:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/f1rl"]
@@ -59,3 +63,13 @@ ignore = ["E501"]
 pythonVersion = "3.12"
 include = ["src/f1rl"]
 typeCheckingMode = "basic"
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu128", marker = "platform_system == 'Windows'" },
+]

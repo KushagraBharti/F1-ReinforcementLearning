@@ -6,7 +6,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from f1rl.constants import ARTIFACTS_DIR, CHECKPOINTS_DIR, LOGS_DIR, METRICS_DIR, RENDERS_DIR
+from f1rl.constants import (
+    ARTIFACTS_DIR,
+    CHAMPIONS_DIR,
+    CHECKPOINTS_DIR,
+    LOGS_DIR,
+    METRICS_DIR,
+    RENDERS_DIR,
+)
 
 
 @dataclass(slots=True)
@@ -14,13 +21,14 @@ class RunPaths:
     run_id: str
     root: Path
     checkpoints: Path
+    inference: Path
     metrics: Path
     logs: Path
     renders: Path
 
 
 def ensure_artifact_dirs() -> None:
-    for directory in (ARTIFACTS_DIR, CHECKPOINTS_DIR, METRICS_DIR, LOGS_DIR, RENDERS_DIR):
+    for directory in (ARTIFACTS_DIR, CHECKPOINTS_DIR, METRICS_DIR, LOGS_DIR, RENDERS_DIR, CHAMPIONS_DIR):
         directory.mkdir(parents=True, exist_ok=True)
 
 
@@ -29,12 +37,21 @@ def new_run_paths(prefix: str) -> RunPaths:
     run_id = f"{prefix}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     root = ARTIFACTS_DIR / run_id
     checkpoints = root / "checkpoints"
+    inference = root / "inference"
     metrics = root / "metrics"
     logs = root / "logs"
     renders = root / "renders"
-    for directory in (root, checkpoints, metrics, logs, renders):
+    for directory in (root, checkpoints, inference, metrics, logs, renders):
         directory.mkdir(parents=True, exist_ok=True)
-    return RunPaths(run_id=run_id, root=root, checkpoints=checkpoints, metrics=metrics, logs=logs, renders=renders)
+    return RunPaths(
+        run_id=run_id,
+        root=root,
+        checkpoints=checkpoints,
+        inference=inference,
+        metrics=metrics,
+        logs=logs,
+        renders=renders,
+    )
 
 
 def checkpoint_dirs(base_dir: Path | None = None) -> list[Path]:
@@ -68,3 +85,11 @@ def resolve_checkpoint(checkpoint: str, base_dir: Path | None = None) -> Path:
     if not path.exists():
         raise FileNotFoundError(f"Checkpoint path does not exist: {checkpoint}")
     return path
+
+
+def owning_run_dir(path: Path) -> Path:
+    resolved = path.resolve()
+    for parent in (resolved, *resolved.parents):
+        if parent.parent == ARTIFACTS_DIR:
+            return parent
+    raise FileNotFoundError(f"Unable to resolve owning run directory for: {path}")

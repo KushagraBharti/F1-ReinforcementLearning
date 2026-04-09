@@ -66,6 +66,27 @@ def polyline_to_segments(points: np.ndarray) -> np.ndarray:
     return segments
 
 
+def point_to_segment_distance(point: np.ndarray, segment_start: np.ndarray, segment_end: np.ndarray) -> float:
+    line = segment_end - segment_start
+    norm = float(np.dot(line, line))
+    if norm <= 1e-9:
+        return float(np.linalg.norm(point - segment_start))
+    t = float(np.clip(np.dot(point - segment_start, line) / norm, 0.0, 1.0))
+    projection = segment_start + t * line
+    return float(np.linalg.norm(point - projection))
+
+
+def nearest_polyline_distance(point: np.ndarray, points: np.ndarray) -> float:
+    if points.shape[0] < 2:
+        raise ValueError("polyline needs at least two points")
+    best = float("inf")
+    for idx in range(points.shape[0] - 1):
+        distance = point_to_segment_distance(point, points[idx], points[idx + 1])
+        if distance < best:
+            best = distance
+    return best
+
+
 def closed_loop(points: Iterable[Iterable[float]]) -> np.ndarray:
     """Ensure the contour is a closed loop by repeating first point."""
     arr = np.asarray(list(points), dtype=np.float32)

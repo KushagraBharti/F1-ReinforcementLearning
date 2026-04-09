@@ -1,66 +1,72 @@
 # Plan
 
 ## Status
-- Milestone 0: Completed
-- Milestone 1: Completed
-- Milestone 2: Completed
-- Milestone 3: Completed
-- Milestone 4: Completed
-- Milestone 5: Completed
+- Milestone A: Completed
+- Milestone B: Completed
+- Milestone C: Completed
+- Milestone D: Completed
+- Milestone E: Completed
+- Milestone F: Completed
+- Milestone G: Completed
 
-## Milestone 0: Baseline and Planning
+## Milestone A: Baseline and GPU Runtime
 ### Acceptance Criteria
-- Repository inventory complete.
-- Initial constraints, goals, and validation workflow captured.
-- `Prompt.md`, `Plan.md`, `Implement.md`, `Documentation.md` created.
+- Baseline validations and current hardware/runtime facts recorded
+- CUDA-enabled Torch configured for the project environment
+- GPU validation command exists and confirms CUDA + RLlib smoke training readiness
 
 ### Validation Commands
-1. `git status --short`
-2. `rg --files`
+1. `nvidia-smi`
+2. `uv run python -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"`
+3. `uv run python -m f1rl.hardware_check`
+4. `uv run python -m f1rl.train --mode smoke --iterations 1`
 
-## Milestone 1: Packaging and Project Layout
+## Milestone B: Benchmark and Champion Workflow
 ### Acceptance Criteria
-- `pyproject.toml` created for uv-managed workflow.
-- Source refactored into package structure under `src/`.
-- Backward-compatible script shims added for legacy file names where practical.
-- `uv.lock` generated.
+- Benchmark evaluation command emits machine-readable metrics
+- Short sampled clips are exported for candidate review
+- Champion comparison logic exists and can protect promoted runs
 
 ### Validation Commands
-1. `uv sync --active --all-extras`
-2. `uv run python -c "import f1rl; print(f1rl.__version__)"`
-3. `uv run pytest -q tests/test_imports.py`
+1. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick`
+2. `uv run pytest -q tests/test_benchmark.py`
 
-## Milestone 2: Environment + Manual Mode Modernization
+## Milestone C: Environment, Observation, and Reward Upgrades
 ### Acceptance Criteria
-- Gymnasium-compatible environment implemented.
-- Manual mode command works (keyboard control, reset, quit).
-- Headless-compatible rendering path exists.
-- Core constants configurable.
+- Dynamics model is more realistic than the current minimal heading/speed update
+- Observation includes track-relative signals beyond raw wall rays
+- Reward logging explains major reward components
+- Termination logic handles no-progress and unstable behavior more robustly
 
 ### Validation Commands
-1. `uv run pytest -q tests/test_env_api.py`
-2. `uv run python -m f1rl.manual --headless --max-steps 60 --controller scripted`
-3. `uv run python -m f1rl.rollout --steps 120 --headless --policy random`
+1. `uv run pytest -q tests/test_dynamics.py tests/test_env_api.py tests/test_reward_logic.py`
+2. `uv run python -m f1rl.validate --skip-train`
 
-## Milestone 3: RLlib Training + Checkpoints + Inference
+## Milestone D: PPO Profiles and Evaluation During Training
 ### Acceptance Criteria
-- RL training entrypoint uses modern RLlib config flow (PyTorch).
-- Smoke training produces checkpoint + metrics artifact.
-- Inference/eval entrypoint loads checkpoint and executes rollout.
-- Optional render artifact (frames/gif) supported.
+- Structured train profiles exist for `smoke`, `benchmark`, and `performance`
+- Training writes evaluation metrics during training
+- GPU-aware RLlib resource configuration is the default local path
 
 ### Validation Commands
-1. `uv run python -m f1rl.train --mode smoke`
-2. `uv run python -m f1rl.train --mode smoke --resume latest`
-3. `uv run python -m f1rl.eval --checkpoint latest --steps 150 --headless`
-4. `uv run pytest -q tests/test_checkpoint_roundtrip.py`
+1. `uv run python -m f1rl.train --mode benchmark --iterations 1`
+2. `uv run pytest -q tests/test_checkpoint_roundtrip.py tests/test_train_profiles.py`
 
-## Milestone 4: Test/Lint/Type and Docs Finalization
+## Milestone E: Recursive Candidate Loop
 ### Acceptance Criteria
-- Unit tests for geometry/dynamics/reward behavior included.
-- Smoke validations automated in scripts.
-- README rewritten with setup/run/train/eval/troubleshooting.
-- `Documentation.md` contains commands, outcomes, and migration notes.
+- Baseline benchmark is recorded
+- At least one candidate change set is benchmarked against the champion
+- Champion promotion follows completion-rate-first comparison rules
+
+### Validation Commands
+1. `uv run python -m f1rl.optimize --max-candidates 1 --profile quick`
+2. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick`
+
+## Milestone F: Final Validation and Documentation
+### Acceptance Criteria
+- README reflects GPU, training, benchmark, and optimization-loop workflows
+- `Documentation.md` records commands, outcomes, benchmark comparisons, and kept/rejected hypotheses
+- Full validation suite passes
 
 ### Validation Commands
 1. `uv run ruff check .`
@@ -68,17 +74,16 @@
 3. `uv run pytest -q`
 4. `uv run python -m f1rl.validate`
 
-## Milestone 5: Python/Ray Upgrade + Controller + Artifact Retention
+## Milestone G: RLlib Modernization and Artifact-First Inference
 ### Acceptance Criteria
-- Runtime upgraded to latest Ray-compatible Python on Windows (`3.12.x`).
-- RLlib upgraded to latest stable Ray build available (`2.54.0`).
-- Manual smoke uses deterministic scripted controller (`--controller scripted`).
-- New artifact cleanup command with retention policy and dry-run/apply behavior.
-- README/docs/validation updated for upgraded stack and new workflows.
+- RLlib config uses explicit new-stack surfaces and learner-centric batching
+- Default train profiles use multi-env parallelism
+- Train exports a lightweight inference artifact
+- Eval/benchmark/rollout use artifact-backed inference by default
+- Reverse-driving is no longer the dominant learned failure mode
 
 ### Validation Commands
-1. `.\\.venv\\Scripts\\python.exe --version`
-2. `uv run python -c "import ray; print(ray.__version__)"`
-3. `uv run python -m f1rl.manual --headless --controller scripted --max-steps 80`
-4. `uv run python -m f1rl.clean_artifacts --keep-runs-per-prefix 3 --keep-days 14 --json`
-5. `uv run python -m f1rl.validate`
+1. `uv run python -m f1rl.train --mode smoke --iterations 1 --device gpu --require-gpu`
+2. `uv run python -m f1rl.eval --checkpoint latest --headless --steps 120`
+3. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick --promote-if-best --no-clips`
+4. `uv run pytest -q tests/test_benchmark.py tests/test_reward_logic.py tests/test_dynamics.py tests/test_checkpoint_roundtrip.py`

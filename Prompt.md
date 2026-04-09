@@ -1,37 +1,41 @@
 # Prompt
 
 ## Mission
-Modernize and stabilize this repository into a reproducible Python project for:
-- manual F1-style top-down driving (Pygame),
-- Gymnasium-compatible RL environment,
-- RLlib-based training (PyTorch),
-- checkpointed inference and rendering,
-- validated test and smoke workflows.
+Push this repository beyond a working baseline into a measured, GPU-enabled RL optimization workflow for a top-down F1-style driving simulator.
 
-## Goals
-1. Restore working manual gameplay with responsive keyboard control.
-2. Refactor into a package-safe, maintainable project layout.
-3. Replace deprecated Ray/RLlib usage with modern API patterns.
-4. Add deterministic setup and execution via `uv` (`pyproject.toml` + `uv.lock`).
-5. Add smoke/unit tests and validation scripts.
-6. Add logging, checkpoints, and basic smoke-run artifacts.
-7. Rewrite README for clone-to-run developer UX.
+## Primary Objective
+Optimize for:
+1. clean lap completion without barrier hits
+2. continuous lap-time improvement
+3. maximum speed only after stable control is established
+
+## Scope
+- F1 RL repository only
+- manual driving, environment realism, reward shaping, observation design, PPO training, evaluation, benchmarking, artifacts, and documentation
+- GPU enablement on the local RTX 4060 laptop
 
 ## Constraints
-- Python 3.12.x for full RL workflows on Windows (Ray 2.54 wheel compatibility).
-- Use `uv` for dependency management.
-- Gymnasium API compliance (`reset -> (obs, info)`, `step -> (obs, reward, terminated, truncated, info)`).
-- RL stack: RLlib + PyTorch.
-- Rendering and training must stay decoupled.
-- No placeholder TODOs for core features.
-- Validation failures must be fixed before milestone completion.
+- Python 3.12.x on Windows
+- Ray/RLlib + PyTorch
+- Gymnasium-compatible environment API
+- Use `uv` for dependency management
+- Keep training deterministic where practical with explicit seeds and reproducible commands
+- Only keep candidate changes that beat the current benchmark champion
 
-## Done Criteria
-- Manual mode launches and controls work.
-- Deterministic scripted controller is available for headless/manual smoke runs.
-- RL smoke training runs end-to-end and saves checkpoint.
-- Checkpoint load and inference rollout work.
-- Headless rollout and render smoke commands run.
-- Artifact cleanup command with retention policy is implemented.
-- Tests and practical lint/type checks pass.
-- README and required repo docs are updated and accurate.
+## Required Outcomes
+- CUDA-enabled Torch is installed and used by the default local training profile
+- RLlib training supports GPU-aware configuration with CPU env runners by default
+- Eval, rollout, and benchmark use lightweight inference artifacts by default instead of full algorithm restore
+- Formal benchmark/evaluation workflow exists with machine-readable metrics
+- Candidate-vs-champion comparison logic exists and follows the project acceptance metric ordering
+- Environment physics, observations, rewards, and terminations are more realistic and more informative for RL
+- Structured train profiles exist for smoke, benchmark, and performance runs
+- Short visual review clips are emitted for benchmark candidates
+- README and repo memory docs describe the optimization loop, commands, and artifact locations
+
+## Success Criteria
+- Full validation suite passes
+- GPU validation command passes
+- Smoke training passes on the upgraded stack
+- Benchmark workflow produces metrics and clips
+- At least one benchmarked candidate is promoted over the baseline using explicit comparison rules

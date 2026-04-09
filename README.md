@@ -1,177 +1,168 @@
-# F1 Reinforcement Learning (Modernized)
+# F1 Reinforcement Learning
 
 Top-down 2D F1-style driving simulator with:
-- manual keyboard gameplay (Pygame),
-- Gymnasium-compatible RL environment,
-- modern RLlib (PyTorch) training/inference,
-- reproducible `uv` workflow,
-- smoke/unit tests and validation script.
+- manual keyboard gameplay in Pygame
+- Gymnasium-compatible RL environment
+- RLlib PPO training/eval on PyTorch
+- GPU-aware local training on Windows
+- benchmark/champion workflow with sampled clip artifacts
+- recursive candidate loop tooling
+- lightweight inference artifacts for eval/benchmark without full algorithm restore
 
 ## Requirements
-- OS: Windows/Linux/macOS (project developed on Windows)
-- Python: `3.12.x` (required for latest Ray RLlib on Windows)
-- Conda (recommended)
-- `uv` package manager
+- Windows laptop workflow is the primary target
+- Python `3.12.x`
+- Conda recommended
+- `uv`
+- NVIDIA GPU for the default local optimization flow
 
 ## Setup
-1. Create and activate a conda env:
 ```powershell
 conda create -n f1rl python=3.12 -y
 conda activate f1rl
-```
-
-2. Install `uv` (if needed):
-```powershell
 pip install uv
-```
-
-3. Sync dependencies:
-```powershell
 uv sync --active --all-extras
 ```
 
-## Run Commands
+If the repo lives under OneDrive, set:
+```powershell
+$env:UV_LINK_MODE='copy'
+```
+before repeated `uv run ...` commands. This avoids Windows hardlink issues on cloud-synced paths.
 
-### Manual Mode (keyboard)
+## Runtime Checks
+Validate CUDA and a local RL smoke path:
+```powershell
+uv run python -m f1rl.hardware_check
+```
+
+Quick Torch check:
+```powershell
+uv run python -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"
+```
+
+## Manual Mode
 ```powershell
 uv run python -m f1rl.manual
 ```
+
+Headless scripted smoke:
+```powershell
+uv run python -m f1rl.manual --headless --controller scripted --max-steps 120
+```
+
 Controls:
-- accelerate: `Up` / `W`
-- brake: `Down` / `S`
-- steer: `Left` / `A`, `Right` / `D`
-- quit: window close or `Esc`
+- `W` / `Up`: throttle
+- `S` / `Down`: brake / reverse
+- `A` / `Left`, `D` / `Right`: steering
+- `Esc`: quit
 
-Headless manual smoke:
+## Training
+Smoke:
 ```powershell
-uv run python -m f1rl.manual --headless --controller scripted --max-steps 80
+uv run python -m f1rl.train --mode smoke --device gpu --require-gpu
+```
+Default shape: `1 env runner x 2 envs`, sync vectorization.
+
+Benchmark:
+```powershell
+uv run python -m f1rl.train --mode benchmark --device gpu --require-gpu
+```
+Default shape: `2 env runners x 3 envs`, sync vectorization.
+
+Longer local training:
+```powershell
+uv run python -m f1rl.train --mode performance --device gpu --require-gpu
+```
+Default shape: `4 env runners x 4 envs`, sync vectorization.
+
+Override local parallelism explicitly:
+```powershell
+uv run python -m f1rl.train --mode smoke --num-env-runners 1 --num-envs-per-env-runner 4 --vector-mode sync
 ```
 
-### Smoke Training
+Candidate env override example:
 ```powershell
-uv run python -m f1rl.train --mode smoke
+uv run python -m f1rl.train --mode benchmark --device gpu --env-config-json "{\"reward\":{\"progress_reward\":3.0}}"
 ```
 
-Resume from latest checkpoint:
+## Eval, Rollout, Benchmark
+Checkpoint eval:
 ```powershell
-uv run python -m f1rl.train --mode smoke --resume latest
+uv run python -m f1rl.eval --checkpoint latest --headless --steps 300
 ```
-
-### Full Training Template
-```powershell
-uv run python -m f1rl.train --mode full --iterations 60 --num-env-runners 1
-```
-
-### Evaluate / Render a Trained Agent
-Headless eval:
-```powershell
-uv run python -m f1rl.eval --checkpoint latest --headless --steps 500
-```
-
-Rendered eval:
-```powershell
-uv run python -m f1rl.eval --checkpoint latest --render --steps 500
-```
+Default backend: lightweight inference artifact.
 
 Checkpoint rollout:
 ```powershell
 uv run python -m f1rl.rollout --policy checkpoint --checkpoint latest --headless --steps 300
 ```
+Default backend: lightweight inference artifact.
 
-Random rollout smoke:
+Benchmark a checkpoint and export sampled clips:
 ```powershell
-uv run python -m f1rl.rollout --policy random --headless --steps 120
+uv run python -m f1rl.benchmark --checkpoint latest --profile quick --promote-if-best
+```
+Default backend: lightweight inference artifact.
+
+Quick benchmark without clip generation:
+```powershell
+uv run python -m f1rl.benchmark --checkpoint latest --profile quick --no-clips
 ```
 
-## Validation and Quality Gates
+Compatibility mode if you explicitly need full RLlib restore:
+```powershell
+uv run python -m f1rl.eval --checkpoint latest --headless --legacy-algorithm-restore
+```
 
-Lint:
+Run the recursive candidate loop:
+```powershell
+uv run python -m f1rl.optimize --max-candidates 2 --iterations 3 --device gpu --profile quick --no-clips
+```
+
+## Validation
 ```powershell
 uv run ruff check .
-```
-
-Type checks:
-```powershell
 uv run pyright src/f1rl
-```
-
-Tests:
-```powershell
 uv run pytest -q
-```
-
-End-to-end validation:
-```powershell
 uv run python -m f1rl.validate
 ```
 
-Artifact cleanup (dry-run):
-```powershell
-uv run python -m f1rl.clean_artifacts --keep-runs-per-prefix 3 --keep-days 14
-```
+## Artifacts
+- `artifacts/train-*/`
+  checkpoints, lightweight inference artifact, metrics, logs, run metadata
+- `artifacts/track-cache/`
+  cached preprocessed track geometry used to reduce worker startup cost on repeated runs
+- `artifacts/benchmark-*/`
+  `benchmark_summary.json` and sampled GIF clips
+- `artifacts/champions/current.json`
+  current promoted benchmark summary
+- `artifacts/optimize-*/optimize_manifest.json`
+  candidate loop keep/reject history
+- `artifacts/renders/`
+  manual/eval/rollout exported frames
 
-Artifact cleanup (apply):
-```powershell
-uv run python -m f1rl.clean_artifacts --apply --keep-runs-per-prefix 3 --keep-days 14
-```
-
-## Artifacts and Outputs
-Artifacts are written under:
-- `artifacts/train-smoke-*/`  
-  `checkpoints/`, `metrics/metrics.csv`, `metrics/metrics.jsonl`, `logs/train.log`
-- `artifacts/eval-*/eval_summary.json`
-- `artifacts/renders/` (if frame export enabled)
+Protected runs are marked with `.pin`.
 
 ## Architecture
-
-### Package Layout
 ```text
 src/f1rl/
-  env.py             # Gymnasium environment
-  dynamics.py        # car physics + observations
-  track.py           # contour extraction + checkpoints + collision geometry
-  renderer.py        # pygame renderer
-  train.py           # RLlib PPO training entrypoint
-  eval.py            # checkpoint evaluation entrypoint
-  rollout.py         # random/checkpoint rollout runner
-  clean_artifacts.py # retention-policy cleanup command
-  validate.py        # end-to-end validation script
-  artifacts.py       # artifact/checkpoint path helpers
-  logging_utils.py   # structured logging
-  legacy.py          # compatibility wrapper for old Race API
+  env.py            # environment, reward logic, termination rules
+  dynamics.py       # kinematic bicycle-style dynamics and observations
+  track.py          # track extraction, goals, centerline metadata
+  train.py          # PPO train profiles with GPU-aware config
+  benchmark.py      # benchmark metrics, clips, champion promotion
+  optimize.py       # candidate loop orchestration
+  hardware_check.py # CUDA/runtime validation
 ```
 
-### Legacy Wrappers
-Old script names still work and delegate to modern modules:
-- `manual_mode.py`
-- `ray_training.py`
-- `ray_rollout.py`
-- `use_agent.py`
-- `render_agents.py`
-- `race.py`
-
-## Troubleshooting
-
-### `ray` install fails with Python 3.13/3.14 on Windows
-Latest Ray (`2.54.0`) currently ships Windows wheels for CPython 3.10-3.12 only.
-Recreate env on Python 3.12 and rerun:
-```powershell
-conda create -n f1rl python=3.12 -y
-conda activate f1rl
-uv sync --active --all-extras
-```
-
-### No window in manual mode
-- Ensure you are not using `--headless`.
-- Check local graphics/display access.
-
-### RLlib warning spam about deprecations
-Ray emits deprecation warnings for some internal loggers/checkpoints in 2.54.x.  
-Training and evaluation still work; warnings are expected for this version line.
-
-## Required Project Memory Docs
-See:
-- `Prompt.md`
-- `Plan.md`
-- `Implement.md`
-- `Documentation.md`
+## Notes
+- The env now includes richer observations than raw wall rays alone: heading error, goal distance, centerline offset, and previous action signals.
+- Reverse is still supported in the simulator, but RL reward/termination now make sustained reverse behavior non-competitive.
+- The benchmark decision rule is fixed:
+  1. higher completion rate
+  2. lower lap time
+  3. lower collision / instability
+- Eval and benchmark no longer restore full `Algorithm` objects by default, which removes the old logger deprecation cascade from those commands.
+- RLlib still emits internal deprecation warnings from Ray 2.54.x internals during training, and RLModule construction still warns once during lightweight inference in this Ray build.
+- The benchmark profile is materially heavier than smoke on Windows; smoke is the stable default for fast iteration.
