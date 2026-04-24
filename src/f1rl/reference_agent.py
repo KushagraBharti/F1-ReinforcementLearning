@@ -44,6 +44,18 @@ class ReferenceProfile:
         return float(np.interp(wrapped, self.distance_m, self.brake))
 
 
+@dataclass(slots=True)
+class ReferencePose:
+    elapsed_s: float
+    progress_m: float
+    x: float
+    y: float
+    heading_rad: float
+    speed_kph: float
+    throttle: float
+    brake: float
+
+
 def parse_timedelta_seconds(value: str) -> float:
     value = value.strip()
     if "days" in value:
@@ -101,6 +113,23 @@ def centerline_curvature_at(sim: MonzaSim, progress_m: float, delta_m: float = 8
     prev_heading = centerline_heading_at(sim, progress_m - delta_m)
     next_heading = centerline_heading_at(sim, progress_m + delta_m)
     return wrap_radians(next_heading - prev_heading) / max(2.0 * delta_m, 1e-6)
+
+
+def reference_pose_at(sim: MonzaSim, profile: ReferenceProfile, elapsed_s: float) -> ReferencePose:
+    clamped_time = float(np.clip(elapsed_s, profile.time_s[0], profile.time_s[-1]))
+    ref_distance_m = float(np.interp(clamped_time, profile.time_s, profile.distance_m))
+    progress_m = min(float(ref_distance_m / profile.distance_max_m * sim.track.length_m), sim.track.length_m)
+    point = centerline_point_at(sim, progress_m)
+    return ReferencePose(
+        elapsed_s=clamped_time,
+        progress_m=progress_m,
+        x=float(point[0]),
+        y=float(point[1]),
+        heading_rad=centerline_heading_at(sim, progress_m),
+        speed_kph=float(np.interp(clamped_time, profile.time_s, profile.speed_kph)),
+        throttle=float(np.interp(clamped_time, profile.time_s, profile.throttle)),
+        brake=float(np.interp(clamped_time, profile.time_s, profile.brake)),
+    )
 
 
 def _empty_reward_components() -> dict[str, float]:

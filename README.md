@@ -36,6 +36,15 @@ This writes the persisted Monza `TrackSpec` under `assets/tracks/monza/`.
 uv run python -m f1rl.manual
 ```
 
+Reference ghost overlay, using the same renderer as manual mode:
+
+```powershell
+uv run f1-manual --ghost-reference
+uv run f1-manual --ghost-reference --flying-start
+```
+
+The Fast-F1 reference lap is a flying qualifying lap and starts around `322 kph`. Use `--flying-start` when comparing your full-throttle launch against the reference ghost.
+
 Controls:
 
 - `W` / Up: throttle

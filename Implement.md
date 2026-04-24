@@ -26,7 +26,11 @@ Outputs:
 
 ```powershell
 uv run python -m f1rl.manual
+uv run f1-manual --ghost-reference
+uv run f1-manual --ghost-reference --flying-start
 ```
+
+`--ghost-reference` overlays the Fast-F1 VER Monza reference lap in the same renderer. `--flying-start` starts the manual car at the reference lap entry speed so the comparison is not a standing start against a flying lap.
 
 Controls:
 

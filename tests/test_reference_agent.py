@@ -5,9 +5,11 @@ from pathlib import Path
 from f1rl.reference_agent import (
     load_reference_profile,
     parse_timedelta_seconds,
+    reference_pose_at,
     run_reference_control,
     run_reference_ghost,
 )
+from f1rl.sim import MonzaSim
 
 
 def test_parse_fastf1_timedelta() -> None:
@@ -22,6 +24,15 @@ def test_reference_profile_loads() -> None:
     assert profile.speed_at(0.0) > 250.0
     assert 0.0 <= profile.throttle_at(0.0) <= 1.0
     assert 0.0 <= profile.brake_at(0.0) <= 1.0
+
+
+def test_reference_pose_maps_to_sim_track() -> None:
+    sim = MonzaSim()
+    profile = load_reference_profile()
+    pose = reference_pose_at(sim, profile, 1.0)
+    assert 0.0 <= pose.progress_m <= sim.track.length_m
+    assert pose.speed_kph > 250.0
+    assert sim.track.point_is_drivable(pose.x, pose.y)
 
 
 def test_reference_ghost_runs_without_telemetry() -> None:

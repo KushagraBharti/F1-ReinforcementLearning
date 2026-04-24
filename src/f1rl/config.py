@@ -108,7 +108,7 @@ class RenderConfig:
     draw_checkpoints: bool = False
     draw_rays: bool = True
     draw_ray_hits: bool = True
-    fps: int = 120
+    fps: int = 60
 
 
 @dataclass(slots=True)

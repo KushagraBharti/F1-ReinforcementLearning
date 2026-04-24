@@ -43,6 +43,8 @@ class MonzaSim:
         self.completed_lap = False
         self.state = initial_car_state(self.track.start_pose)
         self._last_raw_progress_px = 0.0
+        self._ray_cache_key: tuple[float, float, float] | None = None
+        self._ray_cache_distances_m: np.ndarray | None = None
         self._reset_projection()
 
     @property
@@ -96,12 +98,18 @@ class MonzaSim:
         return rays
 
     def ray_distances_m(self) -> np.ndarray:
+        cache_key = (float(self.state.x), float(self.state.y), float(self.state.heading_rad))
+        if self._ray_cache_key == cache_key and self._ray_cache_distances_m is not None:
+            return self._ray_cache_distances_m.copy()
         max_px = self.config.sensors.range_m / self.track.meters_per_pixel
         distances = [
             nearest_intersection_distance(ray, self.boundary_segments, max_px) * self.track.meters_per_pixel
             for ray in self.build_sensor_rays()
         ]
-        return np.asarray(distances, dtype=np.float32)
+        values = np.asarray(distances, dtype=np.float32)
+        self._ray_cache_key = cache_key
+        self._ray_cache_distances_m = values
+        return values.copy()
 
     def _track_errors(self) -> tuple[float, float, float]:
         raw_px, lateral_px, tangent, _ = project_point_to_polyline(

@@ -132,5 +132,18 @@
 ## Replay Timing Fix - 2026-04-24
 - Root cause: `f1-replay` rendered one telemetry row per frame. The Fast-F1 ghost lap has 610 telemetry samples, so at 120 FPS it appeared to finish in about 5 seconds even though the file spans `79.662s`.
 - Fix: replay now uses each row's `sim_time_s` timestamp by default.
+- Follow-up fix: timed replay now interpolates between telemetry rows at render time. The Fast-F1 samples are about `7.7 Hz`, so direct row rendering looked jumpy and visually faster than manual mode even at correct total duration.
 - Added `--speed` for intentional playback scaling and `--no-timing` for old fast-scrub behavior.
 - `uv run f1-replay artifacts/reference-ghost-20260424-025933/steps.jsonl --headless` -> pass; reports `duration=79.662s`.
+
+## Unified Rendering Contract - 2026-04-24
+- Manual mode and replay now share one default renderer surface.
+- Render FPS is `60`, matching the simulator physics timestep of `1/60s`.
+- Renderer now uses `SimConfig.car_image` instead of randomly choosing a car sprite, so manual and replay use the same Ferrari sprite by default.
+- Added a regression test to keep render FPS aligned with physics Hz.
+- Added `f1-manual --ghost-reference` to overlay the Fast-F1 reference lap directly inside manual mode.
+- Added `f1-manual --ghost-reference --flying-start` for a fair comparison against the reference lap, which starts around `322 kph` because it is a flying qualifying lap.
+- Fixed manual timing so interactive mode advances physics from wall-clock time with fixed `1/60s` catch-up steps instead of advancing exactly one physics step per rendered frame.
+- Cached sensor ray distances per simulator state to avoid repeated raycasts during observation, telemetry, and rendering.
+- Changed telemetry writer to keep the JSONL file open for the run instead of opening and closing it every step.
+- User-measured issue before fix: `11-12s` real time produced only about `3s` of manual-mode simulation time.

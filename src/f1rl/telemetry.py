@@ -6,7 +6,7 @@ import json
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 REWARD_COMPONENT_KEYS = ("progress", "finish", "collision", "off_track", "no_progress", "smoothness")
 
@@ -71,13 +71,16 @@ class TelemetryWriter:
         self.mode = mode
         self.seed = seed
         self._steps: list[StepTelemetry] = []
+        self._steps_file: TextIO = self.steps_path.open("a", encoding="utf-8")
 
     def write_step(self, step: StepTelemetry) -> None:
         self._steps.append(step)
-        with self.steps_path.open("a", encoding="utf-8") as file:
-            file.write(json.dumps(asdict(step)) + "\n")
+        self._steps_file.write(json.dumps(asdict(step)) + "\n")
 
     def close_episode(self, *, termination_reason: str, completed_lap: bool) -> EpisodeSummary:
+        if not self._steps_file.closed:
+            self._steps_file.flush()
+            self._steps_file.close()
         elapsed = self._steps[-1].sim_time_s if self._steps else 0.0
         speeds = [step.speed_kph for step in self._steps]
         reward_totals = {key: 0.0 for key in REWARD_COMPONENT_KEYS}

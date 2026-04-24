@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import random
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +16,17 @@ F1_GREEN = (38, 218, 48)
 GRAY = (80, 80, 80)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
+GHOST_BLUE = (45, 170, 255)
+
+
+@dataclass(slots=True)
+class RenderGhost:
+    x: float
+    y: float
+    heading_rad: float
+    speed_kph: float
+    label: str = "REF"
+    color: tuple[int, int, int] = GHOST_BLUE
 
 
 class PygameRenderer:
@@ -44,8 +55,7 @@ class PygameRenderer:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("consolas", 16)
         self.track_surface = self._load_to_window(IMAGES_DIR / "Monza_track_extra_wide_2.png")
-        car_choices = [IMAGES_DIR / "ferrari.png", IMAGES_DIR / "redbull.png", IMAGES_DIR / "mercedes.png"]
-        self.car_surface = self._load_car(random.choice([path for path in car_choices if path.exists()]) if car_choices else config.car_image)
+        self.car_surface = self._load_car(config.car_image)
         self.car_off_surface = self._load_car(IMAGES_DIR / "ferrari_off.png")
 
     def _load_to_window(self, path: Path):
@@ -79,6 +89,36 @@ class PygameRenderer:
         if points.shape[0] < 2:
             return
         self.pygame.draw.lines(self.screen, color, False, [self._p(float(x), float(y)) for x, y in points], width)
+
+    def _draw_car_sprite(
+        self,
+        *,
+        x: float,
+        y: float,
+        heading_rad: float,
+        alive: bool,
+        ghost: RenderGhost | None = None,
+    ) -> None:
+        car_pos = self._p(x, y)
+        if ghost is not None:
+            self.pygame.draw.circle(self.screen, ghost.color, car_pos, 9, 2)
+            self.pygame.draw.circle(self.screen, ghost.color, car_pos, 2)
+            nose = self._p(
+                x + np.cos(heading_rad) * 18.0,
+                y - np.sin(heading_rad) * 18.0,
+            )
+            self.pygame.draw.line(self.screen, ghost.color, car_pos, nose, 2)
+            label = self.font.render(ghost.label, True, ghost.color)
+            self.screen.blit(label, (car_pos[0] + 10, car_pos[1] - 9))
+            return
+        car_surface = self.car_surface if alive else self.car_off_surface
+        if car_surface is None:
+            self.pygame.draw.circle(self.screen, (220, 30, 30), car_pos, 6)
+        else:
+            angle = np.rad2deg(heading_rad) - 90.0
+            rotated = self.pygame.transform.rotate(car_surface, angle)
+            rect = rotated.get_rect(center=car_pos)
+            self.screen.blit(rotated, rect)
 
     def poll(self) -> bool:
         for event in self.pygame.event.get():
@@ -116,7 +156,14 @@ class PygameRenderer:
         keys = self.pygame.key.get_pressed()
         return bool(keys[self.pygame.K_r])
 
-    def render(self, sim: MonzaSim, *, human: bool = True, extra_lines: list[str] | None = None) -> np.ndarray:
+    def render(
+        self,
+        sim: MonzaSim,
+        *,
+        human: bool = True,
+        extra_lines: list[str] | None = None,
+        ghosts: list[RenderGhost] | None = None,
+    ) -> np.ndarray:
         self.screen.fill(GRAY)
         if self.render_config.draw_track_image and self.track_surface is not None:
             self.screen.blit(self.track_surface, (0, 0))
@@ -145,15 +192,20 @@ class PygameRenderer:
                 )
             if self.render_config.draw_ray_hits:
                 self.pygame.draw.circle(self.screen, RED, self._p(end_x, end_y), 2)
-        car_pos = self._p(sim.state.x, sim.state.y)
-        car_surface = self.car_surface if sim.state.alive else self.car_off_surface
-        if car_surface is None:
-            self.pygame.draw.circle(self.screen, (220, 30, 30), car_pos, 6)
-        else:
-            angle = np.rad2deg(sim.state.heading_rad) - 90.0
-            rotated = self.pygame.transform.rotate(car_surface, angle)
-            rect = rotated.get_rect(center=car_pos)
-            self.screen.blit(rotated, rect)
+        for ghost in ghosts or []:
+            self._draw_car_sprite(
+                x=ghost.x,
+                y=ghost.y,
+                heading_rad=ghost.heading_rad,
+                alive=True,
+                ghost=ghost,
+            )
+        self._draw_car_sprite(
+            x=sim.state.x,
+            y=sim.state.y,
+            heading_rad=sim.state.heading_rad,
+            alive=sim.state.alive,
+        )
         lines = [
             f"speed {sim.state.speed_mps * 3.6:6.1f} kph",
             f"progress {sim.state.monotonic_progress_m:7.1f} m",
