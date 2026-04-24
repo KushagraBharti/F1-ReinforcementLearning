@@ -65,7 +65,11 @@ def checkpoint_dirs(base_dir: Path | None = None) -> list[Path]:
         if path.name.startswith("checkpoint_"):
             candidates.append(path)
             continue
-        if (path / "rllib_checkpoint.json").exists() or (path / "algorithm_state.pkl").exists():
+        if (
+            (path / "rllib_checkpoint.json").exists()
+            or (path / "algorithm_state.pkl").exists()
+            or (path / "torch_checkpoint.pt").exists()
+        ):
             candidates.append(path)
     return sorted(candidates, key=lambda path: path.stat().st_mtime)
 

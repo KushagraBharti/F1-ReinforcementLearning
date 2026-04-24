@@ -1,251 +1,136 @@
 # Documentation
 
-## Session Date
-- 2026-04-08 to 2026-04-09
+## Session
+- Date: 2026-04-24
+- Objective: simplify and rebuild the project around explicit Monza geometry, shared car physics, manual mode, telemetry, Gymnasium, and PPO.
 
-## Objective
-- Push the repo from a working RL baseline to a GPU-enabled, benchmark-driven optimization workflow.
-- Improve environment realism, observations, reward shaping, training profiles, and evaluation rigor.
-- Keep only benchmark-positive changes and record the result.
+## Decisions
+- Archived the previous complex implementation into `archive/legacy-20260424/`.
+- Kept source assets in `imgs/`.
+- Removed active Ray/RLlib, imitation, campaign, swarm, image observation, and custom torch-native PPO paths.
+- Chose Stable-Baselines3 PPO as the first trainer.
+- Chose discrete actions for v1.
+- Kept future evolutionary search support as an architecture boundary, not an active implementation.
+- CPU is used for simulation/rendering/telemetry/vector env workers.
+- GPU is used for PyTorch policy training/inference when available.
 
-## Milestone A - Baseline and GPU Runtime
-### Findings
-- `nvidia-smi` detected the RTX 4060 Laptop GPU successfully.
-- The project environment initially used `torch 2.10.0+cpu`; CUDA was unavailable in Python.
-- Existing smoke tests and validation passed on CPU before the runtime upgrade.
+## Current Active Stack
+- Python `>=3.11,<3.13`
+- `uv`
+- NumPy
+- OpenCV for one-time track preprocessing
+- Pygame for manual/replay rendering
+- Gymnasium for env API
+- PyTorch + Stable-Baselines3 for PPO
 
-### Changes
-- Added CUDA-aware Torch installation through `pyproject.toml` using the PyTorch CU128 index.
-- Added `gputil` to the training dependency set.
-- Added `f1rl.hardware_check` / `f1-hardware-check`.
-- Updated PPO config builder and train entrypoint to support `--device auto|cpu|gpu` and `--require-gpu`.
-- Added train profiles: `smoke`, `benchmark`, `performance`.
+## Commands to Run
+1. `uv sync --active --all-extras --all-packages`
+2. `uv run python -m f1rl.track_build`
+3. `uv run pytest -q`
+4. `uv run ruff check .`
+5. `uv run pyright src/f1rl`
+6. `uv run python -m f1rl.hardware --json`
+7. `uv run python -m f1rl.manual --headless --max-steps 60`
+8. `uv run python -m f1rl.train --timesteps 128 --n-envs 1 --device auto`
+9. `uv run python -m f1rl.eval --checkpoint latest --steps 40 --device auto`
 
-### Validation
-1. `nvidia-smi` -> pass
-2. `uv run python -c "import torch; print({'torch': torch.__version__, 'cuda_available': torch.cuda.is_available(), 'cuda_version': torch.version.cuda, 'device_name': torch.cuda.get_device_name(0) if torch.cuda.is_available() else None})"` -> pass (`2.10.0+cu128`, CUDA true)
-3. `uv run python -m f1rl.hardware_check --json --skip-train-smoke` -> pass
-4. `uv run python -m f1rl.train --mode smoke --iterations 1 --device gpu --require-gpu` -> pass
+## Validation Log
+- `uv sync --active --all-extras --all-packages` -> pass after removing stale legacy package metadata inside `.venv`; SB3, TensorBoard, and updated dev tooling installed.
+- `uv run python -m f1rl.track_build` -> pass; wrote `assets/tracks/monza/track_spec.npz`.
+- `.venv\Scripts\python.exe -m pytest -q tests/test_track_build.py tests/test_physics.py tests/test_sim.py` -> pass (`6 passed`).
+- `.venv\Scripts\python.exe -m pytest -q tests/test_env.py tests/test_telemetry.py tests/test_scripted_replay.py` -> pass (`4 passed`).
+- `.venv\Scripts\python.exe -m f1rl.manual --headless --max-steps 20` -> pass; wrote manual-headless telemetry.
+- `uv run ruff check .` -> pass.
+- `uv run pyright src/f1rl` -> pass (`0 errors`).
+- `uv run pytest -q` -> pass (`11 passed`).
+- `uv run python -m f1rl.hardware --json --require-gpu` -> pass; detected `NVIDIA GeForce RTX 4060 Laptop GPU`, Torch `2.10.0+cu128`, CUDA `12.8`.
+- `uv run python -m f1rl.train --timesteps 128 --n-envs 1 --max-steps 80 --device auto` -> pass; wrote `artifacts/train-20260424-015021/checkpoints/final_model.zip` on CUDA.
+- `uv run python -m f1rl.eval --checkpoint latest --steps 40 --device auto` -> pass; wrote `artifacts/eval-20260424-015046/steps.jsonl`.
+- `uv run python -m f1rl.replay artifacts/eval-20260424-015046/steps.jsonl --headless` -> pass; loaded 40 steps.
+- `uv run f1-reference-agent --mode ghost` -> pass; wrote a perfect Fast-F1 ghost lap at `79.662s`, `259.9 kph` average, `348.0 kph` max.
+- `uv run f1-replay artifacts/reference-ghost-20260424-025933/steps.jsonl --headless` -> pass; loaded 610 reference ghost steps.
+- `uv run f1-reference-agent --mode control --steps 7200` -> diagnostic run; controller left track early, so this is not yet a tuned autonomous driver.
+- Fixed replay timing so interactive playback respects telemetry `sim_time_s` instead of advancing one row per rendered frame.
 
-### Notes
-- On this OneDrive-backed path, repeated `uv run ...` commands required `UV_LINK_MODE=copy` to avoid Windows hardlink failures.
+## Issues
+- During exact `uv sync`, the old environment had several stale dist-info folders from archived packages with missing `RECORD` files. They were removed only after verifying their paths were inside this repo's `.venv`.
+- Stable-Baselines3 warns that MLP PPO on GPU may have poor utilization. The project still defaults policy training/inference to CUDA when available, matching the rebuild requirement; env stepping remains CPU-bound.
 
-## Milestone B - Benchmark and Champion Workflow
-### Changes
-- Added `f1rl.benchmark` / `f1-benchmark`.
-- Added quick/standard benchmark profiles.
-- Added summary metrics:
-  - completion rate
-  - collision rate
-  - average progress ratio
-  - average reward
-  - average speed
-  - average stall fraction
-  - average steering oscillation
-  - average/best lap time when available
-- Added sampled GIF clip generation for early/mid/late windows.
-- Added champion storage under `artifacts/champions/current.json`.
-- Added promotion logic and `.pin` protection for promoted runs.
+## Fast-F1 Monza Calibration - 2026-04-24
+### Source
+- Inspected `C:\Users\kushagra\OneDrive\Documents\CS Projects\Fast-F1`.
+- Ran `examples\telemetry\plot_monza_car_timings.py` with the local Fast-F1 package through `uv run`.
+- Exported source telemetry from Fast-F1:
+  - `C:\Users\kushagra\OneDrive\Documents\CS Projects\Fast-F1\exports\monza_2024_Q_VER_telemetry.csv`
+- Copied calibration input into this repo:
+  - `assets/reference/monza_2024_Q_VER_telemetry.csv`
+  - `assets/reference/monza_2024_Q_VER_summary.json`
 
-### Validation
-1. `uv run pytest -q tests/test_benchmark.py tests/test_checkpoint_roundtrip.py` -> pass
-2. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick --no-clips` -> pass
-3. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick --promote-if-best --no-clips` -> pass, first champion established
+### Real Targets
+- Event: 2024 Italian Grand Prix qualifying
+- Driver: VER
+- Lap time: `79.662s`
+- Telemetry distance: `5745.669m`
+- Minimum speed: `75.0 kph`
+- Maximum speed: `348.0 kph`
+- Mean speed: `259.9 kph`
+- P90 speed: `336.2 kph`
+- Derived turning targets from `X`, `Y`, and `Distance`:
+  - curvature p90: `0.0128 rad/m`
+  - curvature p95: `0.0204 rad/m`
+  - radius p05: `49.1m`
+  - radius p10: `77.9m`
+  - lateral-g p90: `3.28g`
+  - lateral-g p95: `4.09g`
 
-### Observed Baseline
-- Champion benchmark summary:
-  - checkpoint: `artifacts/train-smoke-20260409-001939/checkpoints`
-  - completion_rate: `0.000`
-  - collision_rate: `1.000`
-
-## Milestone C - Environment, Observation, and Reward Upgrades
-### Changes
-- Replaced the previous minimal heading/speed update with a more realistic kinematic model:
-  - signed speed
-  - steering angle response
-  - wheelbase-based yaw update
-  - coast deceleration and drag
-  - high-speed steering reduction and grip term
-- Expanded observations:
-  - forward-biased sensor rays
-  - signed speed
-  - heading error to next checkpoint
-  - goal distance
-  - centerline offset
-  - previous steering/throttle
-- Added track centerline metadata and average track width.
-- Reworked reward shaping:
-  - progress reward
-  - lap bonus
-  - forward-speed reward gated by heading
-  - alignment reward
-  - centerline penalty
-  - steering change penalty
-  - stall/no-progress penalties
-  - collision penalty
-- Added no-progress termination and reward component logging in `info`.
-- Updated the scripted controller to understand the richer observation layout.
-- Kept old checkpoint compatibility by translating legacy env config keys on load.
-
-### Validation
-1. `uv run pytest -q tests/test_dynamics.py tests/test_reward_logic.py tests/test_controllers.py tests/test_env_api.py tests/test_geometry.py tests/test_spawn_heading.py` -> pass (`13 passed`)
-2. `uv run python -m f1rl.manual --headless --controller scripted --max-steps 120` -> pass (`manual_run_complete ... reward=15.220`)
-3. `uv run python -m f1rl.train --mode smoke --iterations 1 --device gpu --require-gpu` -> pass on upgraded env
-
-## Milestone D - PPO Profiles, Eval, and Rollout Consistency
-### Changes
-- Added structured PPO profiles in `rllib_utils.py`.
-- Added built-in evaluation metrics during training.
-- Updated `eval.py` and `rollout.py` to reuse per-checkpoint training env config from `run_metadata.json`.
-- Added optional env override input to `train.py` via `--env-config-json` and run tagging via `--run-tag`.
-
-### Validation
-1. `uv run pyright src/f1rl` -> pass
-2. `uv run ruff check src/f1rl tests` -> pass
-3. repo test suite -> pass (`19 passed`)
-
-## Milestone E - Recursive Candidate Loop
-### Changes
-- Added `f1rl.optimize` / `f1-optimize`.
-- Implemented a first candidate catalog for environment/reward/dynamics hypotheses.
-- Candidate loop behavior:
-  - ensure champion exists
-  - train candidate
-  - benchmark candidate
-  - promote only if benchmark beats champion
-  - record result in `optimize_manifest.json`
+### Simulator Tuning
+- Added `f1rl.calibration` / `f1-calibration`.
+- Tuned default `CarParams` toward the real Monza telemetry:
+  - terminal speed estimate: `354.6 kph`
+  - 5s full-throttle estimate: `298.1 kph`
+  - 8s full-throttle estimate: `339.8 kph`
+  - braking estimate `330 -> 150 kph`: `66.7m`
+  - braking estimate `330 -> 100 kph`: `78.4m`
+- Tuned turning model:
+  - grip cap: `4.1g`, matching Fast-F1 p95 derived lateral load
+  - max steering: `18 deg`
+  - steering response: `6 rad/s`
+  - simulator cornering limits:
+    - `100 kph`: radius `19.2m`
+    - `150 kph`: radius `43.2m`
+    - `200 kph`: radius `76.7m`
+    - `250 kph`: radius `119.9m`
+    - `300 kph`: radius `172.7m`
+- The raw maximum lateral-g derived from telemetry is noisy, so tuning uses p90/p95 percentiles rather than raw spikes.
 
 ### Validation
-1. `uv run python -m f1rl.optimize --max-candidates 1 --iterations 2 --device gpu --profile quick --no-clips` -> pass
-2. Result: `kept=0 rejected=1`
+- `uv run python -m f1rl.calibration` -> pass.
+- `uv run ruff check src tests` -> pass.
+- `uv run pyright src/f1rl` -> pass.
+- `uv run pytest -q` -> pass (`13 passed`).
 
-### Additional Benchmark Check
-1. `uv run python -m f1rl.train --mode benchmark --iterations 3 --device gpu --require-gpu` -> pass
-2. `uv run python -m f1rl.benchmark --checkpoint artifacts/train-benchmark-20260409-004057/checkpoints --profile quick --promote-if-best --no-clips` -> pass, not promoted
-
-### Interpretation
-- The optimization loop is functioning correctly.
-- First tested candidate hypothesis was rejected automatically.
-- A stronger GPU benchmark-profile challenger also failed to beat the pinned champion.
-- The repo now supports evidence-based keep/reject iteration instead of manual guesswork.
-
-## Milestone F - RLlib Modernization and Artifact-First Inference
-### Changes
-- Migrated PPO config to explicit RLlib new-stack usage:
-  - `api_stack(enable_rl_module_and_learner=True, enable_env_runner_and_connector_v2=True)`
-  - learner-centric batching via `train_batch_size_per_learner`
-  - hybrid vectorized env-runner defaults per profile
-- Added default parallelism profiles:
-  - smoke: `1 env runner x 2 envs`
-  - benchmark: `2 env runners x 4 envs`
-  - performance: `4 env runners x 4 envs`
-- Added train CLI overrides:
-  - `--num-env-runners`
-  - `--num-envs-per-env-runner`
-  - `--vector-mode`
-- Added lightweight inference artifact export under each training run:
-  - saved RLModule weights
-  - env config
-  - model config
-  - observation/action metadata
-- Moved `eval`, `rollout`, and `benchmark` to artifact-backed inference by default.
-- Added `--legacy-algorithm-restore` compatibility mode to `eval` and `rollout`.
-- Tightened reverse-driving behavior:
-  - braking now slows forward motion before entering reverse
-  - added direct negative-speed penalty
-  - added reverse-speed and reverse-progress termination
-- Expanded benchmark metrics:
-  - negative speed fraction
-  - reverse event count
-  - longest reverse streak
-- Added champion floor logic so a negative-speed or zero-progress candidate cannot displace a valid forward-driving champion.
+## Fast-F1 Reference Agent - 2026-04-24
+### Implementation
+- Added `f1rl.reference_agent` / `f1-reference-agent`.
+- `--mode ghost` maps Fast-F1 telemetry distance onto the simulator Monza centerline and copies real speed, throttle, brake, lap time, and derived steering/yaw-rate proxies into the standard telemetry schema.
+- `--mode control` uses the same reference profile as a target for a pure-pursuit and speed-chasing controller through the real simulator physics.
+- Ghost mode is the performance oracle/reference lap. Control mode is intentionally separate because it reveals physics/controller mismatch.
 
 ### Validation
-1. `uv run ruff check src/f1rl` -> pass
-2. `uv run pyright src/f1rl` -> pass
-3. `uv run pytest -q tests/test_benchmark.py tests/test_reward_logic.py tests/test_dynamics.py tests/test_checkpoint_roundtrip.py` -> pass
-4. `uv run python -m f1rl.train --mode smoke --iterations 1 --device cpu` -> pass
-5. `uv run python -m f1rl.train --mode smoke --iterations 1 --device gpu --require-gpu` -> pass
-6. `uv run python -m f1rl.eval --checkpoint latest --headless --steps 120` -> pass, `backend=artifact`
-7. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick --no-clips` -> pass, `backend=artifact`
-8. `uv run python -m f1rl.benchmark --checkpoint latest --profile quick --promote-if-best --no-clips` -> pass, promoted new champion
+- `uv run f1-reference-agent --mode ghost` -> pass.
+  - target lap: `79.662s`
+  - simulated ghost lap: `79.662s`
+  - target/sim average speed: `259.9 kph`
+  - target/sim max speed: `348.0 kph`
+  - artifact: `artifacts/reference-ghost-20260424-025933/`
+- `uv run f1-reference-agent --mode control --steps 7200` -> generated telemetry but did not complete a lap; current result ended `off_track`.
+- `uv run f1-replay artifacts/reference-ghost-20260424-025933/steps.jsonl --headless` -> pass; loaded 610 steps.
+- `uv run ruff check src tests` -> pass.
+- `uv run pyright src/f1rl` -> pass.
+- `uv run pytest -q` -> pass (`17 passed`).
 
-### Post-Migration Behavior
-- New promoted champion:
-  - checkpoint: `artifacts/train-smoke-20260409-033050/checkpoints`
-  - backend: `artifact`
-  - completion_rate: `0.000`
-  - collision_rate: `1.000`
-  - avg_progress_ratio: `0.033`
-  - avg_speed: `1.525`
-  - avg_negative_speed_fraction: `0.000`
-  - avg_longest_reverse_streak: `0.000`
-- Interpretation:
-  - the policy still crashes before finishing a lap
-  - reverse-driving is no longer the dominant failure mode
-  - forward progress and positive average speed are now established
-  - the optimization loop now has a sane champion floor to build from
-
-## Milestone G - Benchmark Startup Tuning on Windows
-### Changes
-- Tuned the benchmark profile to keep the hybrid vec+actors structure while reducing startup cost:
-  - `2 env runners x 3 envs`
-  - `rollout_fragment_length=96`
-  - `train_batch_size_per_learner=576`
-  - `minibatch_size=192`
-  - `evaluation_num_env_runners=0` so training uses local evaluation instead of launching a separate remote evaluation runner group
-- Added disk-backed track geometry caching under `artifacts/track-cache/` so new worker processes reuse preprocessed track data instead of rebuilding contours from the source image every time.
-- Increased env-runner sample timeout to avoid false “no samples returned” failures during short Windows benchmark runs.
-
-### Validation
-1. `uv run ruff check src/f1rl tests` -> pass
-2. `uv run pyright src/f1rl` -> pass
-3. `uv run pytest -q tests/test_dynamics.py tests/test_reward_logic.py tests/test_checkpoint_roundtrip.py tests/test_benchmark.py` -> pass
-4. `uv run python -m f1rl.train --mode benchmark --iterations 1 --device gpu --require-gpu` -> pass
-5. `uv run python -m f1rl.benchmark --checkpoint artifacts/train-benchmark-20260409-040352/checkpoints --profile quick --no-clips` -> pass
-
-### Observed Outcome
-- Track cache file created:
-  - `artifacts/track-cache/track-84745ee0614b1c44.npz`
-- Benchmark-profile setup time improved materially on the validation runs:
-  - earlier observed setup: about `32s`
-  - tuned profile observed setup: about `14s`
-- The benchmark profile is still heavier than smoke on Windows, but startup is now materially lower and the 1-iteration benchmark run completes reliably.
-
-## Artifacts Produced
-- Champion summary:
-  - `artifacts/champions/current.json`
-- Example benchmark summaries:
-  - `artifacts/benchmark-quick-20260409-002605/benchmark_summary.json`
-  - `artifacts/benchmark-quick-20260409-005458/benchmark_summary.json`
-  - `artifacts/benchmark-quick-20260409-005627/benchmark_summary.json`
-- Example sampled clips:
-  - `artifacts/benchmark-quick-20260409-005627/renders/early.gif`
-  - `artifacts/benchmark-quick-20260409-005627/renders/mid.gif`
-  - `artifacts/benchmark-quick-20260409-005627/renders/late.gif`
-- Example candidate manifest:
-  - `artifacts/optimize-20260409-003338/optimize_manifest.json`
-- Example stronger challenger checkpoint:
-  - `artifacts/train-benchmark-20260409-004057/checkpoints`
-
-## Final Validation
-### Commands and Results
-1. `uv run ruff check src/f1rl tests` -> pass
-2. `uv run pyright src/f1rl` -> pass
-3. `uv run pytest -q` -> pass (`17 passed`)
-4. `uv run python -m f1rl.validate` -> pass
-
-### Validate Highlights
-- hardware check passed with CUDA-enabled Torch on the RTX 4060 Laptop GPU
-- manual scripted smoke passed
-- random rollout smoke passed
-- GPU smoke training passed
-- artifact-backed checkpoint eval passed
-- artifact-backed quick benchmark generation passed
-- final output: `[validate] all checks passed`
-
-## Remaining Limits
-1. RLlib still emits internal deprecation warnings from Ray 2.54.x internals during training, and RLModule construction still warns once during artifact-backed inference in this Ray build.
-2. The smoke profile now learns forward-driving behavior, and benchmark-profile startup is materially better after tuning, but Windows Ray startup still carries noticeable overhead compared to smoke.
-3. Benchmark performance is still poor in absolute driving terms; infrastructure is now in place, but more candidate waves are still needed to reach reliable lap completion.
-4. `UV_LINK_MODE=copy` is needed on this OneDrive-backed path for repeatable `uv run` operations.
+## Replay Timing Fix - 2026-04-24
+- Root cause: `f1-replay` rendered one telemetry row per frame. The Fast-F1 ghost lap has 610 telemetry samples, so at 120 FPS it appeared to finish in about 5 seconds even though the file spans `79.662s`.
+- Fix: replay now uses each row's `sim_time_s` timestamp by default.
+- Added `--speed` for intentional playback scaling and `--no-timing` for old fast-scrub behavior.
+- `uv run f1-replay artifacts/reference-ghost-20260424-025933/steps.jsonl --headless` -> pass; reports `duration=79.662s`.

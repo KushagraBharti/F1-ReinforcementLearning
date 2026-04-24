@@ -1,6 +1,7 @@
-"""F1 reinforcement learning environment and tooling."""
+"""Simplified Monza F1 reinforcement learning package."""
 
-from f1rl.env import F1RaceEnv
+from __future__ import annotations
 
-__all__ = ["F1RaceEnv"]
-__version__ = "0.1.0"
+__all__ = ["__version__"]
+
+__version__ = "0.2.0"

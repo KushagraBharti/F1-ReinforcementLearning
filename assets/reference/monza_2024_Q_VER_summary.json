@@ -1,0 +1,18 @@
+{
+  "source": "Fast-F1 2024 Italian Grand Prix Qualifying VER fastest lap",
+  "rows": 610,
+  "lap_time_s": 79.662,
+  "distance_m": 5745.669358933476,
+  "min_speed_kph": 75.0,
+  "max_speed_kph": 348.0,
+  "mean_speed_kph": 259.91445380074884,
+  "p10_speed_kph": 142.0,
+  "p50_speed_kph": 274.22291253333333,
+  "p90_speed_kph": 336.23074976,
+  "curvature_abs_p90_rad_per_m": 0.012834091146067107,
+  "curvature_abs_p95_rad_per_m": 0.020375263694407456,
+  "radius_p05_m": 49.098784984464274,
+  "radius_p10_m": 77.91750620304065,
+  "lateral_g_p90": 3.2784794132687525,
+  "lateral_g_p95": 4.0949627805901985
+}

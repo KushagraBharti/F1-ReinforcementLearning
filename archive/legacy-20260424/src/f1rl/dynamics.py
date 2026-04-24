@@ -46,7 +46,13 @@ def _move_toward_zero(value: float, delta: float) -> float:
     return value
 
 
-def apply_dynamics(state: CarState, action: np.ndarray, config: DynamicsConfig) -> tuple[CarState, np.ndarray]:
+def apply_dynamics(
+    state: CarState,
+    action: np.ndarray,
+    config: DynamicsConfig,
+    *,
+    meters_per_world_unit: float = 1.0,
+) -> tuple[CarState, np.ndarray]:
     steering_input = float(np.clip(action[0], -1.0, 1.0))
     throttle_input = float(np.clip(action[1], -1.0, 1.0))
 
@@ -79,8 +85,10 @@ def apply_dynamics(state: CarState, action: np.ndarray, config: DynamicsConfig) 
     heading_deg = ((heading_deg + 180.0) % 360.0) - 180.0
 
     heading_rad = np.deg2rad(heading_deg)
-    dx = float(np.cos(heading_rad) * speed * config.dt)
-    dy = float(-np.sin(heading_rad) * speed * config.dt)
+    world_units_per_meter = 1.0 / max(meters_per_world_unit, 1e-6)
+    travel_distance_world = speed * config.dt * world_units_per_meter
+    dx = float(np.cos(heading_rad) * travel_distance_world)
+    dy = float(-np.sin(heading_rad) * travel_distance_world)
     x_new = state.x + dx
     y_new = state.y + dy
 

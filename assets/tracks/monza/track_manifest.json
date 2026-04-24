@@ -1,0 +1,26 @@
+{
+  "config": {
+    "name": "monza",
+    "contour_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\Monza_track_extra_wide_contour.png",
+    "track_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\Monza_track_extra_wide_2.png",
+    "background_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\Monza_background.png",
+    "output_dir": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\assets\\tracks\\monza",
+    "threshold": 225,
+    "num_checkpoints": 120,
+    "real_track_length_m": 5793.0,
+    "start_pos": [
+      1501.0,
+      870.0
+    ],
+    "start_heading_deg": 180.0,
+    "coordinate_scale": 0.7692307692307692
+  },
+  "output": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\assets\\tracks\\monza\\track_spec.npz",
+  "source_image_size": [
+    1894,
+    956
+  ],
+  "centerline_length_px": 4538.56689453125,
+  "meters_per_pixel": 1.2763940985380826,
+  "checkpoints": 120
+}

@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "f1-reinforcement-learning"
-version = "0.1.0"
-description = "Top-down 2D F1-style driving simulator with Gymnasium and RLlib workflows."
+version = "0.2.0"
+description = "Simplified top-down 2D Monza driving simulator with Pygame, Gymnasium, and PPO."
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11,<3.13"
 dependencies = [
-  "gymnasium>=1.0.0",
+  "gymnasium>=1.2.0",
   "numpy>=1.26.0",
   "opencv-python-headless>=4.10.0.84",
   "pillow>=10.4.0",
@@ -18,12 +18,9 @@ dependencies = [
 
 [project.optional-dependencies]
 train = [
-  "ray[rllib]>=2.54.0,<2.55.0",
-  "gputil>=1.4.0",
+  "stable-baselines3>=2.7.0",
+  "tensorboard>=2.20.0",
   "torch>=2.10.0,<2.11.0",
-]
-viz = [
-  "imageio>=2.36.0",
 ]
 dev = [
   "pyright>=1.1.405",
@@ -33,15 +30,15 @@ dev = [
 ]
 
 [project.scripts]
+f1-build-track = "f1rl.track_build:main"
 f1-manual = "f1rl.manual:main"
-f1-rollout = "f1rl.rollout:main"
+f1-scripted = "f1rl.scripted:main"
 f1-train = "f1rl.train:main"
 f1-eval = "f1rl.eval:main"
-f1-benchmark = "f1rl.benchmark:main"
-f1-optimize = "f1rl.optimize:main"
-f1-validate = "f1rl.validate:main"
-f1-clean-artifacts = "f1rl.clean_artifacts:main"
-f1-hardware-check = "f1rl.hardware_check:main"
+f1-replay = "f1rl.replay:main"
+f1-hardware-check = "f1rl.hardware:main"
+f1-calibration = "f1rl.calibration:main"
+f1-reference-agent = "f1rl.reference_agent:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/f1rl"]
@@ -53,15 +50,17 @@ timeout = 120
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
+exclude = ["archive", ".venv", ".pytest_cache", ".ruff_cache"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "N"]
 ignore = ["E501"]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 include = ["src/f1rl"]
+exclude = ["archive", ".venv"]
 typeCheckingMode = "basic"
 
 [[tool.uv.index]]

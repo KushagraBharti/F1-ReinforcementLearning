@@ -1,128 +1,56 @@
-"""Manual gameplay entrypoint."""
+"""Manual Pygame driving mode."""
 
 from __future__ import annotations
 
 import argparse
 import sys
 
-import numpy as np
-import pygame
-
-from f1rl.config import EnvConfig, to_dict
-from f1rl.controllers import ScriptedController
-from f1rl.env import F1RaceEnv
+from f1rl.config import ARTIFACTS_DIR, RenderConfig, SimConfig
+from f1rl.render import PygameRenderer
+from f1rl.sim import MonzaSim
+from f1rl.telemetry import TelemetryWriter
 
 
-def keyboard_action(keys: pygame.key.ScancodeWrapper) -> np.ndarray:
-    throttle = 0.0
-    if keys[pygame.K_UP] or keys[pygame.K_w]:
-        throttle = 1.0
-    elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
-        throttle = -1.0
-
-    steering = 0.0
-    if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-        steering = -1.0
-    elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-        steering = 1.0
-
-    return np.array([steering, throttle], dtype=np.float32)
+def run_manual(*, max_steps: int, seed: int, headless: bool) -> int:
+    sim = MonzaSim(SimConfig(max_steps=max_steps))
+    sim.reset(seed=seed)
+    writer = TelemetryWriter(ARTIFACTS_DIR, mode="manual" if not headless else "manual-headless", seed=seed)
+    renderer = None if headless else PygameRenderer(sim.track, sim.config, render_config=RenderConfig())
+    try:
+        for _ in range(max_steps):
+            if renderer is None:
+                action = 1
+            else:
+                if not renderer.poll():
+                    break
+                if renderer.reset_pressed():
+                    sim.reset(seed=seed)
+                action = renderer.keyboard_action()
+            result = sim.step(action)
+            writer.write_step(result.telemetry)
+            if renderer is not None:
+                renderer.render(sim, human=True)
+            if result.terminated or result.truncated:
+                break
+    finally:
+        if renderer is not None:
+            renderer.close()
+    summary = writer.close_episode(termination_reason=sim.termination_reason, completed_lap=sim.completed_lap)
+    print(f"manual_complete run={writer.root} reason={summary.termination_reason}")
+    return 0
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Manual F1 driving mode")
-    parser.add_argument("--max-steps", type=int, default=1200, help="Steps per episode before reset.")
-    parser.add_argument("--episodes", type=int, default=1, help="Number of episodes to run.")
-    parser.add_argument("--fps", type=int, default=60, help="Render frames per second.")
-    parser.add_argument("--seed", type=int, default=7, help="Random seed for env reset.")
-    parser.add_argument("--headless", action="store_true", help="Disable display window.")
-    parser.add_argument(
-        "--controller",
-        choices=["human", "scripted"],
-        default=None,
-        help="Input controller. Defaults to human with display, scripted in headless mode.",
-    )
-    parser.add_argument("--draw-goals", action="store_true", help="Render goal checkpoint lines.")
-    parser.add_argument("--draw-track-lines", action="store_true", help="Render contour line overlays.")
-    parser.add_argument("--export-frames", action="store_true", help="Save rendered frames under artifacts.")
+    parser = argparse.ArgumentParser(description="Manual Monza driving mode.")
+    parser.add_argument("--max-steps", type=int, default=3600)
+    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--headless", action="store_true")
     return parser.parse_args(argv)
-
-
-def build_env_config(args: argparse.Namespace) -> dict:
-    config = EnvConfig()
-    config.max_steps = args.max_steps
-    config.render_mode = "human" if not args.headless else "rgb_array" if args.export_frames else None
-    config.headless = args.headless
-    config.render.enabled = (not args.headless) or args.export_frames
-    config.render.fps = args.fps
-    config.render.draw_goals = args.draw_goals
-    config.render.draw_track_lines = args.draw_track_lines
-    config.render.export_frames = args.export_frames
-    config.render.frame_prefix = "manual"
-    return to_dict(config)
-
-
-def run_manual(args: argparse.Namespace) -> int:
-    env = F1RaceEnv(build_env_config(args))
-    controller_mode = args.controller or ("scripted" if args.headless else "human")
-    if controller_mode == "human" and args.headless:
-        controller_mode = "scripted"
-    scripted_controller = (
-        ScriptedController(sensor_count=env.sensor_count, goals=env.track.goals.copy())
-        if controller_mode == "scripted"
-        else None
-    )
-    try:
-        running = True
-        total_steps = 0
-        for episode in range(args.episodes):
-            obs, info = env.reset(seed=args.seed + episode)
-            _ = info
-            if scripted_controller is not None:
-                scripted_controller.reset()
-            if env.config.render.enabled:
-                env.render()
-
-            while running:
-                if env.config.render.enabled and env.renderer is not None:
-                    events = env.renderer.poll_events()
-                else:
-                    events = []
-
-                for event in events:
-                    if event.type == pygame.QUIT:
-                        running = False
-                    elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                        running = False
-
-                if not running:
-                    break
-
-                if scripted_controller is not None:
-                    action = scripted_controller.action(obs, info)
-                else:
-                    action = keyboard_action(pygame.key.get_pressed())
-
-                obs, _, terminated, truncated, info = env.step(action)
-                total_steps += 1
-                if env.config.render.enabled:
-                    env.render()
-
-                if terminated or truncated:
-                    break
-
-        print(
-            f"manual_run_complete steps={total_steps} laps={env.car.lap_count} "
-            f"reward={env.car.total_reward:.3f}"
-        )
-        return 0
-    finally:
-        env.close()
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    return run_manual(args)
+    return run_manual(max_steps=args.max_steps, seed=args.seed, headless=args.headless)
 
 
 if __name__ == "__main__":

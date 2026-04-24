@@ -15,11 +15,11 @@ class ScriptedController:
     steering_gain: float = 2.2
     steering_d_gain: float = 0.9
     cruise_throttle: float = 0.18
-    caution_throttle: float = 0.08
+    caution_throttle: float = 0.09
     brake_throttle: float = 0.0
     min_throttle: float = 0.0
-    caution_front: float = 0.38
-    brake_front: float = 0.22
+    caution_front: float = 0.34
+    brake_front: float = 0.18
     high_speed_ratio: float = 0.92
     stuck_speed_ratio: float = 0.04
     stuck_front_ratio: float = 0.18
@@ -27,9 +27,9 @@ class ScriptedController:
     recovery_steer: float = 0.85
     recovery_throttle: float = -0.45
     goals: np.ndarray | None = None
-    lookahead_goals: int = 3
-    heading_gain: float = 1.6
-    heading_d_gain: float = 0.45
+    lookahead_goals: int = 4
+    heading_gain: float = 1.35
+    heading_d_gain: float = 0.2
     _prev_error: float = 0.0
     _prev_heading_error: float = 0.0
     _stuck_counter: int = 0

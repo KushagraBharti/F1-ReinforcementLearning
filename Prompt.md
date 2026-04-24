@@ -1,41 +1,18 @@
 # Prompt
 
-## Mission
-Push this repository beyond a working baseline into a measured, GPU-enabled RL optimization workflow for a top-down F1-style driving simulator.
+Rebuild this repository as a simplified top-down 2D Monza driving simulator and reinforcement learning project.
 
-## Primary Objective
-Optimize for:
-1. clean lap completion without barrier hits
-2. continuous lap-time improvement
-3. maximum speed only after stable control is established
+The active implementation must be small and explicit:
 
-## Scope
-- F1 RL repository only
-- manual driving, environment realism, reward shaping, observation design, PPO training, evaluation, benchmarking, artifacts, and documentation
-- GPU enablement on the local RTX 4060 laptop
+1. Track geometry
+2. Car physics
+3. Shared simulator
+4. Manual mode
+5. Telemetry
+6. Gymnasium environment
+7. PPO training/eval
+8. Replay
 
-## Constraints
-- Python 3.12.x on Windows
-- Ray/RLlib + PyTorch
-- Gymnasium-compatible environment API
-- Use `uv` for dependency management
-- Keep training deterministic where practical with explicit seeds and reproducible commands
-- Only keep candidate changes that beat the current benchmark champion
+The old codebase is archived under `archive/legacy-20260424/` and is reference-only. Active v1 excludes Ray, RLlib, imitation learning, campaign orchestration, swarm tooling, image observations, custom torch-native multi-car simulation, distributed training, and evolutionary search.
 
-## Required Outcomes
-- CUDA-enabled Torch is installed and used by the default local training profile
-- RLlib training supports GPU-aware configuration with CPU env runners by default
-- Eval, rollout, and benchmark use lightweight inference artifacts by default instead of full algorithm restore
-- Formal benchmark/evaluation workflow exists with machine-readable metrics
-- Candidate-vs-champion comparison logic exists and follows the project acceptance metric ordering
-- Environment physics, observations, rewards, and terminations are more realistic and more informative for RL
-- Structured train profiles exist for smoke, benchmark, and performance runs
-- Short visual review clips are emitted for benchmark candidates
-- README and repo memory docs describe the optimization loop, commands, and artifact locations
-
-## Success Criteria
-- Full validation suite passes
-- GPU validation command passes
-- Smoke training passes on the upgraded stack
-- Benchmark workflow produces metrics and clips
-- At least one benchmarked candidate is promoted over the baseline using explicit comparison rules
+Future evolutionary search should reuse the same simulator, observation/action contract, telemetry schema, checkpoint/eval boundary, and replay artifacts.

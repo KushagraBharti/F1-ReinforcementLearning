@@ -1,65 +1,65 @@
-"""Hardware detection helpers for local runtime configuration."""
+"""Local CPU/GPU runtime checks."""
 
 from __future__ import annotations
 
-import subprocess
-from dataclasses import dataclass
+import argparse
+import json
+import sys
 
 
-@dataclass(slots=True)
-class TorchRuntimeInfo:
-    torch_version: str
-    cuda_available: bool
-    cuda_version: str | None
-    cudnn_version: int | None
-    device_count: int
-    device_name: str | None
+def torch_device(requested: str = "auto") -> str:
+    try:
+        import torch
+    except ImportError:
+        if requested == "cuda":
+            raise RuntimeError("CUDA requested but torch is not installed.")
+        return "cpu"
+    if requested == "cpu":
+        return "cpu"
+    if requested == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA requested but torch.cuda.is_available() is false.")
+        return "cuda"
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def get_torch_runtime_info() -> TorchRuntimeInfo:
-    import torch
-
-    cuda_available = bool(torch.cuda.is_available())
-    device_count = int(torch.cuda.device_count()) if cuda_available else 0
-    device_name = torch.cuda.get_device_name(0) if device_count > 0 else None
-    return TorchRuntimeInfo(
-        torch_version=str(torch.__version__),
-        cuda_available=cuda_available,
-        cuda_version=torch.version.cuda,
-        cudnn_version=torch.backends.cudnn.version(),
-        device_count=device_count,
-        device_name=device_name,
-    )
-
-
-def detect_use_gpu(device: str = "auto") -> bool:
-    if device not in {"auto", "cpu", "gpu"}:
-        raise ValueError(f"Unsupported device mode: {device}")
-    runtime = get_torch_runtime_info()
-    if device == "cpu":
-        return False
-    if device == "gpu":
-        return runtime.cuda_available
-    return runtime.cuda_available
+def runtime_info() -> dict:
+    info = {"torch_installed": False, "cuda_available": False, "device_name": None, "torch_version": None, "cuda": None}
+    try:
+        import torch
+    except ImportError:
+        return info
+    info["torch_installed"] = True
+    info["torch_version"] = torch.__version__
+    info["cuda_available"] = bool(torch.cuda.is_available())
+    info["cuda"] = torch.version.cuda
+    if torch.cuda.is_available():
+        info["device_name"] = torch.cuda.get_device_name(0)
+    return info
 
 
-def require_gpu_available(device: str = "auto") -> None:
-    if device == "cpu":
-        return
-    runtime = get_torch_runtime_info()
-    if not runtime.cuda_available:
-        raise RuntimeError(
-            "GPU was requested but CUDA-enabled Torch is not available in the project environment."
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Check PyTorch/CUDA runtime visibility.")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--require-gpu", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    info = runtime_info()
+    if args.require_gpu and not info["cuda_available"]:
+        raise RuntimeError(f"GPU required but unavailable: {info}")
+    if args.json:
+        print(json.dumps(info, indent=2))
+    else:
+        print(
+            "hardware "
+            f"torch={info['torch_version']} cuda_available={info['cuda_available']} "
+            f"cuda={info['cuda']} device={info['device_name']}"
         )
+    return 0
 
 
-def query_nvidia_smi() -> str:
-    completed = subprocess.run(
-        ["nvidia-smi"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(completed.stderr.strip() or "nvidia-smi failed")
-    return completed.stdout.strip()
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

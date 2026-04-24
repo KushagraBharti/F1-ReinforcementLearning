@@ -14,3 +14,7 @@ def test_manual_headless_smoke() -> None:
 
 def test_rollout_random_headless_smoke() -> None:
     run_module("f1rl.rollout", "--policy", "random", "--headless", "--steps", "100")
+
+
+def test_swarm_random_headless_smoke() -> None:
+    run_module("f1rl.swarm", "--policy", "random", "--headless", "--cars", "8", "--steps", "40")

@@ -23,6 +23,8 @@ class TrackDefinition:
     collision_segments: np.ndarray
     centerline: np.ndarray
     average_track_width: float
+    centerline_length_world_units: float
+    meters_per_world_unit: float
 
     @property
     def num_goals(self) -> int:
@@ -44,10 +46,19 @@ def _contour_to_points(contour: np.ndarray) -> np.ndarray:
     return contour[:, 0, :].astype(np.float32)
 
 
-def _track_cache_path(contour_path: str, threshold: int, num_goals: int, render_scale: float) -> Path:
+def _track_cache_path(
+    contour_path: str,
+    threshold: int,
+    num_goals: int,
+    render_scale: float,
+    track_length_meters: float | None,
+) -> Path:
     source = Path(contour_path)
     fingerprint = hashlib.sha256(
-        f"{source.resolve()}|{source.stat().st_mtime_ns}|{threshold}|{num_goals}|{render_scale}|{WINDOW_SIZE}".encode()
+        (
+            f"{source.resolve()}|{source.stat().st_mtime_ns}|{threshold}|{num_goals}|"
+            f"{render_scale}|{track_length_meters}|{WINDOW_SIZE}"
+        ).encode()
     ).hexdigest()[:16]
     TRACK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return TRACK_CACHE_DIR / f"track-{fingerprint}.npz"
@@ -57,6 +68,8 @@ def _load_cached_track(cache_path: Path) -> TrackDefinition | None:
     if not cache_path.exists():
         return None
     with np.load(cache_path) as data:
+        if "centerline_length_world_units" not in data or "meters_per_world_unit" not in data:
+            return None
         return TrackDefinition(
             outer=data["outer"],
             inner=data["inner"],
@@ -64,6 +77,8 @@ def _load_cached_track(cache_path: Path) -> TrackDefinition | None:
             collision_segments=data["collision_segments"],
             centerline=data["centerline"],
             average_track_width=float(data["average_track_width"]),
+            centerline_length_world_units=float(data["centerline_length_world_units"]),
+            meters_per_world_unit=float(data["meters_per_world_unit"]),
         )
 
 
@@ -76,6 +91,8 @@ def _write_cached_track(cache_path: Path, definition: TrackDefinition) -> None:
         collision_segments=definition.collision_segments,
         centerline=definition.centerline,
         average_track_width=np.asarray(definition.average_track_width, dtype=np.float32),
+        centerline_length_world_units=np.asarray(definition.centerline_length_world_units, dtype=np.float32),
+        meters_per_world_unit=np.asarray(definition.meters_per_world_unit, dtype=np.float32),
     )
 
 
@@ -85,12 +102,14 @@ def load_track_definition(
     threshold: int,
     num_goals: int,
     render_scale: float,
+    track_length_meters: float | None,
 ) -> TrackDefinition:
     cache_path = _track_cache_path(
         contour_path=contour_path,
         threshold=threshold,
         num_goals=num_goals,
         render_scale=render_scale,
+        track_length_meters=track_length_meters,
     )
     cached = _load_cached_track(cache_path)
     if cached is not None:
@@ -126,6 +145,10 @@ def load_track_definition(
     )
     centerline = _build_centerline(goals)
     average_track_width = float(np.mean(np.linalg.norm(goals[:, 0:2] - goals[:, 2:4], axis=1)))
+    centerline_length_world_units = _polyline_length(centerline)
+    meters_per_world_unit = 1.0
+    if track_length_meters is not None and centerline_length_world_units > 1e-6:
+        meters_per_world_unit = float(track_length_meters / centerline_length_world_units)
 
     definition = TrackDefinition(
         outer=outer,
@@ -134,6 +157,8 @@ def load_track_definition(
         collision_segments=collision_segments,
         centerline=centerline,
         average_track_width=average_track_width,
+        centerline_length_world_units=centerline_length_world_units,
+        meters_per_world_unit=meters_per_world_unit,
     )
     _write_cached_track(cache_path, definition)
     return definition
@@ -174,10 +199,18 @@ def _build_centerline(goals: np.ndarray) -> np.ndarray:
     return closed_loop(midpoints)
 
 
+def _polyline_length(polyline: np.ndarray) -> float:
+    if polyline.shape[0] < 2:
+        return 0.0
+    deltas = np.diff(polyline, axis=0)
+    return float(np.sum(np.linalg.norm(deltas, axis=1)))
+
+
 def build_track(config: TrackConfig) -> TrackDefinition:
     return load_track_definition(
         contour_path=str(config.contour_image),
         threshold=config.threshold,
         num_goals=config.num_goals,
         render_scale=config.render_scale,
+        track_length_meters=config.track_length_meters,
     )

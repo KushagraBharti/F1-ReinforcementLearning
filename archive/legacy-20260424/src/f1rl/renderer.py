@@ -173,7 +173,7 @@ class PygameRenderer:
         if self.font is None:
             return
         lines = [
-            f"speed: {car_state.speed:.2f}",
+            f"speed: {car_state.speed * 3.6:.1f} kph",
             f"lap: {car_state.lap_count}",
             f"next_goal: {next_goal_idx}",
             f"reward: {total_reward:.2f}",
