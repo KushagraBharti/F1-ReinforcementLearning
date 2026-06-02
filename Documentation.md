@@ -13,6 +13,7 @@
 - Kept future evolutionary search support as an architecture boundary, not an active implementation.
 - CPU is used for simulation/rendering/telemetry/vector env workers.
 - GPU is used for PyTorch policy training/inference when available.
+- Treat Fast-F1 calibration/reference tooling, richer physics, richer telemetry, ghost overlays, replay interpolation, and explicit hardware policy reporting as intentional implemented extensions. These improve calibration, debugging, and resume-quality evidence without reintroducing the old orchestration complexity.
 
 ## Current Active Stack
 - Python `>=3.11,<3.13`
@@ -52,11 +53,34 @@
 - `uv run f1-reference-agent --mode control --steps 7200` -> diagnostic run; controller left track early, so this is not yet a tuned autonomous driver.
 - Fixed replay timing so interactive playback respects telemetry `sim_time_s` instead of advancing one row per rendered frame.
 
+## RL Completion Plan - 2026-06-02
+- Archived the previous rebuild-focused `Plan.md` snapshot to `archive/plans/Plan-pre-rl-training-20260602.md`.
+- Replaced `Plan.md` with the forward RL completion plan.
+- New implementation scope is phases 1-6 only for the next pass: minimal strict lap validity, minimal Monza collision robustness, lightweight debug HUD, benchmark harness, real PPO training infrastructure, and curriculum/segment spawning.
+- New experiment scope stops after the first serious `1M` curriculum PPO run and follow-up benchmark. Overnight `5M+` training, plots, videos, imitation learning, continuous actions, and evolutionary search remain later phases.
+- Training telemetry policy: full per-step telemetry for eval/replay/benchmark/selected training episodes; lightweight aggregate logging by default during PPO training so throughput is not crushed by JSONL writes.
+- Expanded `Plan.md` into the Goal contract: completion criteria, GPU/CPU compute rules, command QC, benchmark/training artifact requirements, measurable-learning proof-of-concept bar, learning-failure triage, and blocked-report requirements now live in the plan so the Codex `/goal` prompt can stay concise.
+
 ## Issues
 - During exact `uv sync`, the old environment had several stale dist-info folders from archived packages with missing `RECORD` files. They were removed only after verifying their paths were inside this repo's `.venv`.
 - Stable-Baselines3 warns that MLP PPO on GPU may have poor utilization. The project still defaults policy training/inference to CUDA when available, matching the rebuild requirement; env stepping remains CPU-bound.
 
+## Implemented Extensions vs Original Minimal Plan
+- The active package intentionally includes `calibration` and `reference_agent` in addition to the original minimal modules.
+- The CLI intentionally includes `f1-calibration` and `f1-reference-agent`.
+- Physics is intentionally richer than the first plan: dynamic grip, aero grip, traction-circle style acceleration/braking/cornering limits, and speed-sensitive steering.
+- `CarParams`, `StepTelemetry`, and `EpisodeSummary` intentionally contain more fields than the original interface sketch so runs can be analyzed without changing schemas later.
+- The scripted baseline intentionally uses continuous controls through `step_controls`; it can still map to discrete actions when needed, but the clean-lap diagnostic benefits from finer control.
+- Manual mode intentionally includes reference ghost overlay and flying-start comparison.
+- Replay intentionally includes timestamp interpolation and playback speed controls.
+- Fast-F1 calibration/reference ghost integration is now part of the active project because it gives a real-world Monza baseline.
+- Python `>=3.11,<3.13` remains the project target; local Python 3.12 runtime/cache artifacts are acceptable.
+- PPO uses CUDA when requested/available, while simulator stepping, rendering, geometry, and telemetry stay on CPU. Low MLP PPO GPU utilization is acceptable under this compute policy.
+- Future evolutionary search support remains architectural only through the shared simulator/policy/telemetry/replay boundaries.
+
 ## Fast-F1 Monza Calibration - 2026-04-24
+Note: the later `Physics, Telemetry, and Compute Policy - 2026-04-24` section supersedes the older simulator tuning numbers in this section. The current terminal speed estimate is `351.1 kph`.
+
 ### Source
 - Inspected `C:\Users\kushagra\OneDrive\Documents\CS Projects\Fast-F1`.
 - Ran `examples\telemetry\plot_monza_car_timings.py` with the local Fast-F1 package through `uv run`.

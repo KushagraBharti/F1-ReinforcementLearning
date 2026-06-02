@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Mission
-This repository is a top-down 2D Pygame + RL project for an F1-style driving environment. The codebase is deprecated and must be fully modernized, refactored, tested, and made reproducible.
+This repository is a simplified top-down 2D Monza driving simulator and RL project. The old complex implementation is archived under `archive/legacy-20260424/`; active work should preserve the small explicit path: track geometry -> car physics -> shared simulator -> manual/scripted -> telemetry -> Gymnasium -> PPO -> eval/replay.
 
 ## Non-negotiable working style
 - Operate autonomously in milestone loops:
@@ -20,7 +20,7 @@ This repository is a top-down 2D Pygame + RL project for an F1-style driving env
 ## Required deliverables
 - Modern Python project structure with `pyproject.toml` (uv-managed) and `uv.lock`
 - Working manual gameplay mode (keyboard control)
-- Working RL training entrypoint (modern APIs; no deprecated RLlib/Ray usage)
+- Working RL training entrypoint using Stable-Baselines3 PPO; no active Ray/RLlib path
 - Working agent inference/render entrypoint
 - Smoke tests and unit tests
 - Clear README with setup, run, train, and troubleshooting
@@ -31,10 +31,10 @@ This repository is a top-down 2D Pygame + RL project for an F1-style driving env
 - Use Python 3.11+
 - Use `uv` for dependency management (`uv sync --active --all-extras --all-packages`)
 - Prefer Gymnasium-compatible environment APIs
-- Prefer modern RLlib API stack if using Ray RLlib
-- Use PyTorch (not TensorFlow) for RLlib
+- Use PyTorch through Stable-Baselines3 for PPO
+- Keep simulator/renderer/telemetry CPU-bound; use CUDA for PyTorch policy training/inference when available
 - Keep rendering and training logic decoupled
-- Add structured logging
+- Persist per-step JSONL telemetry and episode summaries
 
 ## Validation requirements
 - Environment API checks (Gymnasium env checker)
@@ -54,9 +54,9 @@ Maintain these files during the run:
 
 ## Internet use
 Use live web search to verify current APIs/versions for:
-- Ray RLlib
 - Gymnasium
 - Pygame
 - uv
+- Stable-Baselines3
 - Any replaced/deprecated packages
 Document major API migrations in `Documentation.md`.

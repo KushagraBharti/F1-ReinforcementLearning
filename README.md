@@ -8,6 +8,16 @@ The old complex implementation has been archived in `archive/legacy-20260424/`. 
 track geometry -> car physics -> simulator -> manual/scripted -> telemetry -> Gymnasium -> PPO -> eval/replay
 ```
 
+The current implementation also includes intentional extensions that make the simplified simulator easier to calibrate, debug, and present:
+
+- Fast-F1 Monza calibration and reference ghost tooling
+- richer physics with dynamic grip, aero grip, traction limits, and speed-sensitive steering
+- richer telemetry and episode summaries for g-forces, curvature, control deltas, sectors, braking zones, corner summaries, and ghost gaps
+- reference ghost overlay/flying-start manual comparison
+- timestamp-interpolated replay with playback speed controls
+
+These extensions are part of the active design. They should not be treated as unwanted drift from the simplified rebuild.
+
 ## Requirements
 
 - Python `>=3.11,<3.13`
@@ -102,6 +112,7 @@ The ghost mode writes normal telemetry and can be replayed with `f1-replay`. It 
 
 ```powershell
 uv run python -m f1rl.train --timesteps 512 --n-envs 2 --device auto
+uv run python -m f1rl.train --timesteps 512 --n-envs 2 --device auto --require-gpu
 ```
 
 Training uses Stable-Baselines3 PPO. The simulator runs on CPU; the policy trains on CUDA when PyTorch can see the GPU.
@@ -130,6 +141,7 @@ uv run pyright src/f1rl
 uv run pytest -q
 uv run python -m f1rl.hardware --json
 uv run python -m f1rl.calibration
+uv run f1-scripted --steps 18000 --no-telemetry
 ```
 
 ## Active CLI

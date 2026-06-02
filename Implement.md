@@ -11,6 +11,20 @@ uv sync --active --all-extras --all-packages
 
 The project targets Python `>=3.11,<3.13`. The local `.venv` may use Python 3.12 while the code stays compatible with 3.11.
 
+## Implemented Extensions
+
+These features are intentional additions to the simplified rebuild, not unwanted drift:
+
+- `f1-calibration` and `f1-reference-agent`
+- Fast-F1 Monza reference ghost and physics-control diagnostic mode
+- dynamic/aero grip, traction limits, and speed-sensitive steering
+- expanded step telemetry and episode summaries
+- manual reference ghost overlay and flying-start comparison
+- timestamp-interpolated replay with playback speed controls
+- explicit CPU/GPU compute policy reporting
+
+Future evolutionary search remains deferred. It should reuse the same simulator, observation/action space, telemetry, replay, and policy boundaries instead of creating a separate runtime.
+
 ## Build Track
 
 ```powershell
@@ -109,4 +123,5 @@ uv run pyright src/f1rl
 uv run pytest -q
 uv run python -m f1rl.hardware --json
 uv run python -m f1rl.calibration
+uv run f1-scripted --steps 18000 --no-telemetry
 ```
