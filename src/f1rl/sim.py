@@ -333,6 +333,13 @@ class MonzaSim:
 
         components = {key: 0.0 for key in REWARD_COMPONENT_KEYS}
         components["progress"] = progress_delta_m * self.config.reward.progress_scale
+        lateral_excess_m = max(0.0, abs(lateral_error_m) - self.config.reward.lateral_deadzone_m)
+        components["lateral"] = -self.config.reward.lateral_penalty_scale * lateral_excess_m
+        ray_distances_m = self.ray_distances_m()
+        min_ray_m = float(np.min(ray_distances_m)) if len(ray_distances_m) else self.config.reward.track_limit_safe_ray_m
+        track_limit_excess_m = max(0.0, self.config.reward.track_limit_safe_ray_m - min_ray_m)
+        speed_factor = max(1.0, (self.state.speed_mps * 3.6) / 100.0)
+        components["track_limit"] = -self.config.reward.track_limit_penalty_scale * track_limit_excess_m * speed_factor
 
         if self.segment_target_progress_m is not None and self.state.monotonic_progress_m >= self.segment_target_progress_m:
             self.segment_complete = True
@@ -422,7 +429,7 @@ class MonzaSim:
             segment_complete=bool(self.segment_complete),
             curriculum_stage=self.curriculum_stage,
             segment_target_progress_m=self.segment_target_progress_m,
-            ray_distances_m=[float(v) for v in self.ray_distances_m()] if collect_rays else [],
+            ray_distances_m=[float(v) for v in ray_distances_m] if collect_rays else [],
             collided=bool(collided),
             off_track=bool(off_track),
             terminated=bool(self.terminated),

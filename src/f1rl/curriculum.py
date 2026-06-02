@@ -35,6 +35,7 @@ class CurriculumConfig:
     mode: str = "none"
     stages: tuple[CurriculumStage, ...] = DEFAULT_SEGMENT_STAGES
     promotion_resets: int = 300
+    normal_start_probability: float = 0.0
 
     @property
     def enabled(self) -> bool:
@@ -51,6 +52,9 @@ class CurriculumSampler:
         if not self.config.enabled:
             return {}
         rng = np.random.default_rng(seed)
+        if rng.random() < max(0.0, min(float(self.config.normal_start_probability), 1.0)):
+            self.reset_count += 1
+            return {"curriculum_stage": "normal-start-mix"}
         stage_index = min(self.reset_count // max(self.config.promotion_resets, 1), len(self.config.stages) - 1)
         stage = self.config.stages[stage_index]
         self.reset_count += 1
@@ -70,5 +74,6 @@ class CurriculumSampler:
         return {
             "mode": self.config.mode,
             "promotion_resets": self.config.promotion_resets,
+            "normal_start_probability": self.config.normal_start_probability,
             "stages": [asdict(stage) for stage in self.config.stages],
         }

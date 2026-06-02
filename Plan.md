@@ -42,12 +42,23 @@ Current honest gap:
 
 ## Active Goal
 
-Train and evaluate PPO until the project has a stronger RL result:
+Train and evaluate PPO until the project has the target RL result.
 
-1. Preferably a PPO clean/valid lap from strict normal start.
-2. At minimum, a much stronger proof of learning than the current `797.6m` best checkpoint, backed by benchmark summaries, telemetry, TensorBoard curves, and replayable artifacts.
+Only success criterion:
 
-Do not overclaim. If PPO still fails after serious training, document the failure mode precisely and preserve the evidence.
+- PPO completes a valid normal-start Monza lap near the Fast-F1 ghost target, with lap time `<=80.0s`.
+
+Required evidence:
+
+- benchmark summaries,
+- selected telemetry JSONL,
+- replay command/path,
+- TensorBoard artifacts,
+- updated documentation.
+
+Do not overclaim. Partial progress is useful evidence for the next experiment, but it is not goal completion.
+
+Detailed operating plan: use `LearningPlan.md` for the next goal-mode run. It defines the TensorBoard-first workflow, scratch PPO baseline, full-lap PPO, segment curriculum PPO, checkpoint benchmarking, telemetry review, focused mini experiments, promotion rules, 8+ hour runtime expectation, and strict stop conditions.
 
 ## Non-Goals
 
@@ -267,22 +278,30 @@ After serious PPO training:
 
 The next goal is complete when:
 
-- serious PPO training has run for at least `1M` timesteps, or a shorter run is explicitly documented due to a blocker
-- all required artifacts are written
-- PPO results are benchmarked against random/scripted/reference/initial PPO baselines
-- TensorBoard curves are available
-- selected telemetry can be replayed
-- README and Documentation are updated
-- validations pass
+- PPO completes a valid normal-start Monza lap near the Fast-F1 ghost target, with lap time `<=80.0s`.
 
-Strong success:
+Required evidence before reporting completion:
 
-- PPO completes at least one strict valid lap.
+- benchmark summary,
+- selected telemetry JSONL,
+- replay command/path,
+- TensorBoard curves,
+- updated documentation,
+- passing validations after any code changes made during the run.
 
-Acceptable proof of progress:
+The next goal is not complete when:
 
-- PPO does not complete a lap but significantly improves beyond `797.6m`, passes more checkpoints, survives longer, improves reward, or shows better segment-to-full-lap transfer with clear artifacts.
+- serious PPO training merely runs for `1M+` timesteps,
+- PPO improves beyond `797.6m`,
+- PPO passes more checkpoints,
+- PPO survives longer,
+- PPO improves reward,
+- PPO completes a valid lap slower than `80.0s`,
+- PPO shows better segment-to-full-lap transfer,
+- artifacts and TensorBoard curves exist but the strict target is missed.
+
+Those are progress signals for the next experiment, not completion.
 
 Blocked:
 
-- mark blocked only if validations pass, training infrastructure works, multiple serious PPO/curriculum attempts fail to improve, and the next step requires a deeper algorithm/design decision.
+- mark blocked only if the run cannot continue because of a hard external blocker such as CUDA failure after repair attempts, broken training infrastructure, artifacts impossible to persist, or the user explicitly stops the run.

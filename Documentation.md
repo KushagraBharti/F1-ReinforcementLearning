@@ -54,7 +54,79 @@ Current gap:
 Current active plan:
 
 - `Plan.md` now describes the next serious PPO training goal.
+- `LearningPlan.md` defines the strict goal-mode learning loop: TensorBoard-first, scratch PPO baseline, full-lap PPO, curriculum PPO, telemetry diagnosis, focused experiments, and a single success criterion of a valid normal-start Monza lap in `<=80.0s`.
 - The completed proof-of-concept goal plan is archived at `archive/plans/Plan-rl-poc-goal-completed-20260602.md`.
+
+## Learning Goal Run - 2026-06-02
+
+Strict success criterion:
+
+- PPO completes a valid normal-start Monza lap near the Fast-F1 ghost target with lap time `<=80.0s`.
+
+Runtime expectation:
+
+- Run iteratively for hours and hours; `8+` hours is a persistence reference, not a success criterion.
+- Partial progress is not completion.
+
+Setup and validation:
+
+- Started TensorBoard:
+  - `uv run --no-sync tensorboard --logdir artifacts --host 127.0.0.1 --port 6006`
+  - Browser verified at `http://127.0.0.1:6006/?darkMode=true#timeseries`
+- CUDA hardware check:
+  - `uv run --no-sync python -m f1rl.hardware --json`
+  - Result: CUDA available, `NVIDIA GeForce RTX 4060 Laptop GPU`, Torch `2.10.0+cu128`, CUDA `12.8`
+- Validation:
+  - `uv run --no-sync ruff check .` -> pass
+  - `uv run --no-sync pyright src/f1rl` -> pass, `0 errors`
+  - `uv run --no-sync pytest -q` -> pass, `29 passed`
+
+Scratch control run:
+
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 2048 --seed 0 --n-envs 2 --max-steps 600 --device auto --require-gpu --vec-env subproc --curriculum none --checkpoint-every 1024 --eval-every 1024 --eval-episodes 1 --telemetry selected --run-name scratch-control-smoke-goal`
+- Artifact:
+  - `artifacts/scratch-control-smoke-goal-20260602-165322`
+- Result:
+  - `device=cuda`
+  - `vec_env=subproc`
+  - `2048` timesteps
+  - `78.6` training FPS
+  - scratch initialization confirmed in `run_metadata.json`
+
+Scratch benchmark results:
+
+- Initial checkpoint benchmark:
+  - `artifacts/benchmark-20260602-165413`
+  - `20/20` no-progress terminations
+  - average progress `1.71m`
+  - best progress `1.71m`
+  - `0` checkpoints
+  - valid lap rate `0.0`
+- Tiny final checkpoint benchmark:
+  - `artifacts/benchmark-20260602-165806`
+  - `20/20` no-progress terminations
+  - average progress `0.0m`
+  - best progress `0.0m`
+  - `0` checkpoints
+  - valid lap rate `0.0`
+
+Interpretation:
+
+- The scratch baseline has no usable driving behavior, which is the intended zero-knowledge control.
+- Any later progress beyond no-progress / zero checkpoint behavior is attributable to training rather than ghost/scripted/imitation initialization.
+
+Active full-lap PPO run:
+
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 1000000 --seed 10 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum none --checkpoint-every 50000 --eval-every 50000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-full-scratch-goal-1m`
+- Artifact:
+  - `artifacts/ppo-full-scratch-goal-1m-20260602-165924`
+- Early evidence:
+  - run started successfully
+  - SB3 confirms PPO model is using CUDA, with expected low-utilization MLP PPO warning
+  - CPU vector workers are active
+  - GPU memory is allocated
 
 ## Documentation Cleanup - 2026-06-02
 
@@ -1039,3 +1111,342 @@ Results:
 - Screenshot saved:
   - `artifacts\tensorboard-qc-20260602-155050.png`
 - TensorBoard process was stopped after verification.
+
+## 2026-06-02 Long PPO Goal Run
+
+### Strict Completion Criterion
+- The only success criterion is: PPO completes a valid normal-start Monza lap near the Fast-F1 ghost target, with lap time `<=80.0s`.
+- The `8+` hour runtime target is a persistence expectation, not a success criterion.
+- Partial progress, higher reward, longer episodes, checkpoints passed, slow valid laps, or elapsed training time do not count as completion.
+
+### TensorBoard
+- Command:
+  - `uv run --no-sync tensorboard --logdir artifacts --host 127.0.0.1 --port 6006`
+- Status:
+  - running at `http://127.0.0.1:6006/`
+  - in-app browser verified the active run appears in the TensorBoard run list
+  - active run: `ppo-full-scratch-goal-1m-20260602-165924\tensorboard\ppo_1`
+
+### Pre-Run Validation
+- Hardware check confirmed CUDA:
+  - device: `NVIDIA GeForce RTX 4060 Laptop GPU`
+  - torch: `2.10.0+cu128`
+  - CUDA: `12.8`
+- Validation commands passed:
+  - `uv run --no-sync ruff check .`
+  - `uv run --no-sync pyright src/f1rl`
+  - `uv run --no-sync pytest -q`
+
+### Scratch Control Baseline
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 2048 --seed 0 --n-envs 2 --max-steps 600 --device auto --require-gpu --vec-env subproc --curriculum none --checkpoint-every 1024 --eval-every 1024 --eval-episodes 1 --telemetry selected --run-name scratch-control-smoke-goal`
+- Artifact:
+  - `artifacts\scratch-control-smoke-goal-20260602-165322`
+- Result:
+  - device: `cuda`
+  - vec env: `subproc`
+  - training fps: `78.6`
+  - initial checkpoint benchmark: no useful movement, `0` checkpoints, no-progress termination
+  - final checkpoint benchmark: no useful movement, `0` checkpoints, no-progress termination
+- Interpretation:
+  - confirms the serious baseline starts from scratch/random PPO behavior, not ghost/scripted/imitation knowledge.
+
+### Serious Full-Lap Scratch PPO Run
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 1000000 --seed 10 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum none --checkpoint-every 50000 --eval-every 50000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-full-scratch-goal-1m`
+- Artifact:
+  - `artifacts\ppo-full-scratch-goal-1m-20260602-165924`
+- Metadata:
+  - device: `cuda`
+  - `--require-gpu`: enabled
+  - vec env: `subproc`
+  - env workers: `8`
+  - curriculum: `none`
+  - initial scratch policy: `true`
+
+### Full-Lap PPO Early Results
+- Initial scratch eval at timestep `0`:
+  - mean reward: `-89.71`
+  - mean best progress: `3.65m`
+  - checkpoints passed: `0`
+  - termination: no-progress
+- Training scalar at timestep `49,152`:
+  - rollout reward mean: `-51.02`
+  - rollout episode length mean: `492.15`
+  - fps: `208`
+- Deterministic eval at timestep `50,000`:
+  - mean reward: `-25.49`
+  - mean best progress: `431.38m`
+  - checkpoints passed: `8`
+  - average speed: `216.1kph`
+  - max speed: `331.8kph`
+  - termination: off-track
+  - interpretation: policy learned high-throttle forward motion, but not enough braking/turning for the first major section.
+- Training scalar at timestep `100,352`:
+  - rollout reward mean: `-46.07`
+  - rollout episode length mean: `789.21`
+  - fps: `198`
+- Deterministic eval at timestep `100,000`:
+  - mean reward: `-90.0`
+  - mean best progress: `0.0m`
+  - checkpoints passed: `0`
+  - termination: no-progress
+  - interpretation: full-lap scratch PPO is showing stochastic rollout improvement but unstable deterministic eval behavior. Continue to the next eval boundary before deciding whether to cut over to curriculum.
+- Training scalar at timestep `155,648`:
+  - rollout reward mean: `-37.98`
+  - rollout episode length mean: `1298.06`
+  - fps: `210`
+- Deterministic eval at timestep `150,000`:
+  - mean reward: `-90.0`
+  - mean best progress: `0.0m`
+  - checkpoints passed: `0`
+  - termination: no-progress
+  - interpretation: deterministic eval failed for two consecutive scheduled evals after the `50,000` throttle-only improvement. The run was stopped early and the next experiment moved to segment curriculum from scratch.
+
+### Segment Curriculum Scratch PPO Run
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 1000000 --seed 20 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --checkpoint-every 50000 --eval-every 50000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-segments-scratch-goal-1m`
+- Artifact:
+  - `artifacts\ppo-segments-scratch-goal-1m-20260602-171306`
+- Status:
+  - running
+  - device guarded with `--require-gpu`
+  - CUDA memory allocated on the RTX 4060 Laptop GPU
+  - TensorBoard remains running on `http://127.0.0.1:6006/`
+
+### Segment Curriculum Early Results
+- Initial eval at timestep `0`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.0m`
+  - full-lap checkpoints passed: `0`
+  - full-lap termination: no-progress
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `55.92m`
+  - interpretation: scratch full-lap behavior still has no movement; segment eval spawns into local curriculum stages and must not be counted as normal-start lap progress.
+- Training scalar at timestep `50,176`:
+  - rollout reward mean: `-34.62`
+  - rollout episode length mean: `538.68`
+  - fps: `179`
+- Deterministic eval at timestep `50,000`:
+  - full-lap mean reward: `-56.08`
+  - full-lap mean best progress: `49.01m`
+  - full-lap checkpoints passed: `1`
+  - full-lap termination: off-track
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `49.89m`
+  - segment stage: `A0-short-control`
+  - segment failure mode: off-track after partial local progress
+  - interpretation: curriculum has not solved the easiest segment yet; current gap is local steering/control stability.
+- Training scalar near timestep `100,000`:
+  - rollout reward mean: `-19.29`
+  - rollout episode length mean: `956.93`
+  - fps: `198`
+- Deterministic eval at timestep `100,000`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.0m`
+  - full-lap checkpoints passed: `0`
+  - full-lap termination: no-progress
+  - segment completion rate: `0.4`
+  - mean segment progress delta: `70.20m`
+  - sample completed segment:
+    - stage: `A0-short-control`
+    - termination: segment_complete
+    - segment progress delta: `120.88m`
+    - average/max speed: `139.8kph` / `237.4kph`
+  - interpretation: curriculum is now learning local segment control, but the learned behavior has not transferred to deterministic normal-start full-lap driving.
+- Deterministic eval at timestep `150,000`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.0m`
+  - full-lap checkpoints passed: `0`
+  - full-lap termination: no-progress
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `16.98m`
+  - interpretation: segment performance regressed after the `100,000` checkpoint. The likely issue is that the default curriculum promotes stages by reset count instead of measured stage mastery, so the run was stopped and replaced with a focused A0-only experiment.
+
+### Trainer Controls Added
+- Added CLI controls for focused experiments:
+  - `--curriculum-stage-count`
+  - `--curriculum-promotion-resets`
+  - `--n-steps`
+  - `--batch-size`
+  - `--n-epochs`
+  - `--learning-rate`
+  - `--gamma`
+  - `--ent-coef`
+- Validation after code change:
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `30` tests
+
+### Focused A0-Only Scratch PPO Run
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 500000 --seed 30 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 1 --curriculum-promotion-resets 1000000 --n-steps 256 --batch-size 256 --n-epochs 6 --learning-rate 0.0003 --gamma 0.995 --ent-coef 0.005 --checkpoint-every 25000 --eval-every 25000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-a0-focus-scratch-goal-500k`
+- Artifact:
+  - `artifacts\ppo-a0-focus-scratch-goal-500k-20260602-173212`
+- Metadata:
+  - device: `cuda`
+  - `--require-gpu`: enabled
+  - curriculum stage count: `1`
+  - promotion resets: `1000000`
+  - only active curriculum stage: `A0-short-control`
+  - PPO hyperparameters:
+    - `n_steps`: `256`
+    - `batch_size`: `256`
+    - `n_epochs`: `6`
+    - `learning_rate`: `0.0003`
+    - `gamma`: `0.995`
+    - `ent_coef`: `0.005`
+- Initial eval at timestep `0`:
+  - full-lap mean reward: `-6.87`
+  - full-lap mean best progress: `664.08m`
+  - full-lap checkpoints passed: `13`
+  - full-lap termination: off-track
+  - segment completion rate: `1.0`
+  - mean segment progress delta: `120.29m`
+  - interpretation: this seed produced an unusually active random initial deterministic policy; it is a baseline, not learned behavior.
+- Deterministic eval at timestep `25,000`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.0m`
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `11.32m`
+  - TensorBoard rollout reward mean near `25,000`: `14.60`
+  - interpretation: stochastic rollout behavior improved, but deterministic eval collapsed to no-progress. Entropy remained near maximum, so this run was stopped in favor of a lower-entropy focused experiment.
+
+### Focused A0 Low-Entropy Scratch PPO Plan
+- Reason:
+  - sampled PPO rollouts are improving, but deterministic policy evaluation remains weak because action entropy stays high and argmax often collapses to no useful control.
+- Next experiment:
+  - keep A0-only curriculum
+  - keep CUDA required
+  - set `ent_coef=0.0`
+  - increase update pressure with larger rollout batches and more epochs
+
+### Focused A0 Low-Entropy Scratch PPO Run
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 200000 --seed 40 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 1 --curriculum-promotion-resets 1000000 --n-steps 512 --batch-size 256 --n-epochs 10 --learning-rate 0.001 --gamma 0.995 --ent-coef 0.0 --checkpoint-every 10000 --eval-every 10000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-a0-lowentropy-scratch-goal-200k`
+- Artifact:
+  - `artifacts\ppo-a0-lowentropy-scratch-goal-200k-20260602-173740`
+- Metadata:
+  - device: `cuda`
+  - `--require-gpu`: enabled
+  - curriculum stage count: `1`
+  - promotion resets: `1000000`
+  - only active curriculum stage: `A0-short-control`
+  - PPO hyperparameters:
+    - `n_steps`: `512`
+    - `batch_size`: `256`
+    - `n_epochs`: `10`
+    - `learning_rate`: `0.001`
+    - `gamma`: `0.995`
+    - `ent_coef`: `0.0`
+- Deterministic eval at timestep `10,000`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.006m`
+  - full-lap termination: no-progress
+  - segment completion rate: `0.2`
+  - mean segment progress delta: `76.53m`
+- Deterministic eval at timestep `20,000`:
+  - full-lap mean reward: `-25.49`
+  - full-lap mean best progress: `431.38m`
+  - full-lap checkpoints passed: `8`
+  - full-lap termination: off-track
+  - segment completion rate: `0.6`
+  - mean segment progress delta: `106.54m`
+  - interpretation: lower-entropy A0 training recovered deterministic full-lap forward behavior and improved A0 segment completion, but still fails by leaving the track around the first major section.
+- Deterministic eval at timestep `30,000`:
+  - full-lap mean reward: `-25.49`
+  - full-lap mean best progress: `431.38m`
+  - full-lap checkpoints passed: `8`
+  - full-lap termination: off-track
+  - segment completion rate: `1.0`
+  - mean segment progress delta: `120.38m`
+  - interpretation: A0 short-control is now solved in deterministic eval, but normal-start full-lap transfer is still stuck at the `431m` off-track failure. Next useful step is broader-stage curriculum or full-lap fine-tuning from this checkpoint.
+- Deterministic eval at timestep `40,000`:
+  - full-lap mean reward: `-88.92`
+  - full-lap mean best progress: `13.54m`
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `14.44m`
+  - interpretation: the run regressed after the `30,000` checkpoint. The run was stopped and the `30,000` checkpoint is treated as the measured best checkpoint for transfer.
+
+### Resume / Fine-Tune Support Added
+- Added `--resume-checkpoint` to `f1rl.train`.
+- Metadata records:
+  - `scratch_initialization: false`
+  - `resume_checkpoint: <path>`
+- Validation after code change:
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `31` tests
+
+### A0 -> A1 Transfer PPO Run
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 300000 --seed 50 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 2 --curriculum-promotion-resets 1000000 --resume-checkpoint "artifacts\ppo-a0-lowentropy-scratch-goal-200k-20260602-173740\checkpoints\ppo_monza_30000_steps.zip" --n-steps 512 --batch-size 256 --n-epochs 8 --learning-rate 0.0003 --gamma 0.995 --ent-coef 0.002 --checkpoint-every 25000 --eval-every 25000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-a0a1-transfer-goal-300k`
+- Artifact:
+  - `artifacts\ppo-a0a1-transfer-goal-300k-20260602-174803`
+- Metadata:
+  - device: `cuda`
+  - `--require-gpu`: enabled
+  - `scratch_initialization`: `false`
+  - resume checkpoint: `artifacts\ppo-a0-lowentropy-scratch-goal-200k-20260602-173740\checkpoints\ppo_monza_30000_steps.zip`
+  - curriculum stage count: `2`
+  - active curriculum stages:
+    - `A0-short-control`
+    - `A1-short-low-speed`
+  - PPO hyperparameters:
+    - `n_steps`: `512`
+    - `batch_size`: `256`
+    - `n_epochs`: `8`
+    - `learning_rate`: `0.0003`
+    - `gamma`: `0.995`
+    - `ent_coef`: `0.002`
+- Initial loaded-checkpoint eval at timestep `0`:
+  - full-lap mean reward: `-25.49`
+  - full-lap mean best progress: `431.38m`
+  - full-lap checkpoints passed: `8`
+  - full-lap termination: off-track
+  - segment completion rate: `0.4`
+  - note: this row was produced before the eval phase label fix, so it is incorrectly labeled `initial_scratch`; metadata correctly records `scratch_initialization: false`.
+- Deterministic eval at timestep `25,000`:
+  - full-lap mean reward: `-25.49`
+  - full-lap mean best progress: `431.38m`
+  - full-lap checkpoints passed: `8`
+  - full-lap termination: off-track
+  - segment completion rate: `0.2`
+  - mean segment progress delta: `100.18m`
+  - interpretation: A0+A1 transfer preserved the normal-start `431m` behavior but did not improve past it.
+- Deterministic eval at timestep `50,000`:
+  - full-lap mean reward: `-25.49`
+  - full-lap mean best progress: `431.38m`
+  - full-lap checkpoints passed: `8`
+  - full-lap termination: off-track
+  - segment completion rate: `0.6`
+  - mean segment progress delta: `93.35m`
+  - interpretation: still stuck at the same full-throttle off-track failure, so the run was stopped for direct telemetry diagnosis.
+
+### 431m Failure Diagnosis
+- Selected telemetry analyzed:
+  - `artifacts\ppo-a0a1-transfer-goal-300k-20260602-174803\eval\selected_telemetry\ppo_full_lap-episode-000-steps.jsonl`
+- Finding:
+  - action `1` (`throttle`) was used on all `431` steps
+  - throttle: `1.0`
+  - brake: `0.0`
+  - steering: `0.0`
+  - final speed: `331.8kph`
+  - final progress: `431.38m`
+  - final lateral error: `15.51m`
+  - terminal reason: off-track
+- Interpretation:
+  - the policy is exploiting progress reward by driving straight at full throttle until the terminal off-track penalty.
+  - the old reward only penalized the terminal off-track event; it did not give enough dense feedback while the car drifted toward the boundary.
+
+### Dense Track-Discipline Reward Added
+- Added reward components:
+  - `lateral`: penalizes lateral error beyond a `4.0m` deadzone
+  - `track_limit`: penalizes low minimum ray distance below `10.0m`, scaled by speed
+- Updated reward schema is still emitted in every mode through `REWARD_COMPONENT_KEYS`.
+- Added resume eval label fix:
+  - resumed runs now use `phase: initial_resume` instead of incorrectly labeling loaded checkpoints as `initial_scratch`.
+- Validation after code change:
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `31` tests

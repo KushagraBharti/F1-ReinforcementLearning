@@ -12,8 +12,8 @@ from typing import Any
 
 import numpy as np
 
-from f1rl.config import ARTIFACTS_DIR, SimConfig, dataclass_to_dict
-from f1rl.curriculum import CurriculumConfig, CurriculumSampler
+from f1rl.config import ARTIFACTS_DIR, build_sim_config, dataclass_to_dict
+from f1rl.curriculum import DEFAULT_SEGMENT_STAGES, CurriculumConfig, CurriculumSampler
 from f1rl.env import MonzaEnv
 from f1rl.hardware import compute_policy, torch_device
 from f1rl.sim import MonzaSim
@@ -23,13 +23,55 @@ def _action_to_int(action: Any) -> int:
     return int(np.asarray(action).reshape(-1)[0])
 
 
-def _make_env(max_steps: int, seed: int, curriculum: CurriculumConfig | None = None):
+def _make_env(
+    max_steps: int,
+    seed: int,
+    curriculum: CurriculumConfig | None = None,
+    reward_overrides: dict[str, float | None] | None = None,
+):
     def factory() -> MonzaEnv:
-        env = MonzaEnv(SimConfig(max_steps=max_steps), curriculum=curriculum)
+        env = MonzaEnv(build_sim_config(max_steps=max_steps, reward_overrides=reward_overrides), curriculum=curriculum)
         env.reset(seed=seed)
         return env
 
     return factory
+
+
+def _build_curriculum_config(
+    *,
+    mode: str,
+    stage_count: int | None,
+    promotion_resets: int,
+    normal_start_probability: float,
+) -> CurriculumConfig:
+    if mode != "segments":
+        return CurriculumConfig(mode=mode)
+    stages = DEFAULT_SEGMENT_STAGES
+    if stage_count is not None:
+        if stage_count < 1:
+            raise ValueError("--curriculum-stage-count must be at least 1.")
+        stages = DEFAULT_SEGMENT_STAGES[: min(stage_count, len(DEFAULT_SEGMENT_STAGES))]
+    return CurriculumConfig(
+        mode=mode,
+        stages=stages,
+        promotion_resets=promotion_resets,
+        normal_start_probability=normal_start_probability,
+    )
+
+
+def _reward_overrides_from_args(args: argparse.Namespace) -> dict[str, float | None]:
+    return {
+        "progress_scale": args.reward_progress_scale,
+        "finish_bonus": args.reward_finish_bonus,
+        "collision_penalty": args.reward_collision_penalty,
+        "off_track_penalty": args.reward_off_track_penalty,
+        "no_progress_penalty": args.reward_no_progress_penalty,
+        "lateral_deadzone_m": args.reward_lateral_deadzone_m,
+        "lateral_penalty_scale": args.reward_lateral_penalty_scale,
+        "track_limit_safe_ray_m": args.reward_track_limit_safe_ray_m,
+        "track_limit_penalty_scale": args.reward_track_limit_penalty_scale,
+        "smoothness_penalty": args.reward_smoothness_penalty,
+    }
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -103,13 +145,14 @@ def run_model_rollouts(
     telemetry_mode: str = "none",
     policy_name: str = "ppo",
     curriculum: CurriculumConfig | None = None,
+    reward_overrides: dict[str, float | None] | None = None,
 ) -> list[dict[str, Any]]:
     metrics: list[dict[str, Any]] = []
     curriculum_sampler: CurriculumSampler | None = None
     if curriculum is not None and curriculum.enabled:
         curriculum_sampler = CurriculumSampler(curriculum)
     for episode in range(episodes):
-        sim = MonzaSim(SimConfig(max_steps=max_steps))
+        sim = MonzaSim(build_sim_config(max_steps=max_steps, reward_overrides=reward_overrides))
         reset_options = curriculum_sampler.sample_options(seed + episode) if curriculum_sampler is not None else None
         obs, _ = sim.reset(seed=seed + episode, options=reset_options)
         rows: list[dict[str, Any]] = []
@@ -141,6 +184,7 @@ class TrainingEvalCallback:
         telemetry_every: int,
         save_best: bool,
         curriculum: CurriculumConfig,
+        reward_overrides: dict[str, float | None] | None = None,
     ) -> None:
         try:
             from stable_baselines3.common.callbacks import BaseCallback
@@ -165,6 +209,7 @@ class TrainingEvalCallback:
         self.telemetry_every = max(telemetry_every, 1)
         self.save_best = save_best
         self.curriculum = curriculum
+        self.reward_overrides = reward_overrides
         self.last_eval = 0
         self.best_score = float("-inf")
         self.eval_root = run_root / "eval"
@@ -191,6 +236,7 @@ class TrainingEvalCallback:
             telemetry_dir=self.selected_telemetry_dir,
             telemetry_mode=telemetry_mode,
             policy_name="ppo_full_lap",
+            reward_overrides=self.reward_overrides,
         )
         mean_reward = sum(row["total_reward"] for row in metrics) / len(metrics)
         mean_progress = sum(row["best_progress_m"] for row in metrics) / len(metrics)
@@ -206,6 +252,7 @@ class TrainingEvalCallback:
                 telemetry_mode=telemetry_mode,
                 policy_name="ppo_curriculum_segment",
                 curriculum=self.curriculum,
+                reward_overrides=self.reward_overrides,
             )
         segment_source = segment_metrics or metrics
         segment_rate = sum(1 for row in segment_source if row["segment_complete"]) / len(segment_source)
@@ -250,9 +297,19 @@ def run_training(
     telemetry_every: int = 1,
     run_name: str | None = None,
     curriculum: str = "none",
+    curriculum_stage_count: int | None = None,
+    curriculum_promotion_resets: int = 300,
     vec_env: str = "dummy",
     save_best: bool = True,
     benchmark_throughput: bool = False,
+    resume_checkpoint: Path | None = None,
+    reward_overrides: dict[str, float | None] | None = None,
+    n_steps: int = 128,
+    batch_size: int = 128,
+    n_epochs: int = 4,
+    learning_rate: float = 3e-4,
+    gamma: float = 0.995,
+    ent_coef: float = 0.02,
 ) -> Path:
     try:
         from stable_baselines3 import PPO
@@ -272,32 +329,51 @@ def run_training(
     checkpoint_dir = run_root / "checkpoints"
     log_dir = run_root / "tensorboard"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    curriculum_config = CurriculumConfig(mode=curriculum)
+    curriculum_config = _build_curriculum_config(
+        mode=curriculum,
+        stage_count=curriculum_stage_count,
+        promotion_resets=curriculum_promotion_resets,
+        normal_start_probability=curriculum_normal_start_probability,
+    )
     vec_cls = SubprocVecEnv if vec_env == "subproc" else DummyVecEnv
     env = make_vec_env(
-        _make_env(max_steps, seed, curriculum_config),
+        _make_env(max_steps, seed, curriculum_config, reward_overrides),
         n_envs=n_envs,
         seed=seed,
         vec_env_cls=vec_cls,
     )
     env = VecMonitor(env)
     ppo_hyperparams = {
-        "n_steps": 128,
-        "batch_size": 128,
-        "n_epochs": 4,
-        "learning_rate": 3e-4,
-        "gamma": 0.995,
-        "ent_coef": 0.02,
+        "n_steps": n_steps,
+        "batch_size": batch_size,
+        "n_epochs": n_epochs,
+        "learning_rate": learning_rate,
+        "gamma": gamma,
+        "ent_coef": ent_coef,
     }
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=0,
-        seed=seed,
-        device=resolved_device,
-        tensorboard_log=str(log_dir),
-        **ppo_hyperparams,
-    )
+    if resume_checkpoint is not None:
+        if not resume_checkpoint.exists():
+            raise FileNotFoundError(f"Resume checkpoint does not exist: {resume_checkpoint}")
+        model = PPO.load(
+            resume_checkpoint,
+            env=env,
+            device=resolved_device,
+            tensorboard_log=str(log_dir),
+            print_system_info=False,
+            **ppo_hyperparams,
+        )
+        scratch_initialization = False
+    else:
+        model = PPO(
+            "MlpPolicy",
+            env,
+            verbose=0,
+            seed=seed,
+            device=resolved_device,
+            tensorboard_log=str(log_dir),
+            **ppo_hyperparams,
+        )
+        scratch_initialization = True
     initial_checkpoint_path = checkpoint_dir / "initial_model.zip"
     initial_root_path = run_root / "initial_model.zip"
     model.save(initial_checkpoint_path)
@@ -321,6 +397,7 @@ def run_training(
             telemetry_every=telemetry_every,
             save_best=save_best,
             curriculum=curriculum_config,
+            reward_overrides=reward_overrides,
         )
         callbacks.append(
             eval_callback.callback
@@ -337,18 +414,22 @@ def run_training(
         "telemetry": telemetry,
         "telemetry_every": telemetry_every,
         "curriculum": curriculum_config.mode,
+        "curriculum_stage_count": len(curriculum_config.stages) if curriculum_config.enabled else 0,
+        "curriculum_promotion_resets": curriculum_config.promotion_resets,
         "curriculum_config": CurriculumSampler(curriculum_config).to_dict(),
         "compute_policy": policy,
         "benchmark_throughput": benchmark_throughput,
-        "scratch_initialization": True,
+        "scratch_initialization": scratch_initialization,
+        "resume_checkpoint": str(resume_checkpoint) if resume_checkpoint is not None else None,
         "initial_checkpoint": str(initial_checkpoint_path),
         "ppo_hyperparams": ppo_hyperparams,
-        "sim_config": dataclass_to_dict(SimConfig(max_steps=max_steps)),
+        "sim_config": dataclass_to_dict(build_sim_config(max_steps=max_steps, reward_overrides=reward_overrides)),
     }
     metadata_path = run_root / "run_metadata.json"
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     if eval_callback is not None:
-        eval_callback.evaluate(model, timesteps=0, phase="initial_scratch")
+        initial_phase = "initial_scratch" if scratch_initialization else "initial_resume"
+        eval_callback.evaluate(model, timesteps=0, phase=initial_phase)
     started = time.perf_counter()
     model.learn(total_timesteps=timesteps, callback=CallbackList(callbacks), tb_log_name="ppo")
     elapsed = time.perf_counter() - started
@@ -392,8 +473,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--telemetry-every", type=int, default=1)
     parser.add_argument("--run-name")
     parser.add_argument("--curriculum", choices=["none", "segments"], default="none")
+    parser.add_argument("--curriculum-stage-count", type=int)
+    parser.add_argument("--curriculum-promotion-resets", type=int, default=300)
     parser.add_argument("--vec-env", choices=["dummy", "subproc"], default="dummy")
     parser.add_argument("--benchmark-throughput", action="store_true")
+    parser.add_argument("--resume-checkpoint", type=Path)
+    parser.add_argument("--n-steps", type=int, default=128)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--n-epochs", type=int, default=4)
+    parser.add_argument("--learning-rate", type=float, default=3e-4)
+    parser.add_argument("--gamma", type=float, default=0.995)
+    parser.add_argument("--ent-coef", type=float, default=0.02)
     return parser.parse_args(argv)
 
 
@@ -413,9 +503,18 @@ def main(argv: list[str] | None = None) -> int:
         telemetry_every=args.telemetry_every,
         run_name=args.run_name,
         curriculum=args.curriculum,
+        curriculum_stage_count=args.curriculum_stage_count,
+        curriculum_promotion_resets=args.curriculum_promotion_resets,
         vec_env=args.vec_env,
         save_best=args.save_best,
         benchmark_throughput=args.benchmark_throughput,
+        resume_checkpoint=args.resume_checkpoint,
+        n_steps=args.n_steps,
+        batch_size=args.batch_size,
+        n_epochs=args.n_epochs,
+        learning_rate=args.learning_rate,
+        gamma=args.gamma,
+        ent_coef=args.ent_coef,
     )
     return 0
 

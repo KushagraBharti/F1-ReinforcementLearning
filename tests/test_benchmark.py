@@ -60,6 +60,8 @@ def test_episode_metrics_uses_max_checkpoint_count_when_final_row_wraps() -> Non
                 "collision": 0.0,
                 "off_track": 0.0,
                 "no_progress": 0.0,
+                "lateral": 0.0,
+                "track_limit": 0.0,
                 "smoothness": 0.0,
             },
             "reward_total": 1.0,

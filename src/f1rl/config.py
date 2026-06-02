@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +73,10 @@ class RewardConfig:
     collision_penalty: float = -60.0
     off_track_penalty: float = -60.0
     no_progress_penalty: float = -90.0
+    lateral_deadzone_m: float = 4.0
+    lateral_penalty_scale: float = 0.025
+    track_limit_safe_ray_m: float = 10.0
+    track_limit_penalty_scale: float = 0.03
     smoothness_penalty: float = 0.0
 
     def component_keys(self) -> tuple[str, ...]:
@@ -82,6 +86,8 @@ class RewardConfig:
             "collision",
             "off_track",
             "no_progress",
+            "lateral",
+            "track_limit",
             "smoothness",
         )
 
@@ -98,6 +104,27 @@ class SimConfig:
     car: CarParams = field(default_factory=CarParams)
     sensors: SensorConfig = field(default_factory=SensorConfig)
     reward: RewardConfig = field(default_factory=RewardConfig)
+
+
+def build_reward_config(overrides: dict[str, float | None] | None = None) -> RewardConfig:
+    reward = RewardConfig()
+    if not overrides:
+        return reward
+    valid_keys = set(RewardConfig.__dataclass_fields__)
+    unknown = set(overrides) - valid_keys
+    if unknown:
+        unknown_text = ", ".join(sorted(unknown))
+        raise ValueError(f"Unknown reward override(s): {unknown_text}")
+    cleaned = {key: float(value) for key, value in overrides.items() if value is not None}
+    return replace(reward, **cleaned)
+
+
+def build_sim_config(
+    *,
+    max_steps: int = 3600,
+    reward_overrides: dict[str, float | None] | None = None,
+) -> SimConfig:
+    return SimConfig(max_steps=max_steps, reward=build_reward_config(reward_overrides))
 
 
 @dataclass(slots=True)

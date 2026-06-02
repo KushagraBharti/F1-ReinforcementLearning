@@ -57,3 +57,33 @@ def test_latest_checkpoint_finds_named_runs(tmp_path: Path) -> None:
     os.utime(older, (1.0, 1.0))
     os.utime(newer, (2.0, 2.0))
     assert policy_io.latest_checkpoint(tmp_path) == newer
+
+
+@pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
+def test_ppo_resume_checkpoint_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(train, "ARTIFACTS_DIR", tmp_path)
+    base_checkpoint = train.run_training(
+        timesteps=64,
+        seed=6,
+        n_envs=1,
+        max_steps=50,
+        device="cpu",
+        checkpoint_every=64,
+        eval_every=0,
+        run_name="base",
+    )
+    resumed_checkpoint = train.run_training(
+        timesteps=64,
+        seed=7,
+        n_envs=1,
+        max_steps=50,
+        device="cpu",
+        checkpoint_every=64,
+        eval_every=0,
+        run_name="resumed",
+        resume_checkpoint=base_checkpoint,
+    )
+    root = resumed_checkpoint.parents[1]
+    metadata = json.loads((root / "run_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["scratch_initialization"] is False
+    assert metadata["resume_checkpoint"] == str(base_checkpoint)

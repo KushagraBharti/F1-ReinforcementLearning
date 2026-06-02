@@ -1,0 +1,12 @@
+{
+  "policies": [
+    "ppo"
+  ],
+  "episodes": 20,
+  "max_steps": 3600,
+  "seed": 7,
+  "checkpoint": "artifacts\\scratch-control-smoke-goal-20260602-165322\\final_model.zip",
+  "device": "auto",
+  "telemetry": "selected",
+  "telemetry_every": 5
+}

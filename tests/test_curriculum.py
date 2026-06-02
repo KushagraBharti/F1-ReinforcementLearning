@@ -2,6 +2,7 @@ from f1rl.config import SimConfig
 from f1rl.curriculum import CurriculumConfig, CurriculumSampler, CurriculumStage
 from f1rl.env import MonzaEnv
 from f1rl.sim import MonzaSim
+from f1rl.train import _build_curriculum_config
 
 
 def test_curriculum_sampler_promotes_by_reset_count() -> None:
@@ -19,6 +20,20 @@ def test_curriculum_sampler_promotes_by_reset_count() -> None:
     assert second["curriculum_stage"] == "hard"
     assert 0 <= first["start_checkpoint"] < 12
     assert first["segment_length_m"] == 100.0
+
+
+def test_training_curriculum_config_can_limit_stages() -> None:
+    config = _build_curriculum_config(mode="segments", stage_count=1, promotion_resets=100_000)
+    sampler = CurriculumSampler(config, checkpoint_count=12)
+    first = sampler.sample_options(seed=1)
+    later = None
+    for index in range(20):
+        later = sampler.sample_options(seed=index)
+    assert len(config.stages) == 1
+    assert config.promotion_resets == 100_000
+    assert first["curriculum_stage"] == "A0-short-control"
+    assert later is not None
+    assert later["curriculum_stage"] == "A0-short-control"
 
 
 def test_env_curriculum_reset_sets_segment_metadata() -> None:

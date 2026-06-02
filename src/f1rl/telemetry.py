@@ -8,7 +8,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, TextIO
 
-REWARD_COMPONENT_KEYS = ("progress", "finish", "collision", "off_track", "no_progress", "smoothness")
+REWARD_COMPONENT_KEYS = (
+    "progress",
+    "finish",
+    "collision",
+    "off_track",
+    "no_progress",
+    "lateral",
+    "track_limit",
+    "smoothness",
+)
 
 
 @dataclass(slots=True)
