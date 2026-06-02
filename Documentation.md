@@ -147,3 +147,70 @@
 - Cached sensor ray distances per simulator state to avoid repeated raycasts during observation, telemetry, and rendering.
 - Changed telemetry writer to keep the JSONL file open for the run instead of opening and closing it every step.
 - User-measured issue before fix: `11-12s` real time produced only about `3s` of manual-mode simulation time.
+
+## Physics, Telemetry, and Compute Policy - 2026-04-24
+### Physics
+- Kept the model as a simple top-down bicycle model.
+- Added dynamic grip:
+  - lower mechanical grip at low speed
+  - aero-grip growth with speed
+  - capped max grip
+- Added a simple traction-circle style limit so acceleration/braking and cornering compete for available grip.
+- Added speed-sensitive steering effectiveness.
+- Kept Monza top-speed calibration near the Fast-F1 target:
+  - target max: `348.0 kph`
+  - simulator terminal estimate: `351.1 kph`
+
+### Compute Policy
+- Added explicit CPU/GPU policy reporting to `f1-hardware-check --json`.
+- CPU-owned work:
+  - env stepping
+  - physics
+  - geometry
+  - rendering
+  - keyboard input
+  - telemetry
+  - track preprocessing
+  - vector env workers
+- GPU-owned work:
+  - PyTorch neural policy training
+  - PyTorch neural inference
+- Added `f1-train --require-gpu` so training can fail fast if CUDA is not available.
+
+### Telemetry Expansion
+- Per-step telemetry now includes:
+  - acceleration
+  - longitudinal g
+  - lateral g
+  - curvature
+  - throttle/brake/steering deltas
+  - racing-line deviation
+  - optional reference progress/speed/gap fields
+- Episode summaries now include:
+  - sector times
+  - sector speeds
+  - braking zone count/details
+  - racing-line deviation aggregates
+  - lateral/longitudinal g aggregates
+  - steering/throttle/brake smoothness
+  - ghost gap aggregates when available
+  - corner entry/apex/exit speed summaries
+
+### Scripted Baseline
+- Replaced binary scripted steering with a conservative continuous pure-pursuit controller.
+- Fixed a start-line centerline projection continuity issue that could snap progress to the wrong closed-loop segment.
+- Validation:
+  - `uv run f1-scripted --steps 18000 --no-telemetry` -> pass; `lap_complete`, `5800.8m`, `222.3s`.
+  - `uv run f1-scripted --steps 3600` -> pass; telemetry run reached max steps without off-track.
+
+### Validation
+- `uv run ruff check src tests` -> pass.
+- `uv run pyright src/f1rl` -> pass.
+- `uv run pytest -q` -> pass (`19 passed`).
+- `uv run f1-calibration` -> pass; terminal estimate `351.1 kph`.
+- `uv run f1-hardware-check --json --require-gpu` -> pass; CUDA visible and compute policy reported.
+- `uv run f1-reference-agent --mode ghost` -> pass; reference ghost still matches `79.662s`.
+- `uv run f1-manual --headless --ghost-reference --flying-start --max-steps 60` -> pass.
+- `uv run f1-train --timesteps 64 --n-envs 1 --max-steps 80 --device auto --require-gpu` -> pass; final checkpoint written on CUDA.
+- `uv run f1-eval --checkpoint latest --steps 80 --device auto` -> pass.
+- `uv run f1-replay artifacts/reference-ghost-20260424-064405/steps.jsonl --headless` -> pass; duration `79.662s`.

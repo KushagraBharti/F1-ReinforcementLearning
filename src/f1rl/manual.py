@@ -6,7 +6,7 @@ import argparse
 import sys
 import time
 
-from f1rl.config import ARTIFACTS_DIR, RenderConfig, SimConfig
+from f1rl.config import ARTIFACTS_DIR, RenderConfig, SimConfig, action_to_controls
 from f1rl.reference_agent import load_reference_profile, reference_pose_at
 from f1rl.render import PygameRenderer, RenderGhost
 from f1rl.sim import MonzaSim
@@ -28,7 +28,12 @@ def run_manual(
     reference_profile = load_reference_profile() if ghost_reference or flying_start else None
     if flying_start and reference_profile is not None:
         sim.state.speed_mps = reference_profile.speed_at(0.0) / 3.6
-    writer = TelemetryWriter(ARTIFACTS_DIR, mode="manual" if not headless else "manual-headless", seed=seed)
+    writer = TelemetryWriter(
+        ARTIFACTS_DIR,
+        mode="manual" if not headless else "manual-headless",
+        seed=seed,
+        lap_length_m=sim.track.length_m,
+    )
     renderer = None if headless else PygameRenderer(sim.track, sim.config, render_config=RenderConfig())
     result = None
     try:
@@ -55,7 +60,21 @@ def run_manual(
                 now_s = time.perf_counter()
                 steps_this_frame = 0
                 while now_s >= next_step_s and steps_run < max_steps:
-                    result = sim.step(action)
+                    throttle, brake, steer = action_to_controls(action)
+                    result = sim.step_controls(
+                        throttle=throttle,
+                        brake=brake,
+                        steer=steer,
+                        action_id=action,
+                        collect_observation=False,
+                        collect_rays=True,
+                    )
+                    if reference_profile is not None and ghost_reference:
+                        elapsed_s = sim.state.elapsed_steps * sim.config.car.dt
+                        reference = reference_pose_at(sim, reference_profile, elapsed_s)
+                        result.telemetry.reference_progress_m = reference.progress_m
+                        result.telemetry.reference_speed_kph = reference.speed_kph
+                        result.telemetry.ghost_gap_m = reference.progress_m - sim.state.monotonic_progress_m
                     writer.write_step(result.telemetry)
                     steps_run += 1
                     next_step_s += sim.config.car.dt

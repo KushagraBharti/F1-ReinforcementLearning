@@ -14,4 +14,9 @@ def test_telemetry_jsonl_and_summary(tmp_path: Path) -> None:
     rows = load_steps(writer.steps_path)
     assert len(rows) == 1
     assert set(rows[0]["reward_components"]) == set(REWARD_COMPONENT_KEYS)
+    assert "lateral_g" in rows[0]
+    assert "racing_line_deviation_m" in rows[0]
+    assert "ghost_gap_m" in rows[0]
     assert set(summary.reward_totals) == set(REWARD_COMPONENT_KEYS)
+    assert isinstance(summary.sector_times_s, list)
+    assert hasattr(summary, "braking_zone_count")

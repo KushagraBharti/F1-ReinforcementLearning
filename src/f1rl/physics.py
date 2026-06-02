@@ -32,6 +32,11 @@ def initial_car_state(start_pose: np.ndarray) -> CarState:
     return CarState(x=float(start_pose[0]), y=float(start_pose[1]), heading_rad=float(start_pose[2]))
 
 
+def grip_limit_g(params: CarParams, speed_mps: float) -> float:
+    aero_grip = params.aero_grip_per_mps2 * speed_mps * speed_mps
+    return float(np.clip(params.grip_g + aero_grip, params.grip_g, params.max_grip_g))
+
+
 def apply_physics(
     state: CarState,
     *,
@@ -47,22 +52,34 @@ def apply_physics(
     dt = params.dt
 
     speed = max(0.0, float(state.speed_mps))
-    speed += throttle * params.engine_accel_mps2 * dt
-    speed -= brake * params.brake_accel_mps2 * dt
-    if throttle <= 1e-6 and brake <= 1e-6:
-        speed -= params.rolling_resistance_mps2 * dt
-    speed -= params.drag_coefficient * speed * speed * dt
-    speed = float(np.clip(speed, 0.0, params.max_speed_mps))
-
     target_steering = steer * np.deg2rad(params.max_steer_deg)
     steering_delta = target_steering - state.steering
     max_delta = params.steer_response * dt
     steering = state.steering + float(np.clip(steering_delta, -max_delta, max_delta))
+    effective_steering = steering / (1.0 + params.steering_speed_sensitivity * speed * speed)
 
-    if abs(steering) > 1e-6 and speed > 1e-6:
-        yaw_rate = speed / max(params.wheelbase_m, 1e-6) * np.tan(steering)
+    max_total_accel = grip_limit_g(params, speed) * 9.81
+    if abs(effective_steering) > 1e-6 and speed > 1e-6:
+        requested_yaw = speed / max(params.wheelbase_m, 1e-6) * np.tan(effective_steering)
+        requested_lateral = abs(speed * requested_yaw)
+    else:
+        requested_yaw = 0.0
+        requested_lateral = 0.0
+    lateral_accel = min(requested_lateral, max_total_accel)
+    longitudinal_capacity = float(np.sqrt(max(max_total_accel * max_total_accel - lateral_accel * lateral_accel, 0.0)))
+    drive_limit = min(params.engine_accel_mps2, params.max_drive_g * 9.81, longitudinal_capacity)
+    brake_limit = min(params.brake_accel_mps2, params.max_brake_g * 9.81, longitudinal_capacity)
+
+    longitudinal_accel = throttle * drive_limit - brake * brake_limit
+    if throttle <= 1e-6 and brake <= 1e-6:
+        longitudinal_accel -= params.rolling_resistance_mps2
+    longitudinal_accel -= params.drag_coefficient * speed * speed
+    speed = float(np.clip(speed + longitudinal_accel * dt, 0.0, params.max_speed_mps))
+
+    if abs(effective_steering) > 1e-6 and speed > 1e-6:
+        yaw_rate = speed / max(params.wheelbase_m, 1e-6) * np.tan(effective_steering)
         lateral_accel = abs(speed * yaw_rate)
-        max_lateral = params.grip_g * 9.81
+        max_lateral = grip_limit_g(params, speed) * 9.81
         if lateral_accel > max_lateral:
             yaw_rate *= max_lateral / max(lateral_accel, 1e-6)
     else:

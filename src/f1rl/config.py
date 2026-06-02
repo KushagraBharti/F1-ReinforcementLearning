@@ -56,7 +56,12 @@ class CarParams:
     brake_accel_mps2: float = 38.0
     drag_coefficient: float = 0.0025
     rolling_resistance_mps2: float = 0.25
-    grip_g: float = 4.1
+    grip_g: float = 2.2
+    aero_grip_per_mps2: float = 0.00023
+    max_grip_g: float = 4.2
+    max_drive_g: float = 2.45
+    max_brake_g: float = 4.6
+    steering_speed_sensitivity: float = 0.0008
     max_speed_mps: float = 110.0
     dt: float = 1.0 / 60.0
 

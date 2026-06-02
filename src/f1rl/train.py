@@ -10,7 +10,7 @@ from pathlib import Path
 
 from f1rl.config import ARTIFACTS_DIR, SimConfig, dataclass_to_dict
 from f1rl.env import MonzaEnv
-from f1rl.hardware import torch_device
+from f1rl.hardware import compute_policy, torch_device
 
 
 def _make_env(max_steps: int, seed: int):
@@ -30,6 +30,7 @@ def run_training(
     max_steps: int,
     device: str,
     checkpoint_every: int,
+    require_gpu: bool = False,
 ) -> Path:
     try:
         from stable_baselines3 import PPO
@@ -39,6 +40,9 @@ def run_training(
         raise RuntimeError("Training requires stable-baselines3. Run `uv sync --active --all-extras --all-packages`.") from exc
 
     resolved_device = torch_device(device)
+    if require_gpu and resolved_device != "cuda":
+        raise RuntimeError(f"GPU required but resolved device is {resolved_device!r}.")
+    policy = compute_policy(device)
     run_id = f"train-{time.strftime('%Y%m%d-%H%M%S')}"
     run_root = ARTIFACTS_DIR / run_id
     checkpoint_dir = run_root / "checkpoints"
@@ -70,6 +74,7 @@ def run_training(
         "n_envs": n_envs,
         "max_steps": max_steps,
         "device": resolved_device,
+        "compute_policy": policy,
         "sim_config": dataclass_to_dict(SimConfig(max_steps=max_steps)),
     }
     (run_root / "run_metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
@@ -88,6 +93,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--n-envs", type=int, default=2)
     parser.add_argument("--max-steps", type=int, default=600)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+    parser.add_argument("--require-gpu", action="store_true")
     parser.add_argument("--checkpoint-every", type=int, default=256)
     return parser.parse_args(argv)
 
@@ -101,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         max_steps=args.max_steps,
         device=args.device,
         checkpoint_every=args.checkpoint_every,
+        require_gpu=args.require_gpu,
     )
     return 0
 

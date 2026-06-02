@@ -64,7 +64,23 @@ uv run python -m f1rl.manual --headless --max-steps 60
 
 ```powershell
 uv run python -m f1rl.scripted --steps 600
+uv run python -m f1rl.scripted --steps 18000 --no-telemetry
 ```
+
+The scripted controller is a conservative pure-pursuit baseline. The long no-telemetry run is the quick check for a slow clean lap.
+
+## Compute Policy
+
+```powershell
+uv run f1-hardware-check --json
+```
+
+Default placement is strict:
+
+- CPU: simulator stepping, physics, geometry, rendering, keyboard input, telemetry, track preprocessing, vector env workers
+- GPU: PyTorch policy/model training and inference when CUDA is available
+
+Use `--require-gpu` on training when CUDA must be present.
 
 ## Fast-F1 Reference Agent
 

@@ -51,7 +51,10 @@ uv run python -m f1rl.manual --headless --max-steps 60
 
 ```powershell
 uv run python -m f1rl.scripted --steps 600
+uv run python -m f1rl.scripted --steps 18000 --no-telemetry
 ```
+
+The long no-telemetry run verifies the conservative baseline can finish a slow clean lap without paying full JSONL/raycast telemetry cost.
 
 ## Fast-F1 Reference Agent
 
@@ -77,6 +80,7 @@ uv run f1-replay artifacts\<reference-run>\steps.jsonl
 
 ```powershell
 uv run python -m f1rl.train --timesteps 512 --n-envs 2 --device auto
+uv run python -m f1rl.train --timesteps 512 --n-envs 2 --device auto --require-gpu
 ```
 
 PyTorch uses CUDA when available. Environment stepping, geometry, rendering, and telemetry stay on CPU.

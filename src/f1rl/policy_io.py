@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from f1rl.config import ARTIFACTS_DIR
+from f1rl.hardware import torch_device
 
 
 def latest_checkpoint(root: Path = ARTIFACTS_DIR) -> Path:
@@ -21,4 +22,4 @@ def load_sb3_ppo(checkpoint: Path | str, *, env: Any | None = None, device: str 
     except ImportError as exc:  # pragma: no cover - exercised before train extra is installed
         raise RuntimeError("stable-baselines3 is required. Run `uv sync --active --all-extras --all-packages`.") from exc
     resolved = latest_checkpoint() if str(checkpoint) == "latest" else Path(checkpoint)
-    return PPO.load(resolved, env=env, device=device)
+    return PPO.load(resolved, env=env, device=torch_device(device))

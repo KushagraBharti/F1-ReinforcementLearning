@@ -15,7 +15,7 @@ def run_eval(*, checkpoint: str, steps: int, seed: int, device: str) -> int:
     env = MonzaEnv(SimConfig(max_steps=steps))
     model = load_sb3_ppo(checkpoint, env=env, device=device)
     obs, _ = env.reset(seed=seed)
-    writer = TelemetryWriter(ARTIFACTS_DIR, mode="eval", seed=seed)
+    writer = TelemetryWriter(ARTIFACTS_DIR, mode="eval", seed=seed, lap_length_m=env.sim.track.length_m)
     try:
         for _ in range(steps):
             action, _ = model.predict(obs, deterministic=True)

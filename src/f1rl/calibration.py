@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 
 from f1rl.config import ASSETS_DIR, CarParams
+from f1rl.physics import grip_limit_g
 
 REFERENCE_CSV = ASSETS_DIR / "reference" / "monza_2024_Q_VER_telemetry.csv"
 REFERENCE_SUMMARY = ASSETS_DIR / "reference" / "monza_2024_Q_VER_summary.json"
@@ -59,7 +60,7 @@ def load_targets(path: Path = REFERENCE_SUMMARY) -> CalibrationTargets:
 
 
 def theoretical_terminal_speed_kph(params: CarParams) -> float:
-    accel = max(params.engine_accel_mps2 - params.rolling_resistance_mps2, 0.0)
+    accel = max(min(params.engine_accel_mps2, params.max_drive_g * 9.81) - params.rolling_resistance_mps2, 0.0)
     terminal_mps = math.sqrt(accel / max(params.drag_coefficient, 1e-9))
     terminal_mps = min(terminal_mps, params.max_speed_mps)
     return terminal_mps * 3.6
@@ -69,7 +70,7 @@ def straight_line_speed_after(params: CarParams, seconds: float) -> float:
     speed = 0.0
     steps = int(seconds / params.dt)
     for _ in range(steps):
-        speed += params.engine_accel_mps2 * params.dt
+        speed += min(params.engine_accel_mps2, params.max_drive_g * 9.81) * params.dt
         speed -= params.rolling_resistance_mps2 * params.dt
         speed -= params.drag_coefficient * speed * speed * params.dt
         speed = float(np.clip(speed, 0.0, params.max_speed_mps))
@@ -82,7 +83,7 @@ def braking_distance(params: CarParams, *, from_kph: float, to_kph: float) -> fl
     distance = 0.0
     while speed > target:
         distance += speed * params.dt
-        speed -= params.brake_accel_mps2 * params.dt
+        speed -= min(params.brake_accel_mps2, params.max_brake_g * 9.81) * params.dt
         speed -= params.rolling_resistance_mps2 * params.dt
         speed -= params.drag_coefficient * speed * speed * params.dt
         speed = max(0.0, speed)
@@ -138,8 +139,10 @@ def steering_limited_radius(params: CarParams) -> float:
 
 def cornering_capacity(params: CarParams, speed_kph: float) -> dict[str, float]:
     speed_mps = speed_kph / 3.6
-    steering_curvature = math.tan(math.radians(params.max_steer_deg)) / max(params.wheelbase_m, 1e-9)
-    grip_curvature = params.grip_g * 9.81 / max(speed_mps * speed_mps, 1e-9)
+    effective_steer = math.radians(params.max_steer_deg) / (1.0 + params.steering_speed_sensitivity * speed_mps * speed_mps)
+    steering_curvature = math.tan(effective_steer) / max(params.wheelbase_m, 1e-9)
+    grip_g = grip_limit_g(params, speed_mps)
+    grip_curvature = grip_g * 9.81 / max(speed_mps * speed_mps, 1e-9)
     max_curvature = min(steering_curvature, grip_curvature)
     radius = 1.0 / max(max_curvature, 1e-9)
     lateral_g = speed_mps * speed_mps * max_curvature / 9.81
@@ -148,6 +151,7 @@ def cornering_capacity(params: CarParams, speed_kph: float) -> dict[str, float]:
         "max_curvature_rad_per_m": max_curvature,
         "min_radius_m": radius,
         "lateral_g_at_limit": lateral_g,
+        "available_grip_g": grip_g,
     }
 
 

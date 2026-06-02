@@ -111,6 +111,7 @@ def project_point_to_polyline(
     total = float(cumulative[-1])
     point = np.asarray(point, dtype=np.float32)
     best_distance = float("inf")
+    best_score = float("inf")
     best_progress = 0.0
     best_heading = 0.0
     best_projection = points[0].astype(np.float32)
@@ -131,9 +132,15 @@ def project_point_to_polyline(
         t = float(np.clip(np.dot(point - start, line) / norm, 0.0, 1.0))
         projection = start + line * t
         distance = float(np.linalg.norm(point - projection))
-        if distance < best_distance:
+        progress = float(cumulative[idx] + np.sqrt(norm) * t)
+        score = distance
+        if prev_mod is not None:
+            signed_delta = ((progress - prev_mod + total * 0.5) % total) - total * 0.5
+            score += max(-signed_delta, 0.0) * 0.05
+        if score < best_score:
+            best_score = score
             best_distance = distance
-            best_progress = float(cumulative[idx] + np.sqrt(norm) * t)
+            best_progress = progress
             best_heading = float(np.arctan2(-(end[1] - start[1]), end[0] - start[0]))
             best_projection = projection.astype(np.float32)
     return best_progress % total, best_distance, best_heading, best_projection

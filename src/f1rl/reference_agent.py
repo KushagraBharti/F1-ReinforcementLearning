@@ -140,10 +140,15 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
     profile = load_reference_profile(profile_path)
     sim = MonzaSim(SimConfig(max_steps=max(len(profile.time_s) + 10, 3600)))
     sim.reset(seed=seed)
-    writer = TelemetryWriter(ARTIFACTS_DIR, mode="reference-ghost", seed=seed) if telemetry else None
+    writer = TelemetryWriter(ARTIFACTS_DIR, mode="reference-ghost", seed=seed, lap_length_m=sim.track.length_m) if telemetry else None
     checkpoint_spacing = sim.track.length_m / max(len(sim.track.checkpoints), 1)
     steering_curvature = np.tan(np.deg2rad(sim.config.car.max_steer_deg)) / sim.config.car.wheelbase_m
     previous_progress = 0.0
+    previous_speed_mps = float(profile.speed_kph[0] / 3.6)
+    previous_throttle = float(profile.throttle[0])
+    previous_brake = float(profile.brake[0])
+    previous_steering = 0.0
+    previous_time_s = float(profile.time_s[0])
 
     for idx, (time_s, ref_distance_m, speed_kph, throttle, brake) in enumerate(
         zip(profile.time_s, profile.distance_m, profile.speed_kph, profile.throttle, profile.brake, strict=True)
@@ -155,11 +160,14 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
         steering = float(np.clip(curvature / max(steering_curvature, 1e-9), -1.0, 1.0))
         progress_delta = max(0.0, progress_m - previous_progress)
         previous_progress = progress_m
+        speed_mps = float(speed_kph / 3.6)
+        dt = max(float(time_s) - previous_time_s, 1e-6)
+        acceleration_mps2 = (speed_mps - previous_speed_mps) / dt
 
         sim.state.x = float(point[0])
         sim.state.y = float(point[1])
         sim.state.heading_rad = heading
-        sim.state.speed_mps = float(speed_kph / 3.6)
+        sim.state.speed_mps = speed_mps
         sim.state.yaw_rate_rps = float(sim.state.speed_mps * curvature)
         sim.state.steering = float(steering * np.deg2rad(sim.config.car.max_steer_deg))
         sim.state.elapsed_steps = idx
@@ -184,15 +192,26 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
             speed_mps=float(sim.state.speed_mps),
             speed_kph=float(speed_kph),
             yaw_rate_rps=float(sim.state.yaw_rate_rps),
+            acceleration_mps2=float(acceleration_mps2),
+            longitudinal_g=float(acceleration_mps2 / 9.81),
+            lateral_g=float((sim.state.speed_mps * sim.state.yaw_rate_rps) / 9.81),
+            curvature_rad_per_m=float(curvature),
             throttle=float(throttle),
             brake=float(brake),
             steering=float(steering),
+            throttle_delta=float(throttle - previous_throttle),
+            brake_delta=float(brake - previous_brake),
+            steering_delta=float(steering - previous_steering),
             action_id=-100,
             raw_progress_m=float(progress_m),
             monotonic_progress_m=float(progress_m),
             progress_delta_m=float(progress_delta),
             lateral_error_m=0.0,
+            racing_line_deviation_m=0.0,
             heading_error_deg=0.0,
+            reference_progress_m=float(progress_m),
+            reference_speed_kph=float(speed_kph),
+            ghost_gap_m=0.0,
             checkpoint_index=int(sim.state.checkpoint_index),
             lap_index=int(sim.state.lap_index),
             ray_distances_m=[float(v) for v in sim.ray_distances_m()],
@@ -206,6 +225,11 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
         )
         if writer:
             writer.write_step(telemetry_row)
+        previous_speed_mps = speed_mps
+        previous_throttle = float(throttle)
+        previous_brake = float(brake)
+        previous_steering = steering
+        previous_time_s = float(time_s)
 
     if not writer:
         return None
@@ -251,7 +275,7 @@ def run_reference_control(
     sim = MonzaSim(SimConfig(max_steps=steps, no_progress_limit_steps=600))
     sim.reset(seed=seed)
     sim.state.speed_mps = profile.speed_at(0.0) / 3.6
-    writer = TelemetryWriter(ARTIFACTS_DIR, mode="reference-control", seed=seed) if telemetry else None
+    writer = TelemetryWriter(ARTIFACTS_DIR, mode="reference-control", seed=seed, lap_length_m=sim.track.length_m) if telemetry else None
 
     for _ in range(steps):
         throttle, brake, steer = pure_pursuit_controls(sim, profile)

@@ -35,6 +35,8 @@ class MonzaSim:
         self.boundary_segments = self.track.boundary_segments
         self.sensor_angles = self._sensor_angles()
         self.last_action_id = 0
+        self.last_throttle = 0.0
+        self.last_brake = 0.0
         self.last_steer = 0.0
         self.no_progress_steps = 0
         self.terminated = False
@@ -59,6 +61,8 @@ class MonzaSim:
         del seed
         self.state = initial_car_state(self.track.start_pose)
         self.last_action_id = 0
+        self.last_throttle = 0.0
+        self.last_brake = 0.0
         self.last_steer = 0.0
         self.no_progress_steps = 0
         self.terminated = False
@@ -159,12 +163,24 @@ class MonzaSim:
         throttle, brake, steer = action_to_controls(action_id)
         return self.step_controls(throttle=throttle, brake=brake, steer=steer, action_id=action_id)
 
-    def step_controls(self, *, throttle: float, brake: float, steer: float, action_id: int = -1) -> SimStep:
+    def step_controls(
+        self,
+        *,
+        throttle: float,
+        brake: float,
+        steer: float,
+        action_id: int = -1,
+        collect_observation: bool = True,
+        collect_rays: bool = True,
+    ) -> SimStep:
         if self.terminated or self.truncated:
             raise RuntimeError("step() called after episode ended; call reset() first")
         previous_steer = self.last_steer
+        previous_throttle = self.last_throttle
+        previous_brake = self.last_brake
         old_progress_m = self.state.monotonic_progress_m
         old_raw_px = self._last_raw_progress_px
+        old_speed_mps = self.state.speed_mps
         self.state, movement = apply_physics(
             self.state,
             throttle=throttle,
@@ -174,6 +190,8 @@ class MonzaSim:
             meters_per_pixel=self.track.meters_per_pixel,
         )
         self.last_action_id = int(action_id)
+        self.last_throttle = float(throttle)
+        self.last_brake = float(brake)
         self.last_steer = float(steer)
 
         raw_px, lateral_error_m, heading_error = self._track_errors()
@@ -228,7 +246,10 @@ class MonzaSim:
         if self.terminated:
             self.state.alive = False
 
-        obs = self.observation()
+        obs = self.observation() if collect_observation else np.empty(0, dtype=np.float32)
+        acceleration_mps2 = (self.state.speed_mps - old_speed_mps) / max(self.config.car.dt, 1e-9)
+        lateral_g = (self.state.speed_mps * self.state.yaw_rate_rps) / 9.81
+        curvature = self.state.yaw_rate_rps / max(self.state.speed_mps, 1e-6)
         telemetry = StepTelemetry(
             step_index=self.state.elapsed_steps,
             sim_time_s=self.state.elapsed_steps * self.config.car.dt,
@@ -238,18 +259,29 @@ class MonzaSim:
             speed_mps=float(self.state.speed_mps),
             speed_kph=float(self.state.speed_mps * 3.6),
             yaw_rate_rps=float(self.state.yaw_rate_rps),
+            acceleration_mps2=float(acceleration_mps2),
+            longitudinal_g=float(acceleration_mps2 / 9.81),
+            lateral_g=float(lateral_g),
+            curvature_rad_per_m=float(curvature),
             throttle=float(throttle),
             brake=float(brake),
             steering=float(steer),
+            throttle_delta=float(throttle - previous_throttle),
+            brake_delta=float(brake - previous_brake),
+            steering_delta=float(steer - previous_steer),
             action_id=int(action_id),
             raw_progress_m=float(self.state.raw_progress_m),
             monotonic_progress_m=float(self.state.monotonic_progress_m),
             progress_delta_m=float(self.state.monotonic_progress_m - old_progress_m),
             lateral_error_m=float(lateral_error_m),
+            racing_line_deviation_m=float(lateral_error_m),
             heading_error_deg=float(np.rad2deg(heading_error)),
+            reference_progress_m=None,
+            reference_speed_kph=None,
+            ghost_gap_m=None,
             checkpoint_index=int(self.state.checkpoint_index),
             lap_index=int(self.state.lap_index),
-            ray_distances_m=[float(v) for v in self.ray_distances_m()],
+            ray_distances_m=[float(v) for v in self.ray_distances_m()] if collect_rays else [],
             collided=bool(collided),
             off_track=bool(off_track),
             terminated=bool(self.terminated),
