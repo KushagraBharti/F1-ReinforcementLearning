@@ -1,5 +1,24 @@
+from f1rl.config import DISCRETE_ACTIONS, action_to_controls
 from f1rl.sim import MonzaSim
 from f1rl.telemetry import REWARD_COMPONENT_KEYS
+
+
+def test_discrete_action_table_preserves_original_ids_and_adds_soft_controls() -> None:
+    original_actions = (
+        ("coast", 0.0, 0.0, 0.0),
+        ("throttle", 1.0, 0.0, 0.0),
+        ("brake", 0.0, 1.0, 0.0),
+        ("left", 0.0, 0.0, -1.0),
+        ("right", 0.0, 0.0, 1.0),
+        ("throttle_left", 1.0, 0.0, -1.0),
+        ("throttle_right", 1.0, 0.0, 1.0),
+        ("brake_left", 0.0, 1.0, -1.0),
+        ("brake_right", 0.0, 1.0, 1.0),
+    )
+    assert DISCRETE_ACTIONS[: len(original_actions)] == original_actions
+    assert ("half_throttle_soft_left", 0.5, 0.0, -0.45) in DISCRETE_ACTIONS
+    assert ("soft_brake_right", 0.0, 0.35, 0.45) in DISCRETE_ACTIONS
+    assert action_to_controls(14) == (0.5, 0.0, -0.45)
 
 
 def test_sim_observation_and_reward_schema() -> None:

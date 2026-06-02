@@ -176,6 +176,18 @@ DISCRETE_ACTIONS: tuple[tuple[str, float, float, float], ...] = (
     ("throttle_right", 1.0, 0.0, 1.0),
     ("brake_left", 0.0, 1.0, -1.0),
     ("brake_right", 0.0, 1.0, 1.0),
+    ("half_throttle", 0.5, 0.0, 0.0),
+    ("soft_left", 0.0, 0.0, -0.45),
+    ("soft_right", 0.0, 0.0, 0.45),
+    ("throttle_soft_left", 1.0, 0.0, -0.45),
+    ("throttle_soft_right", 1.0, 0.0, 0.45),
+    ("half_throttle_soft_left", 0.5, 0.0, -0.45),
+    ("half_throttle_soft_right", 0.5, 0.0, 0.45),
+    ("half_throttle_left", 0.5, 0.0, -1.0),
+    ("half_throttle_right", 0.5, 0.0, 1.0),
+    ("soft_brake", 0.0, 0.35, 0.0),
+    ("soft_brake_left", 0.0, 0.35, -0.45),
+    ("soft_brake_right", 0.0, 0.35, 0.45),
 )
 
 
