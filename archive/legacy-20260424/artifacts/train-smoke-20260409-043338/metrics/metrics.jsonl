@@ -1,0 +1,2 @@
+{"training_iteration": 1.0, "episode_reward_mean": 0.0, "episode_len_mean": 0.0, "timesteps_total": 512.0, "time_total_s": 53.26992583274841, "evaluation_episode_reward_mean": 3.696251832239702, "evaluation_episode_len_mean": 99.0}
+{"training_iteration": 2.0, "episode_reward_mean": 6.053493676597024, "episode_len_mean": 300.0, "timesteps_total": 1024.0, "time_total_s": 96.38029026985168, "evaluation_episode_reward_mean": 0.5840888467518255, "evaluation_episode_len_mean": 62.0}

@@ -5,5 +5,4 @@ __pycache__/
 .mypy_cache/
 .pyright/
 
-artifacts/
 ray_results/

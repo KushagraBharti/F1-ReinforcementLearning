@@ -214,6 +214,37 @@ class PygameRenderer:
             f"reason {sim.termination_reason}",
             "WASD/arrows drive  R reset  Esc quit",
         ]
+        if sim.last_telemetry is not None:
+            telemetry = sim.last_telemetry
+            ray_values = telemetry.ray_distances_m
+            if ray_values:
+                center_ray = ray_values[len(ray_values) // 2]
+                ray_text = f"rays min/ctr/max {min(ray_values):5.0f}/{center_ray:5.0f}/{max(ray_values):5.0f} m"
+            else:
+                ray_text = "rays unavailable"
+            reward_parts = telemetry.reward_components
+            lines.extend(
+                [
+                    f"time {telemetry.sim_time_s:7.2f} s",
+                    f"delta {telemetry.progress_delta_m:6.2f} m reward {telemetry.reward_total:7.2f}",
+                    "rew "
+                    f"p {reward_parts.get('progress', 0.0):6.2f} "
+                    f"f {reward_parts.get('finish', 0.0):6.1f} "
+                    f"c {reward_parts.get('collision', 0.0):6.1f} "
+                    f"o {reward_parts.get('off_track', 0.0):6.1f}",
+                    f"err lat {telemetry.lateral_error_m:6.1f} m head {telemetry.heading_error_deg:6.1f} deg",
+                    ray_text,
+                    f"valid {telemetry.valid_lap} passed {telemetry.checkpoints_passed:03d} next {telemetry.next_checkpoint_index:03d}",
+                ]
+            )
+            if telemetry.ghost_gap_m is not None:
+                lines.append(f"ghost gap {telemetry.ghost_gap_m:7.1f} m")
+            if telemetry.curriculum_stage or telemetry.segment_target_progress_m is not None:
+                lines.append(
+                    f"stage {telemetry.curriculum_stage or '-'} "
+                    f"segment {telemetry.segment_complete} "
+                    f"target {telemetry.segment_target_progress_m or 0.0:7.1f}"
+                )
         if extra_lines:
             lines.extend(extra_lines)
         for idx, text in enumerate(lines):

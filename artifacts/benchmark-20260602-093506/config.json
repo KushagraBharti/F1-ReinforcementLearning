@@ -1,0 +1,12 @@
+{
+  "policies": [
+    "random"
+  ],
+  "episodes": 3,
+  "max_steps": 600,
+  "seed": 7,
+  "checkpoint": "latest",
+  "device": "auto",
+  "telemetry": "selected",
+  "telemetry_every": 3
+}

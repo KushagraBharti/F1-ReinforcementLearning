@@ -1,0 +1,23 @@
+{
+  "run_id": "reference-control-20260424-030047",
+  "mode": "reference-control",
+  "seed": 7,
+  "termination_reason": "off_track",
+  "completed_lap": false,
+  "elapsed_time_s": 0.8333333333333334,
+  "lap_time_s": null,
+  "checkpoints_reached": 1,
+  "distance_traveled_m": 83.77440728316061,
+  "avg_speed_kph": 308.3208203009098,
+  "max_speed_kph": 320.73877095077796,
+  "collision_count": 0,
+  "off_track_count": 1,
+  "reward_totals": {
+    "progress": 6.701952582652851,
+    "finish": 0.0,
+    "collision": 0.0,
+    "off_track": -25.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  }
+}

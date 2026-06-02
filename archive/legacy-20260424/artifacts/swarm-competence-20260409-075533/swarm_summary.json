@@ -1,0 +1,72 @@
+{
+  "policy": "checkpoint",
+  "backend": "artifact",
+  "cars": 4,
+  "swarm_stage": "competence",
+  "logical_cars_target": 32,
+  "elapsed_s": 9.546836200053804,
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 0.0,
+    "avg_checkpoints_reached": 0.0,
+    "max_checkpoints_reached": 0,
+    "avg_speed": 0.3662672908533187,
+    "best_reward": 0.5795676708221436,
+    "samples_per_second": 17.597272037181604
+  },
+  "failure_histogram": {
+    "wall_hugging": 4
+  },
+  "clip_paths": {},
+  "top_k_traces_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\swarm-competence-20260409-075533\\metrics\\top_k_traces.json",
+  "cars_summary": [
+    {
+      "index": 0,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.5795676708221436,
+      "avg_speed": 0.8532787504650298,
+      "termination_reason": "wall_hugging"
+    },
+    {
+      "index": 1,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.32065242528915405,
+      "avg_speed": 0.40344914935884024,
+      "termination_reason": "wall_hugging"
+    },
+    {
+      "index": 2,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.2894173860549927,
+      "avg_speed": 0.14727584520975748,
+      "termination_reason": "wall_hugging"
+    },
+    {
+      "index": 3,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.3060622215270996,
+      "avg_speed": 0.06106541837964739,
+      "termination_reason": "wall_hugging"
+    }
+  ]
+}

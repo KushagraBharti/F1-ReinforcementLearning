@@ -1,0 +1,79 @@
+{
+  "run_id": "manual-20260602-143632",
+  "mode": "manual",
+  "seed": 7,
+  "termination_reason": "off_track",
+  "completed_lap": false,
+  "valid_lap": false,
+  "finish_crossed": false,
+  "segment_complete": false,
+  "curriculum_stage": null,
+  "segment_target_progress_m": null,
+  "elapsed_time_s": 5.266666666666667,
+  "lap_time_s": null,
+  "checkpoints_reached": 3,
+  "checkpoints_passed": 3,
+  "missed_checkpoint_count": 0,
+  "distance_traveled_m": 167.54056573807887,
+  "avg_speed_kph": 115.03877271958805,
+  "max_speed_kph": 262.5183894804243,
+  "collision_count": 0,
+  "off_track_count": 1,
+  "reward_totals": {
+    "progress": 13.403245259046308,
+    "finish": 0.0,
+    "collision": 0.0,
+    "off_track": -60.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  },
+  "sector_times_s": [
+    null,
+    null,
+    null
+  ],
+  "sector_speed_kph": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "braking_zone_count": 1,
+  "braking_zones": [
+    {
+      "start_time_s": 3.05,
+      "end_time_s": 3.1333333333333333,
+      "start_progress_m": 40.48264560643346,
+      "end_progress_m": 43.84259923630511,
+      "entry_speed_kph": 146.39010430258472,
+      "min_speed_kph": 145.15829406096995,
+      "max_brake": 0.0,
+      "peak_decel_g": 0.42282910206924756
+    }
+  ],
+  "avg_abs_racing_line_deviation_m": 3.484922772225384,
+  "max_abs_racing_line_deviation_m": 15.996152917246036,
+  "avg_lateral_g": 0.06355374402708978,
+  "max_lateral_g": 2.580317469650925,
+  "avg_longitudinal_g": 1.411407402463388,
+  "min_longitudinal_g": -0.42282910206924756,
+  "steering_smoothness_avg": 0.006329113924050633,
+  "steering_smoothness_max": 1.0,
+  "throttle_smoothness_avg": 0.0031645569620253164,
+  "brake_smoothness_avg": 0.0,
+  "avg_ghost_gap_m": 199.96285786524118,
+  "final_ghost_gap_m": 328.6713691410223,
+  "corner_count": 1,
+  "corner_summaries": [
+    {
+      "start_time_s": 3.033333333333333,
+      "end_time_s": 3.15,
+      "start_progress_m": 39.80577983674583,
+      "end_progress_m": 44.512539249700495,
+      "entry_speed_kph": 146.63898151206266,
+      "apex_speed_kph": 145.15829406096995,
+      "exit_speed_kph": 145.6104462654605,
+      "peak_lateral_g": 2.580317469650925,
+      "max_deviation_m": 1.6662306282151462
+    }
+  ]
+}

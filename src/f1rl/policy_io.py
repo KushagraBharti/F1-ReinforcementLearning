@@ -10,9 +10,9 @@ from f1rl.hardware import torch_device
 
 
 def latest_checkpoint(root: Path = ARTIFACTS_DIR) -> Path:
-    candidates = sorted(root.glob("train-*/checkpoints/*.zip"), key=lambda path: path.stat().st_mtime)
+    candidates = sorted(root.glob("*/checkpoints/*.zip"), key=lambda path: path.stat().st_mtime)
     if not candidates:
-        raise FileNotFoundError("No checkpoints found under artifacts/train-*/checkpoints.")
+        raise FileNotFoundError("No checkpoints found under artifacts/*/checkpoints.")
     return candidates[-1]
 
 

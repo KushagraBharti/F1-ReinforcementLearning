@@ -1,0 +1,72 @@
+{
+  "policy": "checkpoint",
+  "backend": "artifact",
+  "cars": 4,
+  "swarm_stage": "competence",
+  "logical_cars_target": 32,
+  "elapsed_s": 13.490958399954252,
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 0.0,
+    "avg_checkpoints_reached": 0.0,
+    "max_checkpoints_reached": 0,
+    "avg_speed": 0.31155485411485034,
+    "best_reward": 0.8000030517578125,
+    "samples_per_second": 17.78957094562532
+  },
+  "failure_histogram": {
+    "max_steps": 4
+  },
+  "clip_paths": {},
+  "top_k_traces_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\swarm-competence-20260409-073517\\metrics\\top_k_traces.json",
+  "cars_summary": [
+    {
+      "index": 0,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.3829726576805115,
+      "avg_speed": 0.04950129588445028,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 1,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.7066937685012817,
+      "avg_speed": 0.3427508989969889,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 2,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.8000030517578125,
+      "avg_speed": 0.5223181406656902,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 3,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.6612094044685364,
+      "avg_speed": 0.33164908091227213,
+      "termination_reason": "max_steps"
+    }
+  ]
+}

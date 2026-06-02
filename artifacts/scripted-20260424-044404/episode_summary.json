@@ -1,0 +1,61 @@
+{
+  "run_id": "scripted-20260424-044404",
+  "mode": "scripted",
+  "seed": 7,
+  "termination_reason": "off_track",
+  "completed_lap": false,
+  "elapsed_time_s": 2.35,
+  "lap_time_s": null,
+  "checkpoints_reached": 0,
+  "distance_traveled_m": 36.25716285064887,
+  "avg_speed_kph": 44.60895821097603,
+  "max_speed_kph": 63.31335506452955,
+  "collision_count": 0,
+  "off_track_count": 1,
+  "reward_totals": {
+    "progress": 2.9005730280519098,
+    "finish": 0.0,
+    "collision": 0.0,
+    "off_track": -25.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  },
+  "sector_times_s": [
+    1.2833333333333332,
+    0.0,
+    1.0166666666666666
+  ],
+  "sector_speed_kph": [
+    33.90280162658076,
+    43508595.42077865,
+    42.79533975814292
+  ],
+  "braking_zone_count": 0,
+  "braking_zones": [],
+  "avg_abs_racing_line_deviation_m": 3.4360973926920657,
+  "max_abs_racing_line_deviation_m": 15.419296235363618,
+  "avg_lateral_g": 1.1412108816702828,
+  "max_lateral_g": 2.2536419552230793,
+  "avg_longitudinal_g": 0.7383235532261236,
+  "min_longitudinal_g": -0.10400345277986302,
+  "steering_smoothness_avg": 0.0070921985815602835,
+  "steering_smoothness_max": 0.08344319170335625,
+  "throttle_smoothness_avg": 0.010664402806454096,
+  "brake_smoothness_avg": 0.0,
+  "avg_ghost_gap_m": null,
+  "final_ghost_gap_m": null,
+  "corner_count": 1,
+  "corner_summaries": [
+    {
+      "start_time_s": 0.016666666666666666,
+      "end_time_s": 2.35,
+      "start_progress_m": 0.0,
+      "end_progress_m": 36.25716285064887,
+      "entry_speed_kph": 0.7725375,
+      "apex_speed_kph": 0.7725375,
+      "exit_speed_kph": 61.275391323474395,
+      "peak_lateral_g": 2.2536419552230793,
+      "max_deviation_m": 15.419296235363618
+    }
+  ]
+}

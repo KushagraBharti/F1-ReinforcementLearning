@@ -1,0 +1,119 @@
+{
+  "device": "cpu",
+  "dataset": {
+    "aggregate": {
+      "episodes": 8,
+      "samples": 3696,
+      "avg_progress_total": 17.0,
+      "best_progress_total": 17
+    },
+    "episodes": [
+      {
+        "seed": 41,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 42,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 43,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 44,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 45,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 46,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 47,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      },
+      {
+        "seed": 48,
+        "steps": 462,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 50.22546616217471,
+        "terminated_reason": "no_progress"
+      }
+    ]
+  },
+  "train": {
+    "final_loss": 0.0002674445859156549,
+    "mean_loss": 0.0013849861599737779,
+    "train_time_s": 0.11443329998292029
+  },
+  "eval": {
+    "aggregate": {
+      "episodes": 3,
+      "avg_progress_total": 17.0,
+      "best_progress_total": 17,
+      "avg_steps": 500.0,
+      "avg_reward": 49.61432795575164,
+      "completion_rate": 0.0
+    },
+    "episodes": [
+      {
+        "seed": 101,
+        "steps": 500,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 49.61432795575164,
+        "terminated_reason": "max_steps"
+      },
+      {
+        "seed": 202,
+        "steps": 500,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 49.61432795575164,
+        "terminated_reason": "max_steps"
+      },
+      {
+        "seed": 303,
+        "steps": 500,
+        "lap_count": 0,
+        "positive_progress_total": 17,
+        "total_reward": 49.61432795575164,
+        "terminated_reason": "max_steps"
+      }
+    ]
+  },
+  "model_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\bc-smoke-20260409-084158\\checkpoints\\bc_model.pt"
+}

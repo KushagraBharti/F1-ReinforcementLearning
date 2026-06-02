@@ -1,0 +1,792 @@
+[
+  {
+    "step": 42,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 1,
+    "lap_count": 0,
+    "total_checkpoints_reached": 1,
+    "x": 1452.9209209547887,
+    "y": 866.4381319481604
+  },
+  {
+    "step": 42,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 1,
+    "lap_count": 0,
+    "total_checkpoints_reached": 1,
+    "x": 1458.2287337946495,
+    "y": 873.7401296443303
+  },
+  {
+    "step": 45,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 1,
+    "lap_count": 0,
+    "total_checkpoints_reached": 1,
+    "x": 1460.0870253444307,
+    "y": 876.7078377568698
+  },
+  {
+    "step": 48,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 1,
+    "lap_count": 0,
+    "total_checkpoints_reached": 1,
+    "x": 1459.7916132494986,
+    "y": 874.6573229467219
+  },
+  {
+    "step": 60,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 2,
+    "lap_count": 0,
+    "total_checkpoints_reached": 2,
+    "x": 1419.3918926667836,
+    "y": 867.8176825426967
+  },
+  {
+    "step": 60,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 2,
+    "lap_count": 0,
+    "total_checkpoints_reached": 2,
+    "x": 1424.625045294144,
+    "y": 875.1098872686828
+  },
+  {
+    "step": 63,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 2,
+    "lap_count": 0,
+    "total_checkpoints_reached": 2,
+    "x": 1425.4276645352443,
+    "y": 877.8360091820457
+  },
+  {
+    "step": 65,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 1,
+    "lap_count": 0,
+    "total_checkpoints_reached": 1,
+    "x": 1458.9492722245263,
+    "y": 874.2820358448563
+  },
+  {
+    "step": 66,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 2,
+    "lap_count": 0,
+    "total_checkpoints_reached": 2,
+    "x": 1424.5670911469385,
+    "y": 874.9417816474551
+  },
+  {
+    "step": 70,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 1,
+    "lap_count": 0,
+    "total_checkpoints_reached": 1,
+    "x": 1458.399956842825,
+    "y": 873.5898598246283
+  },
+  {
+    "step": 77,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 3,
+    "lap_count": 0,
+    "total_checkpoints_reached": 3,
+    "x": 1382.9611402079777,
+    "y": 869.5343179631941
+  },
+  {
+    "step": 77,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 3,
+    "lap_count": 0,
+    "total_checkpoints_reached": 3,
+    "x": 1388.0999798203388,
+    "y": 876.557114077264
+  },
+  {
+    "step": 79,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 3,
+    "lap_count": 0,
+    "total_checkpoints_reached": 3,
+    "x": 1390.5307848302193,
+    "y": 878.9613961735533
+  },
+  {
+    "step": 83,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 3,
+    "lap_count": 0,
+    "total_checkpoints_reached": 3,
+    "x": 1387.157833582076,
+    "y": 875.7154323009856
+  },
+  {
+    "step": 86,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 2,
+    "lap_count": 0,
+    "total_checkpoints_reached": 2,
+    "x": 1425.659543954256,
+    "y": 876.4163317552922
+  },
+  {
+    "step": 92,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 4,
+    "lap_count": 0,
+    "total_checkpoints_reached": 4,
+    "x": 1348.2946573731215,
+    "y": 871.2132757809846
+  },
+  {
+    "step": 93,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 4,
+    "lap_count": 0,
+    "total_checkpoints_reached": 4,
+    "x": 1351.0016108876669,
+    "y": 877.9018964372927
+  },
+  {
+    "step": 95,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 2,
+    "lap_count": 0,
+    "total_checkpoints_reached": 2,
+    "x": 1425.0403828588478,
+    "y": 876.0157314152442
+  },
+  {
+    "step": 95,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 4,
+    "lap_count": 0,
+    "total_checkpoints_reached": 4,
+    "x": 1353.1530845555912,
+    "y": 880.0720721741841
+  },
+  {
+    "step": 98,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 4,
+    "lap_count": 0,
+    "total_checkpoints_reached": 4,
+    "x": 1351.9405728974286,
+    "y": 876.6414685178376
+  },
+  {
+    "step": 104,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 3,
+    "lap_count": 0,
+    "total_checkpoints_reached": 3,
+    "x": 1389.7615330952906,
+    "y": 878.2897456040378
+  },
+  {
+    "step": 107,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 5,
+    "lap_count": 0,
+    "total_checkpoints_reached": 5,
+    "x": 1312.0683083937276,
+    "y": 872.9704781978085
+  },
+  {
+    "step": 107,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 5,
+    "lap_count": 0,
+    "total_checkpoints_reached": 5,
+    "x": 1317.1123917348186,
+    "y": 879.0436424023005
+  },
+  {
+    "step": 110,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 5,
+    "lap_count": 0,
+    "total_checkpoints_reached": 5,
+    "x": 1316.6288700597959,
+    "y": 881.0936900759033
+  },
+  {
+    "step": 113,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 5,
+    "lap_count": 0,
+    "total_checkpoints_reached": 5,
+    "x": 1315.3524691374082,
+    "y": 877.7094701103993
+  },
+  {
+    "step": 114,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 3,
+    "lap_count": 0,
+    "total_checkpoints_reached": 3,
+    "x": 1389.831860400738,
+    "y": 878.0496004350348
+  },
+  {
+    "step": 120,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 4,
+    "lap_count": 0,
+    "total_checkpoints_reached": 4,
+    "x": 1354.229189133333,
+    "y": 879.7821110339651
+  },
+  {
+    "step": 121,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 6,
+    "lap_count": 0,
+    "total_checkpoints_reached": 6,
+    "x": 1277.3246858530051,
+    "y": 874.5888292241823
+  },
+  {
+    "step": 122,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 6,
+    "lap_count": 0,
+    "total_checkpoints_reached": 6,
+    "x": 1279.8219330442155,
+    "y": 880.2240265478208
+  },
+  {
+    "step": 124,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 6,
+    "lap_count": 0,
+    "total_checkpoints_reached": 6,
+    "x": 1281.6830957773245,
+    "y": 882.0109417548463
+  },
+  {
+    "step": 127,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 6,
+    "lap_count": 0,
+    "total_checkpoints_reached": 6,
+    "x": 1280.3725095005252,
+    "y": 878.7763075463961
+  },
+  {
+    "step": 131,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 4,
+    "lap_count": 0,
+    "total_checkpoints_reached": 4,
+    "x": 1353.4365236514527,
+    "y": 879.7061564520216
+  },
+  {
+    "step": 135,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 7,
+    "lap_count": 0,
+    "total_checkpoints_reached": 7,
+    "x": 1241.9733506854411,
+    "y": 876.1962859755911
+  },
+  {
+    "step": 136,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 5,
+    "lap_count": 0,
+    "total_checkpoints_reached": 5,
+    "x": 1316.464933051284,
+    "y": 881.1236411468534
+  },
+  {
+    "step": 136,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 7,
+    "lap_count": 0,
+    "total_checkpoints_reached": 7,
+    "x": 1244.4091086277926,
+    "y": 881.3098179330578
+  },
+  {
+    "step": 138,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 7,
+    "lap_count": 0,
+    "total_checkpoints_reached": 7,
+    "x": 1246.1951933567636,
+    "y": 882.9352111824958
+  },
+  {
+    "step": 141,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 7,
+    "lap_count": 0,
+    "total_checkpoints_reached": 7,
+    "x": 1244.8599538260803,
+    "y": 879.8898606984718
+  },
+  {
+    "step": 147,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 5,
+    "lap_count": 0,
+    "total_checkpoints_reached": 5,
+    "x": 1316.448427298509,
+    "y": 881.0965415828665
+  },
+  {
+    "step": 148,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 8,
+    "lap_count": 0,
+    "total_checkpoints_reached": 8,
+    "x": 1208.7756455342221,
+    "y": 877.7395147889712
+  },
+  {
+    "step": 150,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 8,
+    "lap_count": 0,
+    "total_checkpoints_reached": 8,
+    "x": 1208.5968841197453,
+    "y": 882.4789455185911
+  },
+  {
+    "step": 151,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 6,
+    "lap_count": 0,
+    "total_checkpoints_reached": 6,
+    "x": 1279.7269871267786,
+    "y": 882.2398889810651
+  },
+  {
+    "step": 152,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 8,
+    "lap_count": 0,
+    "total_checkpoints_reached": 8,
+    "x": 1210.3318464061922,
+    "y": 883.9494494656165
+  },
+  {
+    "step": 155,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 8,
+    "lap_count": 0,
+    "total_checkpoints_reached": 8,
+    "x": 1208.9891454610324,
+    "y": 881.1279320577792
+  },
+  {
+    "step": 162,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 6,
+    "lap_count": 0,
+    "total_checkpoints_reached": 6,
+    "x": 1280.193709366071,
+    "y": 882.2438381706977
+  },
+  {
+    "step": 162,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 9,
+    "lap_count": 0,
+    "total_checkpoints_reached": 9,
+    "x": 1172.7444844019024,
+    "y": 879.373930728409
+  },
+  {
+    "step": 164,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 9,
+    "lap_count": 0,
+    "total_checkpoints_reached": 9,
+    "x": 1172.5062627814602,
+    "y": 883.6608482767751
+  },
+  {
+    "step": 165,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 7,
+    "lap_count": 0,
+    "total_checkpoints_reached": 7,
+    "x": 1244.6624803951772,
+    "y": 883.2256903712924
+  },
+  {
+    "step": 166,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 9,
+    "lap_count": 0,
+    "total_checkpoints_reached": 9,
+    "x": 1174.2057242736228,
+    "y": 884.9953852106518
+  },
+  {
+    "step": 169,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 9,
+    "lap_count": 0,
+    "total_checkpoints_reached": 9,
+    "x": 1172.8601854370875,
+    "y": 882.3968380024756
+  },
+  {
+    "step": 176,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 7,
+    "lap_count": 0,
+    "total_checkpoints_reached": 7,
+    "x": 1245.4313543085825,
+    "y": 883.2469939923819
+  },
+  {
+    "step": 176,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 10,
+    "lap_count": 0,
+    "total_checkpoints_reached": 10,
+    "x": 1136.5105968037512,
+    "y": 880.9839497311732
+  },
+  {
+    "step": 177,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 10,
+    "lap_count": 0,
+    "total_checkpoints_reached": 10,
+    "x": 1138.8251868879736,
+    "y": 884.7638117412206
+  },
+  {
+    "step": 179,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 8,
+    "lap_count": 0,
+    "total_checkpoints_reached": 8,
+    "x": 1209.0789081268103,
+    "y": 884.2637659319025
+  },
+  {
+    "step": 180,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 10,
+    "lap_count": 0,
+    "total_checkpoints_reached": 10,
+    "x": 1137.9066832285164,
+    "y": 886.0571236400348
+  },
+  {
+    "step": 183,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 10,
+    "lap_count": 0,
+    "total_checkpoints_reached": 10,
+    "x": 1136.556427023501,
+    "y": 883.6839371549453
+  },
+  {
+    "step": 190,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 8,
+    "lap_count": 0,
+    "total_checkpoints_reached": 8,
+    "x": 1210.051069683564,
+    "y": 884.2932324856372
+  },
+  {
+    "step": 190,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 11,
+    "lap_count": 0,
+    "total_checkpoints_reached": 11,
+    "x": 1100.1423270124865,
+    "y": 882.5709676794646
+  },
+  {
+    "step": 191,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 11,
+    "lap_count": 0,
+    "total_checkpoints_reached": 11,
+    "x": 1102.4267427446903,
+    "y": 885.9592748249029
+  },
+  {
+    "step": 193,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 9,
+    "lap_count": 0,
+    "total_checkpoints_reached": 9,
+    "x": 1173.1424771083334,
+    "y": 885.3117677071731
+  },
+  {
+    "step": 194,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 11,
+    "lap_count": 0,
+    "total_checkpoints_reached": 11,
+    "x": 1101.4871393775904,
+    "y": 887.1316281748238
+  },
+  {
+    "step": 196,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 11,
+    "lap_count": 0,
+    "total_checkpoints_reached": 11,
+    "x": 1102.7399450665084,
+    "y": 884.8887965968053
+  },
+  {
+    "step": 203,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 12,
+    "lap_count": 0,
+    "total_checkpoints_reached": 12,
+    "x": 1066.2878502915266,
+    "y": 884.0406192693692
+  },
+  {
+    "step": 204,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 9,
+    "lap_count": 0,
+    "total_checkpoints_reached": 9,
+    "x": 1174.2522081829895,
+    "y": 885.3448458098384
+  },
+  {
+    "step": 205,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 12,
+    "lap_count": 0,
+    "total_checkpoints_reached": 12,
+    "x": 1065.9479563121574,
+    "y": 887.1737313267002
+  },
+  {
+    "step": 207,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 10,
+    "lap_count": 0,
+    "total_checkpoints_reached": 10,
+    "x": 1136.9718767795657,
+    "y": 886.3617174294363
+  },
+  {
+    "step": 207,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 12,
+    "lap_count": 0,
+    "total_checkpoints_reached": 12,
+    "x": 1067.6049995317023,
+    "y": 888.1486050647761
+  },
+  {
+    "step": 210,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 12,
+    "lap_count": 0,
+    "total_checkpoints_reached": 12,
+    "x": 1066.2489392124837,
+    "y": 886.2057970130537
+  },
+  {
+    "step": 217,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 13,
+    "lap_count": 0,
+    "total_checkpoints_reached": 13,
+    "x": 1029.7770541307423,
+    "y": 885.6020291268584
+  },
+  {
+    "step": 218,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 10,
+    "lap_count": 0,
+    "total_checkpoints_reached": 10,
+    "x": 1138.174514934631,
+    "y": 886.3974475318213
+  },
+  {
+    "step": 218,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 13,
+    "lap_count": 0,
+    "total_checkpoints_reached": 13,
+    "x": 1032.0235619986713,
+    "y": 888.3201616940823
+  },
+  {
+    "step": 220,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 11,
+    "lap_count": 0,
+    "total_checkpoints_reached": 11,
+    "x": 1103.237912136441,
+    "y": 887.3413748719472
+  },
+  {
+    "step": 221,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 13,
+    "lap_count": 0,
+    "total_checkpoints_reached": 13,
+    "x": 1031.0624234268862,
+    "y": 889.2722932938364
+  },
+  {
+    "step": 223,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 13,
+    "lap_count": 0,
+    "total_checkpoints_reached": 13,
+    "x": 1032.318419520425,
+    "y": 887.4397669705223
+  },
+  {
+    "step": 230,
+    "car_index": 3,
+    "progress_delta": 1,
+    "checkpoint_index": 14,
+    "lap_count": 0,
+    "total_checkpoints_reached": 14,
+    "x": 995.8326635662457,
+    "y": 887.0162380791946
+  },
+  {
+    "step": 232,
+    "car_index": 1,
+    "progress_delta": 1,
+    "checkpoint_index": 11,
+    "lap_count": 0,
+    "total_checkpoints_reached": 11,
+    "x": 1101.9040812257729,
+    "y": 887.4529147271766
+  },
+  {
+    "step": 232,
+    "car_index": 7,
+    "progress_delta": 1,
+    "checkpoint_index": 14,
+    "lap_count": 0,
+    "total_checkpoints_reached": 14,
+    "x": 995.4549075128094,
+    "y": 889.5570024360849
+  },
+  {
+    "step": 234,
+    "car_index": 4,
+    "progress_delta": 1,
+    "checkpoint_index": 12,
+    "lap_count": 0,
+    "total_checkpoints_reached": 12,
+    "x": 1066.8122345989207,
+    "y": 888.420746972116
+  },
+  {
+    "step": 234,
+    "car_index": 6,
+    "progress_delta": 1,
+    "checkpoint_index": 14,
+    "lap_count": 0,
+    "total_checkpoints_reached": 14,
+    "x": 997.1001915154902,
+    "y": 890.3285492420438
+  },
+  {
+    "step": 237,
+    "car_index": 0,
+    "progress_delta": 1,
+    "checkpoint_index": 14,
+    "lap_count": 0,
+    "total_checkpoints_reached": 14,
+    "x": 995.7436472099647,
+    "y": 888.760779967767
+  }
+]

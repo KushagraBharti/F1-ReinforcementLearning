@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from f1rl.reference_agent import (
@@ -37,6 +38,25 @@ def test_reference_pose_maps_to_sim_track() -> None:
 
 def test_reference_ghost_runs_without_telemetry() -> None:
     assert run_reference_ghost(seed=3, telemetry=False) is None
+
+
+def test_reference_ghost_telemetry_keeps_finish_checkpoint_count(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr("f1rl.reference_agent.ARTIFACTS_DIR", tmp_path)
+    root = run_reference_ghost(seed=3, telemetry=True)
+    assert root is not None
+
+    summary = json.loads((root / "episode_summary.json").read_text(encoding="utf-8"))
+    assert summary["completed_lap"] is True
+    assert summary["valid_lap"] is True
+    assert summary["checkpoints_passed"] == 119
+
+    rows = [
+        json.loads(line)
+        for line in (root / "steps.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert rows[-1]["termination_reason"] == "lap_complete"
+    assert rows[-1]["checkpoints_passed"] == 119
 
 
 def test_reference_control_short_run_writes_telemetry(tmp_path: Path, monkeypatch) -> None:

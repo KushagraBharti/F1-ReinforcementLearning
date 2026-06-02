@@ -1,24 +1,66 @@
 # Prompt
 
-Rebuild this repository as a simplified top-down 2D Monza driving simulator and reinforcement learning project.
+Build and iterate on this repository as a simplified top-down 2D Monza simulator and reinforcement-learning project.
 
-The active implementation must be small and explicit:
+The active implementation path is:
 
-1. Track geometry
-2. Car physics
-3. Shared simulator
-4. Manual mode
-5. Telemetry
-6. Gymnasium environment
-7. PPO training/eval
-8. Replay
+```text
+track geometry -> car physics -> shared simulator -> manual/scripted -> telemetry -> Gymnasium -> PPO -> eval/replay
+```
 
-The old codebase is archived under `archive/legacy-20260424/` and is reference-only. Active v1 excludes Ray, RLlib, imitation learning, campaign orchestration, swarm tooling, image observations, custom torch-native multi-car simulation, distributed training, and evolutionary search.
+The old complex implementation is archived under `archive/legacy-20260424/` and is reference-only. Do not reintroduce active Ray/RLlib, imitation learning, campaign orchestration, swarm tooling, image observations, distributed training, or custom torch-native multi-car simulation unless the user explicitly starts that later phase.
 
-Future evolutionary search should reuse the same simulator, observation/action contract, telemetry schema, checkpoint/eval boundary, and replay artifacts.
+## Implemented State
 
-Active extras beyond the original minimal v1 are allowed when they serve calibration or debugging without reintroducing orchestration complexity; current examples are Fast-F1 calibration/reference ghost tooling and hardware policy reporting.
+The simulator/RL proof of concept is implemented and verified:
 
-The implemented extensions are intentional improvements over the baseline plan, not items to remove. They include `f1rl.calibration`, `f1rl.reference_agent`, `f1-calibration`, `f1-reference-agent`, richer physics, richer telemetry/episode summaries, continuous-control scripted driving through the same simulator, manual reference ghost overlay, flying-start comparison, timestamp-interpolated replay, and explicit CPU/GPU policy reporting.
+- explicit Monza track geometry and persisted `TrackSpec`
+- 2D car physics with dynamic/aero grip and traction/braking limits
+- shared simulator used by manual, scripted, replay, Gymnasium, PPO, eval, benchmark, and QC
+- manual Pygame driving with reference ghost overlay and flying-start comparison
+- deterministic scripted baseline
+- Fast-F1 reference ghost baseline
+- ray sensors and numeric observation space
+- discrete action space
+- stable reward schema
+- checkpoint/lap validity fields
+- JSONL telemetry and episode summaries
+- benchmark harness
+- curriculum/segment spawning
+- Stable-Baselines3 PPO training/eval
+- CUDA-required smoke training
+- TensorBoard scalar logging
+- QC dashboard/report generation
 
-Current state: the simulator/manual/replay/telemetry/Gymnasium/PPO smoke pipeline is implemented and validated. The next major product gap is RL learning quality: curriculum training, segment/checkpoint spawning, and a policy that completes clean laps are not implemented yet.
+The implemented extensions are intentional improvements over the original minimal rebuild, not scope drift:
+
+- `f1rl.calibration`
+- `f1rl.reference_agent`
+- `f1rl.benchmark`
+- `f1rl.curriculum`
+- `f1rl.qc`
+- richer telemetry and episode summaries
+- replay timestamp interpolation and speed controls
+- explicit CPU/GPU compute policy reporting
+
+## Current Gap
+
+The current PPO agent has a measurable learning signal but no clean/valid full lap yet.
+
+Verified PPO progression:
+
+- scratch initial PPO: `0.0m`, no-progress
+- final checkpoint: `431.4m`, off-track
+- best checkpoint: `797.6m`, collision
+
+The next major goal is serious PPO training, curriculum-to-full-lap transfer, and artifact-backed results.
+
+## Rules
+
+- Keep simulator, renderer, telemetry, and trainers decoupled.
+- Keep manual/scripted/PPO/eval/replay on the same simulator path.
+- Use CUDA for PyTorch policy training/inference when required and available.
+- Keep simulator stepping, rendering, geometry, and telemetry CPU-bound.
+- Preserve artifacts and logs when running experiments.
+- Do not claim PPO completed a lap unless benchmark data proves it.
+- Update `Documentation.md` after meaningful implementation, validation, training, benchmark, or blocker events.

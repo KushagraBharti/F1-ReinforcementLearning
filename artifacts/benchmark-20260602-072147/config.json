@@ -1,0 +1,12 @@
+{
+  "policies": [
+    "ppo"
+  ],
+  "episodes": 2,
+  "max_steps": 300,
+  "seed": 7,
+  "checkpoint": "latest",
+  "device": "auto",
+  "telemetry": "selected",
+  "telemetry_every": 1
+}

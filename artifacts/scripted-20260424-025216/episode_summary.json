@@ -1,0 +1,23 @@
+{
+  "run_id": "scripted-20260424-025216",
+  "mode": "scripted",
+  "seed": 11,
+  "termination_reason": "max_steps",
+  "completed_lap": false,
+  "elapsed_time_s": 0.13333333333333333,
+  "lap_time_s": null,
+  "checkpoints_reached": 0,
+  "distance_traveled_m": 0.0,
+  "avg_speed_kph": 6.613312261418845,
+  "max_speed_kph": 11.754899840252033,
+  "collision_count": 0,
+  "off_track_count": 0,
+  "reward_totals": {
+    "progress": 0.0,
+    "finish": 0.0,
+    "collision": 0.0,
+    "off_track": 0.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  }
+}

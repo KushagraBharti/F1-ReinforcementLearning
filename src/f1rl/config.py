@@ -70,9 +70,9 @@ class CarParams:
 class RewardConfig:
     progress_scale: float = 0.08
     finish_bonus: float = 100.0
-    collision_penalty: float = -25.0
-    off_track_penalty: float = -25.0
-    no_progress_penalty: float = -10.0
+    collision_penalty: float = -60.0
+    off_track_penalty: float = -60.0
+    no_progress_penalty: float = -90.0
     smoothness_penalty: float = 0.0
 
     def component_keys(self) -> tuple[str, ...]:
@@ -93,6 +93,7 @@ class SimConfig:
     max_steps: int = 3600
     no_progress_limit_steps: int = 180
     local_projection_window_m: float = 500.0
+    checkpoint_lateral_limit_m: float = 24.0
     lookahead_m: tuple[float, ...] = (40.0, 90.0, 160.0, 280.0)
     car: CarParams = field(default_factory=CarParams)
     sensors: SensorConfig = field(default_factory=SensorConfig)

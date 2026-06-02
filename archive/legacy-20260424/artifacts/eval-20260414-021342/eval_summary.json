@@ -1,0 +1,25 @@
+{
+  "checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\train-smoke-audit-20260414-021332\\checkpoints\\checkpoint_000001",
+  "backend": "torch_native",
+  "steps": 40,
+  "episodes": 0,
+  "total_reward": 0.5094292578287423,
+  "avg_reward_per_step": 0.012735731445718556,
+  "avg_speed_kph": -1.1792454719543457,
+  "distance_travelled": 0.08825486898422241,
+  "current_checkpoint_index": 0,
+  "termination_reason": "active",
+  "checkpoint_events": [],
+  "runtime": {
+    "sim_device": "cpu",
+    "policy_device": "cpu",
+    "renderer_backend": "headless",
+    "cuda_available": true,
+    "selected_device_name": null,
+    "telemetry_thresholds": {
+      "moving_speed_threshold_kph": 3.0,
+      "moving_progress_threshold": 0.01
+    },
+    "track_length_meters": 5793.0
+  }
+}

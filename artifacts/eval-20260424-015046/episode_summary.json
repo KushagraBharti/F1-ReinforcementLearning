@@ -1,0 +1,23 @@
+{
+  "run_id": "eval-20260424-015046",
+  "mode": "eval",
+  "seed": 17,
+  "termination_reason": "max_steps",
+  "completed_lap": false,
+  "elapsed_time_s": 0.6666666666666666,
+  "lap_time_s": null,
+  "checkpoints_reached": 0,
+  "distance_traveled_m": 0.0,
+  "avg_speed_kph": 0.0,
+  "max_speed_kph": 0.0,
+  "collision_count": 0,
+  "off_track_count": 0,
+  "reward_totals": {
+    "progress": 0.0,
+    "finish": 0.0,
+    "collision": 0.0,
+    "off_track": 0.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  }
+}

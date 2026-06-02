@@ -1,0 +1,62 @@
+{
+  "checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\train-smoke-20260409-001939\\checkpoints",
+  "profile": "quick",
+  "episodes": [
+    {
+      "seed": 101,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 263,
+      "lap_time_steps": null,
+      "total_reward": -20.996190896449605,
+      "avg_speed": -1.0644454618204353,
+      "progress_ratio": 0.0,
+      "reverse_events": 7,
+      "stall_fraction": 0.0076045627376425855,
+      "steering_oscillation": 0.0004986019339412451
+    },
+    {
+      "seed": 102,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 263,
+      "lap_time_steps": null,
+      "total_reward": -20.996190896449605,
+      "avg_speed": -1.0644454618204353,
+      "progress_ratio": 0.0,
+      "reverse_events": 7,
+      "stall_fraction": 0.0076045627376425855,
+      "steering_oscillation": 0.0004986019339412451
+    },
+    {
+      "seed": 103,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 263,
+      "lap_time_steps": null,
+      "total_reward": -20.996190896449605,
+      "avg_speed": -1.0644454618204353,
+      "progress_ratio": 0.0,
+      "reverse_events": 7,
+      "stall_fraction": 0.0076045627376425855,
+      "steering_oscillation": 0.0004986019339412451
+    }
+  ],
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 1.0,
+    "avg_progress_ratio": 0.0,
+    "avg_reward": -20.996190896449605,
+    "avg_speed": -1.0644454618204353,
+    "avg_stall_fraction": 0.0076045627376425855,
+    "avg_steering_oscillation": 0.0004986019339412451,
+    "avg_lap_time_steps": null,
+    "best_lap_time_steps": null
+  },
+  "clip_paths": {},
+  "promoted": true,
+  "comparison_reason": "first benchmark champion"
+}

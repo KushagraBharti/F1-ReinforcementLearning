@@ -1,0 +1,23 @@
+{
+  "run_id": "manual-20260424-033441",
+  "mode": "manual",
+  "seed": 7,
+  "termination_reason": "collision",
+  "completed_lap": false,
+  "elapsed_time_s": 10.483333333333333,
+  "lap_time_s": null,
+  "checkpoints_reached": 20,
+  "distance_traveled_m": 982.646758859834,
+  "avg_speed_kph": 338.83584760065486,
+  "max_speed_kph": 354.5217497326363,
+  "collision_count": 1,
+  "off_track_count": 0,
+  "reward_totals": {
+    "progress": 78.61174070878664,
+    "finish": 0.0,
+    "collision": -25.0,
+    "off_track": 0.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  }
+}

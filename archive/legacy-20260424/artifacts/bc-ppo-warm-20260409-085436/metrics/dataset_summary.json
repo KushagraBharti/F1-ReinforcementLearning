@@ -1,0 +1,74 @@
+{
+  "aggregate": {
+    "episodes": 8,
+    "samples": 3696,
+    "avg_progress_total": 17.0,
+    "best_progress_total": 17
+  },
+  "episodes": [
+    {
+      "seed": 41,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 42,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 43,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 44,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 45,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 46,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 47,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    },
+    {
+      "seed": 48,
+      "steps": 462,
+      "lap_count": 0,
+      "positive_progress_total": 17,
+      "total_reward": 50.22546616217471,
+      "terminated_reason": "no_progress"
+    }
+  ]
+}

@@ -173,6 +173,7 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
         sim.state.elapsed_steps = idx
         sim.state.raw_progress_m = progress_m
         sim.state.monotonic_progress_m = progress_m
+        checkpoints_passed = min(int(progress_m // checkpoint_spacing), len(sim.track.checkpoints) - 1)
         sim.state.checkpoint_index = int((progress_m // checkpoint_spacing) % len(sim.track.checkpoints))
         sim.state.lap_index = 1 if progress_m >= sim.track.length_m else 0
         sim.completed_lap = progress_m >= sim.track.length_m
@@ -213,7 +214,15 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
             reference_speed_kph=float(speed_kph),
             ghost_gap_m=0.0,
             checkpoint_index=int(sim.state.checkpoint_index),
+            next_checkpoint_index=min(int(checkpoints_passed) + 1, len(sim.track.checkpoints)),
+            checkpoints_passed=int(checkpoints_passed),
+            missed_checkpoint_count=0,
             lap_index=int(sim.state.lap_index),
+            valid_lap=True,
+            finish_crossed=bool(idx == len(profile.time_s) - 1),
+            segment_complete=False,
+            curriculum_stage=None,
+            segment_target_progress_m=None,
             ray_distances_m=[float(v) for v in sim.ray_distances_m()],
             collided=False,
             off_track=False,

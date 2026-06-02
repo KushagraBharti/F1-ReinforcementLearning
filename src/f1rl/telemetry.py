@@ -42,7 +42,15 @@ class StepTelemetry:
     reference_speed_kph: float | None
     ghost_gap_m: float | None
     checkpoint_index: int
+    next_checkpoint_index: int
+    checkpoints_passed: int
+    missed_checkpoint_count: int
     lap_index: int
+    valid_lap: bool
+    finish_crossed: bool
+    segment_complete: bool
+    curriculum_stage: str | None
+    segment_target_progress_m: float | None
     ray_distances_m: list[float]
     collided: bool
     off_track: bool
@@ -60,9 +68,16 @@ class EpisodeSummary:
     seed: int
     termination_reason: str
     completed_lap: bool
+    valid_lap: bool
+    finish_crossed: bool
+    segment_complete: bool
+    curriculum_stage: str | None
+    segment_target_progress_m: float | None
     elapsed_time_s: float
     lap_time_s: float | None
     checkpoints_reached: int
+    checkpoints_passed: int
+    missed_checkpoint_count: int
     distance_traveled_m: float
     avg_speed_kph: float
     max_speed_kph: float
@@ -228,9 +243,23 @@ class TelemetryWriter:
             seed=self.seed,
             termination_reason=termination_reason,
             completed_lap=completed_lap,
+            valid_lap=bool(self._steps[-1].valid_lap) if self._steps else False,
+            finish_crossed=any(step.finish_crossed for step in self._steps),
+            segment_complete=any(step.segment_complete for step in self._steps),
+            curriculum_stage=next((step.curriculum_stage for step in reversed(self._steps) if step.curriculum_stage), None),
+            segment_target_progress_m=next(
+                (
+                    step.segment_target_progress_m
+                    for step in reversed(self._steps)
+                    if step.segment_target_progress_m is not None
+                ),
+                None,
+            ),
             elapsed_time_s=elapsed,
             lap_time_s=elapsed if completed_lap else None,
             checkpoints_reached=max((step.checkpoint_index for step in self._steps), default=0),
+            checkpoints_passed=max((step.checkpoints_passed for step in self._steps), default=0),
+            missed_checkpoint_count=max((step.missed_checkpoint_count for step in self._steps), default=0),
             distance_traveled_m=self._steps[-1].monotonic_progress_m if self._steps else 0.0,
             avg_speed_kph=float(sum(speeds) / len(speeds)) if speeds else 0.0,
             max_speed_kph=float(max(speeds)) if speeds else 0.0,

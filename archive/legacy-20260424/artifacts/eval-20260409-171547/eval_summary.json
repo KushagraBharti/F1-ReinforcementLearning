@@ -1,0 +1,25 @@
+{
+  "checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\train-smoke-20260409-171537\\checkpoints\\checkpoint_000001",
+  "backend": "torch_native",
+  "steps": 70,
+  "episodes": 3,
+  "total_reward": 2.742105459328741,
+  "avg_reward_per_step": 0.03917293513326773,
+  "avg_speed_kph": -3.7998411655426025,
+  "distance_travelled": 0.4989120662212372,
+  "current_checkpoint_index": 0,
+  "termination_reason": "reverse_speed",
+  "checkpoint_events": [],
+  "runtime": {
+    "sim_device": "cuda",
+    "policy_device": "cuda",
+    "renderer_backend": "headless",
+    "cuda_available": true,
+    "selected_device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "telemetry_thresholds": {
+      "moving_speed_threshold_kph": 3.0,
+      "moving_progress_threshold": 0.01
+    },
+    "track_length_meters": 5793.0
+  }
+}

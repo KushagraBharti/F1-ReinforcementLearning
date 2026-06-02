@@ -1,0 +1,913 @@
+{
+  "run_id": "scripted-20260602-144903",
+  "mode": "scripted",
+  "seed": 7,
+  "termination_reason": "lap_complete",
+  "completed_lap": true,
+  "valid_lap": true,
+  "finish_crossed": true,
+  "segment_complete": false,
+  "curriculum_stage": null,
+  "segment_target_progress_m": null,
+  "elapsed_time_s": 214.46666666666667,
+  "lap_time_s": 214.46666666666667,
+  "checkpoints_reached": 119,
+  "checkpoints_passed": 119,
+  "missed_checkpoint_count": 0,
+  "distance_traveled_m": 5800.348944943339,
+  "avg_speed_kph": 96.04246964564221,
+  "max_speed_kph": 107.88187908938144,
+  "collision_count": 0,
+  "off_track_count": 0,
+  "reward_totals": {
+    "progress": 464.027915595465,
+    "finish": 100.0,
+    "collision": 0.0,
+    "off_track": 0.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  },
+  "sector_times_s": [
+    70.81666666666666,
+    71.43333333333334,
+    72.21666666666667
+  ],
+  "sector_speed_kph": [
+    98.16333254883503,
+    97.31591227251516,
+    96.26032771751673
+  ],
+  "braking_zone_count": 69,
+  "braking_zones": [
+    {
+      "start_time_s": 31.166666666666668,
+      "end_time_s": 31.2,
+      "start_progress_m": 878.4742448809717,
+      "end_progress_m": 879.458150908015,
+      "entry_speed_kph": 106.67273697645314,
+      "min_speed_kph": 106.127695751033,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4649989395218029
+    },
+    {
+      "start_time_s": 31.983333333333334,
+      "end_time_s": 32.016666666666666,
+      "start_progress_m": 901.9381950259091,
+      "end_progress_m": 902.8626595831217,
+      "entry_speed_kph": 100.49368456164117,
+      "min_speed_kph": 99.98194943016485,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4363115664435587
+    },
+    {
+      "start_time_s": 32.05,
+      "end_time_s": 32.083333333333336,
+      "start_progress_m": 903.785110313011,
+      "end_progress_m": 904.7026648395982,
+      "entry_speed_kph": 99.7782558397553,
+      "min_speed_kph": 99.26998279912766,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.43334989399800755
+    },
+    {
+      "start_time_s": 32.11666666666667,
+      "end_time_s": 32.166666666666664,
+      "start_progress_m": 905.6181315615316,
+      "end_progress_m": 906.9822242131078,
+      "entry_speed_kph": 99.06955488658842,
+      "min_speed_kph": 98.3131765528666,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.43043372901792487
+    },
+    {
+      "start_time_s": 32.2,
+      "end_time_s": 32.36666666666667,
+      "start_progress_m": 907.8884273293534,
+      "end_progress_m": 912.3475944835026,
+      "entry_speed_kph": 98.11709911327836,
+      "min_speed_kph": 95.63941384883998,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4265295079578088
+    },
+    {
+      "start_time_s": 32.4,
+      "end_time_s": 32.55,
+      "start_progress_m": 913.228039789316,
+      "end_progress_m": 917.5188530686202,
+      "entry_speed_kph": 95.45526030971995,
+      "min_speed_kph": 93.27874981658725,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.41572041592689923
+    },
+    {
+      "start_time_s": 32.68333333333333,
+      "end_time_s": 34.516666666666666,
+      "start_progress_m": 920.9760487892661,
+      "end_progress_m": 966.38019166137,
+      "entry_speed_kph": 93.4933115765783,
+      "min_speed_kph": 59.27095904955693,
+      "max_brake": 0.43079279990686387,
+      "peak_decel_g": 1.065838539891039
+    },
+    {
+      "start_time_s": 35.916666666666664,
+      "end_time_s": 36.7,
+      "start_progress_m": 989.1606760368335,
+      "end_progress_m": 1013.8731317155828,
+      "entry_speed_kph": 73.17830843131966,
+      "min_speed_kph": 55.03962955182671,
+      "max_brake": 0.39912171498978616,
+      "peak_decel_g": 0.9680712445755402
+    },
+    {
+      "start_time_s": 41.86666666666667,
+      "end_time_s": 41.9,
+      "start_progress_m": 1134.6700798991833,
+      "end_progress_m": 1135.5872929760876,
+      "entry_speed_kph": 99.69793942171026,
+      "min_speed_kph": 99.18972675233174,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.43330698193970396
+    },
+    {
+      "start_time_s": 41.93333333333333,
+      "end_time_s": 41.96666666666667,
+      "start_progress_m": 1136.5024110960612,
+      "end_progress_m": 1137.4127054142557,
+      "entry_speed_kph": 98.98969857003219,
+      "min_speed_kph": 98.48491849175787,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.43037170272571235
+    },
+    {
+      "start_time_s": 42.0,
+      "end_time_s": 42.06666666666666,
+      "start_progress_m": 1138.3211208090702,
+      "end_progress_m": 1140.123460295534,
+      "entry_speed_kph": 98.28809482522284,
+      "min_speed_kph": 97.28772805293686,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4274781882787675
+    },
+    {
+      "start_time_s": 42.1,
+      "end_time_s": 42.2,
+      "start_progress_m": 1141.0202979975688,
+      "end_progress_m": 1143.6826698911727,
+      "entry_speed_kph": 97.0962920144978,
+      "min_speed_kph": 95.61638677910354,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4225816071633027
+    },
+    {
+      "start_time_s": 42.233333333333334,
+      "end_time_s": 42.28333333333333,
+      "start_progress_m": 1144.5635694337639,
+      "end_progress_m": 1146.1814552200015,
+      "entry_speed_kph": 95.43235834251996,
+      "min_speed_kph": 94.70160688926799,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4158127909678545
+    },
+    {
+      "start_time_s": 50.016666666666666,
+      "end_time_s": 50.05,
+      "start_progress_m": 1364.324516314209,
+      "end_progress_m": 1365.2108361115647,
+      "entry_speed_kph": 96.37639852491904,
+      "min_speed_kph": 95.88464817884883,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.41921245245231303
+    },
+    {
+      "start_time_s": 50.083333333333336,
+      "end_time_s": 50.15,
+      "start_progress_m": 1366.0952595556346,
+      "end_progress_m": 1367.8500761777982,
+      "entry_speed_kph": 95.6993908898638,
+      "min_speed_kph": 94.72448381373941,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.41651781055782205
+    },
+    {
+      "start_time_s": 50.18333333333333,
+      "end_time_s": 50.28333333333333,
+      "start_progress_m": 1368.7232836541018,
+      "end_progress_m": 1371.315310020197,
+      "entry_speed_kph": 94.54431432957138,
+      "min_speed_kph": 93.10134137745908,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4119286379562024
+    },
+    {
+      "start_time_s": 51.699999999999996,
+      "end_time_s": 51.75,
+      "start_progress_m": 1408.6442304106763,
+      "end_progress_m": 1409.912046037316,
+      "entry_speed_kph": 92.08579758724679,
+      "min_speed_kph": 91.3807504053161,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4010342484084646
+    },
+    {
+      "start_time_s": 51.78333333333333,
+      "end_time_s": 51.86666666666667,
+      "start_progress_m": 1410.754308191571,
+      "end_progress_m": 1412.840119848411,
+      "entry_speed_kph": 91.21474682473087,
+      "min_speed_kph": 90.05157635788493,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3978301966588937
+    },
+    {
+      "start_time_s": 51.9,
+      "end_time_s": 52.11666666666667,
+      "start_progress_m": 1413.6693113983429,
+      "end_progress_m": 1419.6247943977196,
+      "entry_speed_kph": 89.89113814174831,
+      "min_speed_kph": 86.9294784359395,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.39295405018470525
+    },
+    {
+      "start_time_s": 55.916666666666664,
+      "end_time_s": 55.949999999999996,
+      "start_progress_m": 1518.1487070744172,
+      "end_progress_m": 1519.014592431591,
+      "entry_speed_kph": 94.1469841742375,
+      "min_speed_kph": 93.6656715327823,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.410287935512137
+    },
+    {
+      "start_time_s": 55.983333333333334,
+      "end_time_s": 56.03333333333333,
+      "start_progress_m": 1519.878732635397,
+      "end_progress_m": 1521.1663539565575,
+      "entry_speed_kph": 93.49008211420816,
+      "min_speed_kph": 92.77345064161997,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.40771753468858996
+    },
+    {
+      "start_time_s": 57.833333333333336,
+      "end_time_s": 57.86666666666667,
+      "start_progress_m": 1569.063749479143,
+      "end_progress_m": 1569.9355726789006,
+      "entry_speed_kph": 94.80353679052565,
+      "min_speed_kph": 94.31990396567595,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.41224485042482645
+    },
+    {
+      "start_time_s": 57.9,
+      "end_time_s": 57.949999999999996,
+      "start_progress_m": 1570.805519946586,
+      "end_progress_m": 1572.101683081446,
+      "entry_speed_kph": 94.14141274083892,
+      "min_speed_kph": 93.42123916865258,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4097079139992382
+    },
+    {
+      "start_time_s": 57.983333333333334,
+      "end_time_s": 58.1,
+      "start_progress_m": 1572.9628418294785,
+      "end_progress_m": 1575.940612342541,
+      "entry_speed_kph": 93.24663849203728,
+      "min_speed_kph": 91.58776728077717,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4062762062647523
+    },
+    {
+      "start_time_s": 58.13333333333333,
+      "end_time_s": 58.25,
+      "start_progress_m": 1576.7838796874235,
+      "end_progress_m": 1580.2211655372269,
+      "entry_speed_kph": 91.42097850778002,
+      "min_speed_kph": 89.79049803590425,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.39928974522843885
+    },
+    {
+      "start_time_s": 60.0,
+      "end_time_s": 60.05,
+      "start_progress_m": 1625.3667663828755,
+      "end_progress_m": 1626.6476287414262,
+      "entry_speed_kph": 92.99308731201398,
+      "min_speed_kph": 92.28081106243141,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.40519651465254547
+    },
+    {
+      "start_time_s": 60.083333333333336,
+      "end_time_s": 60.13333333333333,
+      "start_progress_m": 1627.4985776354445,
+      "end_progress_m": 1628.7665915395676,
+      "entry_speed_kph": 92.1110786528198,
+      "min_speed_kph": 91.40467638647705,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.40184649241776943
+    },
+    {
+      "start_time_s": 60.166666666666664,
+      "end_time_s": 60.28333333333333,
+      "start_progress_m": 1629.6090233457574,
+      "end_progress_m": 1633.0233232418238,
+      "entry_speed_kph": 91.23865207587585,
+      "min_speed_kph": 89.61112602831989,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3985450940128489
+    },
+    {
+      "start_time_s": 76.75,
+      "end_time_s": 78.55,
+      "start_progress_m": 2107.55007216652,
+      "end_progress_m": 2155.137320565577,
+      "entry_speed_kph": 104.93824203644492,
+      "min_speed_kph": 72.2851295244245,
+      "max_brake": 0.3036321097542697,
+      "peak_decel_g": 0.8037672786841111
+    },
+    {
+      "start_time_s": 81.61666666666666,
+      "end_time_s": 82.08333333333333,
+      "start_progress_m": 2228.5252501680566,
+      "end_progress_m": 2241.1648489065506,
+      "entry_speed_kph": 97.28562528649815,
+      "min_speed_kph": 90.55305780816269,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.42236804363080366
+    },
+    {
+      "start_time_s": 90.43333333333334,
+      "end_time_s": 90.46666666666667,
+      "start_progress_m": 2475.5995220164514,
+      "end_progress_m": 2476.4964353907035,
+      "entry_speed_kph": 97.52227303145828,
+      "min_speed_kph": 97.02623336235395,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4228487882274354
+    },
+    {
+      "start_time_s": 90.5,
+      "end_time_s": 90.53333333333333,
+      "start_progress_m": 2477.3913182690235,
+      "end_progress_m": 2478.281385718675,
+      "entry_speed_kph": 96.83579641404344,
+      "min_speed_kph": 96.34288718094855,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4201724519281084
+    },
+    {
+      "start_time_s": 90.56666666666666,
+      "end_time_s": 90.66666666666667,
+      "start_progress_m": 2479.1694786657517,
+      "end_progress_m": 2481.8050623852278,
+      "entry_speed_kph": 96.15550154401483,
+      "min_speed_kph": 94.69277520887043,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.41753341557338913
+    },
+    {
+      "start_time_s": 90.7,
+      "end_time_s": 91.06666666666666,
+      "start_progress_m": 2482.6768907357186,
+      "end_progress_m": 2492.5665649512716,
+      "entry_speed_kph": 94.51265971307926,
+      "min_speed_kph": 89.32495169356352,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4111437263953353
+    },
+    {
+      "start_time_s": 91.4,
+      "end_time_s": 91.53333333333333,
+      "start_progress_m": 2500.8824545430157,
+      "end_progress_m": 2504.190911335628,
+      "entry_speed_kph": 90.44682963896618,
+      "min_speed_kph": 88.62943105696712,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3925694994362687
+    },
+    {
+      "start_time_s": 91.56666666666666,
+      "end_time_s": 91.6,
+      "start_progress_m": 2505.0108838851124,
+      "end_progress_m": 2505.8268978942187,
+      "entry_speed_kph": 88.47430959396962,
+      "min_speed_kph": 88.02981064434918,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.37942395563533354
+    },
+    {
+      "start_time_s": 91.68333333333334,
+      "end_time_s": 91.71666666666667,
+      "start_progress_m": 2507.8586146142106,
+      "end_progress_m": 2508.665681991725,
+      "entry_speed_kph": 87.50480276606817,
+      "min_speed_kph": 87.06702030870471,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3733503855413798
+    },
+    {
+      "start_time_s": 91.8,
+      "end_time_s": 91.83333333333333,
+      "start_progress_m": 2510.6740149695443,
+      "end_progress_m": 2511.471318130979,
+      "entry_speed_kph": 86.55204631702591,
+      "min_speed_kph": 86.11925364827584,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3688175054939595
+    },
+    {
+      "start_time_s": 91.86666666666666,
+      "end_time_s": 91.91666666666667,
+      "start_progress_m": 2512.2667851683295,
+      "end_progress_m": 2513.4514692192824,
+      "entry_speed_kph": 85.97347150042818,
+      "min_speed_kph": 85.32846746852857,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.36665973771181437
+    },
+    {
+      "start_time_s": 91.95,
+      "end_time_s": 93.18333333333334,
+      "start_progress_m": 2514.2381217599072,
+      "end_progress_m": 2543.866272451703,
+      "entry_speed_kph": 85.18578620643542,
+      "min_speed_kph": 67.05711424846949,
+      "max_brake": 0.248706846498587,
+      "peak_decel_g": 0.6556428721734485
+    },
+    {
+      "start_time_s": 94.28333333333333,
+      "end_time_s": 94.31666666666666,
+      "start_progress_m": 2565.1562040574704,
+      "end_progress_m": 2565.8087371125357,
+      "entry_speed_kph": 71.09490316599505,
+      "min_speed_kph": 70.72058609852895,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3185159976008142
+    },
+    {
+      "start_time_s": 94.35,
+      "end_time_s": 95.58333333333333,
+      "start_progress_m": 2566.4596842264345,
+      "end_progress_m": 2592.8407897977545,
+      "entry_speed_kph": 70.63041348964691,
+      "min_speed_kph": 52.85981304653902,
+      "max_brake": 0.29571651983695363,
+      "peak_decel_g": 0.739378203070534
+    },
+    {
+      "start_time_s": 98.0,
+      "end_time_s": 98.06666666666666,
+      "start_progress_m": 2635.8638428795307,
+      "end_progress_m": 2638.8795091501584,
+      "entry_speed_kph": 73.49923967445896,
+      "min_speed_kph": 72.7144766889277,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.33499913738881126
+    },
+    {
+      "start_time_s": 105.39999999999999,
+      "end_time_s": 107.21666666666667,
+      "start_progress_m": 2829.5372859940067,
+      "end_progress_m": 2877.946687226721,
+      "entry_speed_kph": 106.39727393174323,
+      "min_speed_kph": 66.34130645071636,
+      "max_brake": 0.5227949723373561,
+      "peak_decel_g": 1.298716650543678
+    },
+    {
+      "start_time_s": 108.61666666666666,
+      "end_time_s": 108.64999999999999,
+      "start_progress_m": 2905.2847452499836,
+      "end_progress_m": 2905.9676327456004,
+      "entry_speed_kph": 74.50508914677856,
+      "min_speed_kph": 74.11168284198737,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.33492527505447206
+    },
+    {
+      "start_time_s": 108.68333333333334,
+      "end_time_s": 109.33333333333333,
+      "start_progress_m": 2906.6490577588384,
+      "end_progress_m": 2921.8798791056197,
+      "entry_speed_kph": 74.01086777295802,
+      "min_speed_kph": 66.56808709171383,
+      "max_brake": 0.11032570309824834,
+      "peak_decel_g": 0.3389315973438168
+    },
+    {
+      "start_time_s": 142.88333333333333,
+      "end_time_s": 142.96666666666667,
+      "start_progress_m": 3880.9295948705817,
+      "end_progress_m": 3883.364799173136,
+      "entry_speed_kph": 106.01457778656706,
+      "min_speed_kph": 104.66616286456966,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.462153605196524
+    },
+    {
+      "start_time_s": 143.68333333333334,
+      "end_time_s": 143.73333333333332,
+      "start_progress_m": 3903.618344421839,
+      "end_progress_m": 3904.982161570684,
+      "entry_speed_kph": 99.01834491015296,
+      "min_speed_kph": 98.26445359915111,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.42896716474201385
+    },
+    {
+      "start_time_s": 143.76666666666665,
+      "end_time_s": 143.83333333333334,
+      "start_progress_m": 3905.888023931526,
+      "end_progress_m": 3907.6850373536317,
+      "entry_speed_kph": 98.06845598518696,
+      "min_speed_kph": 97.0732403553894,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4251890629458177
+    },
+    {
+      "start_time_s": 143.86666666666667,
+      "end_time_s": 144.38333333333333,
+      "start_progress_m": 3908.57908079502,
+      "end_progress_m": 3922.4716603728857,
+      "entry_speed_kph": 96.88261096800974,
+      "min_speed_kph": 89.484484315213,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.42050863068120065
+    },
+    {
+      "start_time_s": 144.86666666666667,
+      "end_time_s": 146.65,
+      "start_progress_m": 3934.5975045090954,
+      "end_progress_m": 3977.7845797342457,
+      "entry_speed_kph": 91.22290550894556,
+      "min_speed_kph": 61.73609766109262,
+      "max_brake": 0.42015069075827705,
+      "peak_decel_g": 1.0443121937405657
+    },
+    {
+      "start_time_s": 149.46666666666667,
+      "end_time_s": 150.63333333333333,
+      "start_progress_m": 4039.0300564735658,
+      "end_progress_m": 4068.4052352648346,
+      "entry_speed_kph": 92.59646172078253,
+      "min_speed_kph": 75.4206290118743,
+      "max_brake": 0.20462334977480623,
+      "peak_decel_g": 0.5880245385913576
+    },
+    {
+      "start_time_s": 153.7,
+      "end_time_s": 154.73333333333332,
+      "start_progress_m": 4142.012620445649,
+      "end_progress_m": 4169.007353495025,
+      "entry_speed_kph": 96.66784987425363,
+      "min_speed_kph": 80.34279996931197,
+      "max_brake": 0.19630075315259674,
+      "peak_decel_g": 0.5899713583246079
+    },
+    {
+      "start_time_s": 186.11666666666667,
+      "end_time_s": 186.15,
+      "start_progress_m": 5074.784758336679,
+      "end_progress_m": 5075.761237543137,
+      "entry_speed_kph": 105.86767784695931,
+      "min_speed_kph": 105.3268315398168,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.46139688406440466
+    },
+    {
+      "start_time_s": 187.01666666666665,
+      "end_time_s": 187.05,
+      "start_progress_m": 5100.417038080941,
+      "end_progress_m": 5101.33131738979,
+      "entry_speed_kph": 99.4077392389931,
+      "min_speed_kph": 98.90144342748793,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.43165364012180424
+    },
+    {
+      "start_time_s": 187.08333333333334,
+      "end_time_s": 187.13333333333333,
+      "start_progress_m": 5102.243604746702,
+      "end_progress_m": 5103.603058683164,
+      "entry_speed_kph": 98.70267707022482,
+      "min_speed_kph": 97.94919102402721,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.42877434356131844
+    },
+    {
+      "start_time_s": 187.16666666666666,
+      "end_time_s": 187.25,
+      "start_progress_m": 5104.506076007063,
+      "end_progress_m": 5106.742699826912,
+      "entry_speed_kph": 97.7547402394441,
+      "min_speed_kph": 96.51315031723797,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.42491617639248264
+    },
+    {
+      "start_time_s": 187.28333333333333,
+      "end_time_s": 187.53333333333333,
+      "start_progress_m": 5107.631784139398,
+      "end_progress_m": 5114.555278684348,
+      "entry_speed_kph": 96.32512495017312,
+      "min_speed_kph": 92.69343786299557,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.4191320278383924
+    },
+    {
+      "start_time_s": 187.85,
+      "end_time_s": 188.01666666666665,
+      "start_progress_m": 5122.749847822487,
+      "end_progress_m": 5127.0218981297385,
+      "entry_speed_kph": 93.62826716476873,
+      "min_speed_kph": 91.28509117377149,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.40632225923947585
+    },
+    {
+      "start_time_s": 188.05,
+      "end_time_s": 188.08333333333334,
+      "start_progress_m": 5127.866564758822,
+      "end_progress_m": 5128.70705537556,
+      "entry_speed_kph": 91.11902529972367,
+      "min_speed_kph": 90.66193869608229,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.390118634855166
+    },
+    {
+      "start_time_s": 188.11666666666667,
+      "end_time_s": 188.15,
+      "start_progress_m": 5129.545954868279,
+      "end_progress_m": 5130.380767814968,
+      "entry_speed_kph": 90.4982381670731,
+      "min_speed_kph": 90.04532912094328,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.38636244434616157
+    },
+    {
+      "start_time_s": 188.23333333333332,
+      "end_time_s": 188.26666666666665,
+      "start_progress_m": 5132.457857721181,
+      "end_progress_m": 5133.282530693265,
+      "entry_speed_kph": 89.49923976468367,
+      "min_speed_kph": 89.05199009134839,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3812448974357671
+    },
+    {
+      "start_time_s": 188.3,
+      "end_time_s": 188.33333333333334,
+      "start_progress_m": 5134.105410209814,
+      "end_progress_m": 5134.923594809386,
+      "entry_speed_kph": 88.89457039412586,
+      "min_speed_kph": 88.45007026856649,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3787729330900867
+    },
+    {
+      "start_time_s": 188.36666666666667,
+      "end_time_s": 189.61666666666667,
+      "start_progress_m": 5135.739801515171,
+      "end_progress_m": 5166.2023279570485,
+      "entry_speed_kph": 88.29506842173494,
+      "min_speed_kph": 70.13784900847654,
+      "max_brake": 0.2312592139876057,
+      "peak_decel_g": 0.6284460212522581
+    },
+    {
+      "start_time_s": 190.78333333333333,
+      "end_time_s": 190.83333333333334,
+      "start_progress_m": 5189.847838533168,
+      "end_progress_m": 5190.872332173127,
+      "entry_speed_kph": 74.54718956519939,
+      "min_speed_kph": 73.96901817509489,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3282293061024065
+    },
+    {
+      "start_time_s": 190.86666666666667,
+      "end_time_s": 192.01666666666665,
+      "start_progress_m": 5191.5524998647625,
+      "end_progress_m": 5217.362300738413,
+      "entry_speed_kph": 73.86796199238368,
+      "min_speed_kph": 55.70346804003086,
+      "max_brake": 0.33376155405220587,
+      "peak_decel_g": 0.8320244877084816
+    },
+    {
+      "start_time_s": 194.1,
+      "end_time_s": 194.28333333333333,
+      "start_progress_m": 5253.517361573657,
+      "end_progress_m": 5259.218659508242,
+      "entry_speed_kph": 69.48012610035005,
+      "min_speed_kph": 67.4149299702794,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.3221901324331188
+    },
+    {
+      "start_time_s": 195.73333333333332,
+      "end_time_s": 196.58333333333334,
+      "start_progress_m": 5287.98637776533,
+      "end_progress_m": 5307.576269900742,
+      "entry_speed_kph": 75.4292568442436,
+      "min_speed_kph": 65.41102542370453,
+      "max_brake": 0.1569078301892096,
+      "peak_decel_g": 0.44163449961665496
+    },
+    {
+      "start_time_s": 200.96666666666667,
+      "end_time_s": 201.33333333333334,
+      "start_progress_m": 5403.855379255937,
+      "end_progress_m": 5413.462807636813,
+      "entry_speed_kph": 88.82988970042315,
+      "min_speed_kph": 83.92186452656065,
+      "max_brake": 0.1,
+      "peak_decel_g": 0.38815765810732694
+    }
+  ],
+  "avg_abs_racing_line_deviation_m": 1.2117255146200752,
+  "max_abs_racing_line_deviation_m": 9.06697814967174,
+  "avg_lateral_g": 0.13812117517658834,
+  "max_lateral_g": 1.1612852760159569,
+  "avg_longitudinal_g": 0.013833845649547297,
+  "min_longitudinal_g": -1.298716650543678,
+  "steering_smoothness_avg": 0.000821143409316639,
+  "steering_smoothness_max": 0.319055563317896,
+  "throttle_smoothness_avg": 0.01925149379314958,
+  "brake_smoothness_avg": 0.01618044886536325,
+  "avg_ghost_gap_m": null,
+  "final_ghost_gap_m": null,
+  "corner_count": 15,
+  "corner_summaries": [
+    {
+      "start_time_s": 0.016666666666666666,
+      "end_time_s": 0.3833333333333333,
+      "start_progress_m": 0.0032703271987359365,
+      "end_progress_m": 0.9094014510957694,
+      "entry_speed_kph": 0.7122060000000001,
+      "apex_speed_kph": 0.7122060000000001,
+      "exit_speed_kph": 16.36947168181268,
+      "peak_lateral_g": 0.012825438336213335,
+      "max_deviation_m": 0.026187641632515746
+    },
+    {
+      "start_time_s": 32.733333333333334,
+      "end_time_s": 34.5,
+      "start_progress_m": 922.2660811243269,
+      "end_progress_m": 966.1150610117552,
+      "entry_speed_kph": 92.78159650025998,
+      "apex_speed_kph": 59.63645450819891,
+      "exit_speed_kph": 59.63645450819891,
+      "peak_lateral_g": 0.9258609746856763,
+      "max_deviation_m": 8.145338050264286
+    },
+    {
+      "start_time_s": 34.68333333333333,
+      "end_time_s": 37.28333333333333,
+      "start_progress_m": 969.0609151621101,
+      "end_progress_m": 1022.9447769090657,
+      "entry_speed_kph": 60.45397044528314,
+      "apex_speed_kph": 55.03962955182671,
+      "exit_speed_kph": 60.26886856083444,
+      "peak_lateral_g": 1.1612852760159569,
+      "max_deviation_m": 9.06697814967174
+    },
+    {
+      "start_time_s": 76.88333333333333,
+      "end_time_s": 78.63333333333333,
+      "start_progress_m": 2111.392301375874,
+      "end_progress_m": 2156.793830897443,
+      "entry_speed_kph": 102.82368354312865,
+      "apex_speed_kph": 72.2851295244245,
+      "exit_speed_kph": 72.78550996853949,
+      "peak_lateral_g": 0.8198592838515879,
+      "max_deviation_m": 6.377336518813763
+    },
+    {
+      "start_time_s": 91.4,
+      "end_time_s": 98.0,
+      "start_progress_m": 2500.8824545430157,
+      "end_progress_m": 2635.8638428795307,
+      "entry_speed_kph": 90.44682963896618,
+      "apex_speed_kph": 52.85981304653902,
+      "exit_speed_kph": 73.49923967445896,
+      "peak_lateral_g": 0.753774604247025,
+      "max_deviation_m": 8.228177754817239
+    },
+    {
+      "start_time_s": 98.05,
+      "end_time_s": 98.15,
+      "start_progress_m": 2638.547768215734,
+      "end_progress_m": 2640.546822109124,
+      "entry_speed_kph": 72.91003092433178,
+      "apex_speed_kph": 72.7144766889277,
+      "exit_speed_kph": 73.21165780386796,
+      "peak_lateral_g": 0.286818975757115,
+      "max_deviation_m": 5.09676686915526
+    },
+    {
+      "start_time_s": 105.5,
+      "end_time_s": 109.63333333333333,
+      "start_progress_m": 2832.466436421424,
+      "end_progress_m": 2927.4209269463513,
+      "entry_speed_kph": 104.78643446208211,
+      "apex_speed_kph": 66.34130645071636,
+      "exit_speed_kph": 68.50093449990244,
+      "peak_lateral_g": 0.9938403500575599,
+      "max_deviation_m": 7.437907861637427
+    },
+    {
+      "start_time_s": 144.85,
+      "end_time_s": 146.88333333333333,
+      "start_progress_m": 3934.175708020999,
+      "end_progress_m": 3981.750447403906,
+      "entry_speed_kph": 91.45521089811965,
+      "apex_speed_kph": 61.73609766109262,
+      "exit_speed_kph": 63.331314273292314,
+      "peak_lateral_g": 0.8336397056264805,
+      "max_deviation_m": 7.62546516197574
+    },
+    {
+      "start_time_s": 149.01666666666665,
+      "end_time_s": 150.61666666666667,
+      "start_progress_m": 4027.5322155750323,
+      "end_progress_m": 4068.06043352421,
+      "entry_speed_kph": 91.2013730777829,
+      "apex_speed_kph": 75.62134900294862,
+      "exit_speed_kph": 75.62134900294862,
+      "peak_lateral_g": 0.6705070906342722,
+      "max_deviation_m": 5.495957436070853
+    },
+    {
+      "start_time_s": 153.23333333333332,
+      "end_time_s": 154.25,
+      "start_progress_m": 4129.584655869437,
+      "end_progress_m": 4155.917318685254,
+      "entry_speed_kph": 95.42062908142587,
+      "apex_speed_kph": 88.59766532980193,
+      "exit_speed_kph": 88.59766532980193,
+      "peak_lateral_g": 0.5975286223875016,
+      "max_deviation_m": 3.375312611521508
+    },
+    {
+      "start_time_s": 187.88333333333333,
+      "end_time_s": 189.8,
+      "start_progress_m": 5123.6124249198165,
+      "end_progress_m": 5169.752785796914,
+      "entry_speed_kph": 93.15264975915541,
+      "apex_speed_kph": 70.13784900847654,
+      "exit_speed_kph": 71.26884889820472,
+      "peak_lateral_g": 0.7212286416220461,
+      "max_deviation_m": 6.354063034063415
+    },
+    {
+      "start_time_s": 190.01666666666665,
+      "end_time_s": 194.56666666666666,
+      "start_progress_m": 5174.0374067763605,
+      "end_progress_m": 5264.514190985552,
+      "entry_speed_kph": 72.5855614181553,
+      "apex_speed_kph": 55.70346804003086,
+      "exit_speed_kph": 69.2213804224172,
+      "peak_lateral_g": 0.7488623290954893,
+      "max_deviation_m": 7.987032219645016
+    },
+    {
+      "start_time_s": 194.66666666666666,
+      "end_time_s": 196.93333333333334,
+      "start_progress_m": 5266.423953959925,
+      "end_progress_m": 5313.943206751812,
+      "entry_speed_kph": 69.85007511522466,
+      "apex_speed_kph": 65.41102542370453,
+      "exit_speed_kph": 67.69473899041348,
+      "peak_lateral_g": 0.5779809369031059,
+      "max_deviation_m": 6.647219229539019
+    },
+    {
+      "start_time_s": 197.33333333333334,
+      "end_time_s": 198.45,
+      "start_progress_m": 5321.535609182254,
+      "end_progress_m": 5344.470580509736,
+      "entry_speed_kph": 70.23288116731487,
+      "apex_speed_kph": 70.23288116731487,
+      "exit_speed_kph": 77.41826784951775,
+      "peak_lateral_g": 0.33640342834575343,
+      "max_deviation_m": 3.7813454210575514
+    },
+    {
+      "start_time_s": 200.01666666666665,
+      "end_time_s": 200.56666666666666,
+      "start_progress_m": 5380.759104536262,
+      "end_progress_m": 5394.015826982486,
+      "entry_speed_kph": 85.50047297360635,
+      "apex_speed_kph": 85.50047297360635,
+      "exit_speed_kph": 87.99472619501736,
+      "peak_lateral_g": 0.38905353868567555,
+      "max_deviation_m": 1.9003295725228497
+    }
+  ]
+}

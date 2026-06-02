@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 train = [
+  "setuptools>=80.9.0,<81",
   "stable-baselines3>=2.7.0",
   "tensorboard>=2.20.0",
   "torch>=2.10.0,<2.11.0",
@@ -39,6 +40,8 @@ f1-replay = "f1rl.replay:main"
 f1-hardware-check = "f1rl.hardware:main"
 f1-calibration = "f1rl.calibration:main"
 f1-reference-agent = "f1rl.reference_agent:main"
+f1-benchmark = "f1rl.benchmark:main"
+f1-qc = "f1rl.qc:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/f1rl"]

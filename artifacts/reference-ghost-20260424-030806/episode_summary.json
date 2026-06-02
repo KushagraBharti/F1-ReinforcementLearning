@@ -1,0 +1,23 @@
+{
+  "run_id": "reference-ghost-20260424-030806",
+  "mode": "reference-ghost",
+  "seed": 7,
+  "termination_reason": "lap_complete",
+  "completed_lap": true,
+  "elapsed_time_s": 79.662,
+  "lap_time_s": 79.662,
+  "checkpoints_reached": 119,
+  "distance_traveled_m": 5793.0,
+  "avg_speed_kph": 259.9144538007488,
+  "max_speed_kph": 348.0,
+  "collision_count": 0,
+  "off_track_count": 0,
+  "reward_totals": {
+    "progress": 463.4400000000003,
+    "finish": 100.0,
+    "collision": 0.0,
+    "off_track": 0.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  }
+}

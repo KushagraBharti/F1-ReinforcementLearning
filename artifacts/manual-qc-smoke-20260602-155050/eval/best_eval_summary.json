@@ -1,0 +1,113 @@
+{
+  "timesteps": 2048,
+  "phase": "train",
+  "scratch_initial_policy": false,
+  "mean_reward": -25.489976929647053,
+  "mean_best_progress_m": 431.37528837941187,
+  "completion_rate": 0.0,
+  "segment_completion_rate": 1.0,
+  "mean_segment_best_progress_m": 603.5951739611686,
+  "mean_segment_progress_delta_m": 120.73430727295118,
+  "episodes": [
+    {
+      "policy": "ppo_full_lap",
+      "episode": 0,
+      "seed": 3055,
+      "steps": 431,
+      "completed_lap": false,
+      "valid_lap": false,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "elapsed_time_s": 7.183333333333334,
+      "total_reward": -25.489976929647053,
+      "reward_totals": {
+        "progress": 34.510023070352936,
+        "finish": 0.0,
+        "collision": 0.0,
+        "off_track": -60.0,
+        "no_progress": 0.0,
+        "smoothness": 0.0
+      },
+      "final_progress_m": 431.37528837941187,
+      "best_progress_m": 431.37528837941187,
+      "segment_progress_delta_m": 431.36937064473966,
+      "segment_target_progress_m": null,
+      "segment_remaining_m": null,
+      "checkpoints_passed": 8,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 216.1343573544163,
+      "max_speed_kph": 331.8339517158782,
+      "crashed": false,
+      "off_track": true,
+      "curriculum_stage": null
+    }
+  ],
+  "full_lap_episodes": [
+    {
+      "policy": "ppo_full_lap",
+      "episode": 0,
+      "seed": 3055,
+      "steps": 431,
+      "completed_lap": false,
+      "valid_lap": false,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "elapsed_time_s": 7.183333333333334,
+      "total_reward": -25.489976929647053,
+      "reward_totals": {
+        "progress": 34.510023070352936,
+        "finish": 0.0,
+        "collision": 0.0,
+        "off_track": -60.0,
+        "no_progress": 0.0,
+        "smoothness": 0.0
+      },
+      "final_progress_m": 431.37528837941187,
+      "best_progress_m": 431.37528837941187,
+      "segment_progress_delta_m": 431.36937064473966,
+      "segment_target_progress_m": null,
+      "segment_remaining_m": null,
+      "checkpoints_passed": 8,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 216.1343573544163,
+      "max_speed_kph": 331.8339517158782,
+      "crashed": false,
+      "off_track": true,
+      "curriculum_stage": null
+    }
+  ],
+  "curriculum_segment_episodes": [
+    {
+      "policy": "ppo_curriculum_segment",
+      "episode": 0,
+      "seed": 53055,
+      "steps": 188,
+      "completed_lap": false,
+      "valid_lap": false,
+      "segment_complete": true,
+      "termination_reason": "segment_complete",
+      "elapsed_time_s": 3.1333333333333333,
+      "total_reward": 109.66761649809563,
+      "reward_totals": {
+        "progress": 9.667616498095638,
+        "finish": 100.0,
+        "collision": 0.0,
+        "off_track": 0.0,
+        "no_progress": 0.0,
+        "smoothness": 0.0
+      },
+      "final_progress_m": 603.5951739611686,
+      "best_progress_m": 603.5951739611686,
+      "segment_progress_delta_m": 120.73430727295118,
+      "segment_target_progress_m": 602.7499677349731,
+      "segment_remaining_m": 0.0,
+      "checkpoints_passed": 12,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 138.87668684279527,
+      "max_speed_kph": 237.21953897156345,
+      "crashed": false,
+      "off_track": false,
+      "curriculum_stage": "A0-short-control"
+    }
+  ]
+}

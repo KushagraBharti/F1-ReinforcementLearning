@@ -1,0 +1,121 @@
+{
+  "policy": "checkpoint",
+  "backend": "artifact",
+  "cars": 8,
+  "swarm_stage": "competence",
+  "logical_cars_target": 32,
+  "elapsed_s": 119.4271180999931,
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 0.125,
+    "avg_checkpoints_reached": 3.125,
+    "max_checkpoints_reached": 5,
+    "avg_speed": 0.604717022842831,
+    "best_reward": 14.971115112304688,
+    "samples_per_second": 15.725016281909884
+  },
+  "failure_histogram": {
+    "max_steps": 7,
+    "collision": 1
+  },
+  "clip_paths": {},
+  "top_k_traces_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\swarm-competence-20260409-070245\\metrics\\top_k_traces.json",
+  "cars_summary": [
+    {
+      "index": 0,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 3,
+      "max_checkpoint_streak": 3,
+      "total_reward": 9.449137687683105,
+      "avg_speed": 0.6004298528035482,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 1,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 5,
+      "max_checkpoint_streak": 5,
+      "total_reward": 14.971115112304688,
+      "avg_speed": 0.8086209615071615,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 2,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 198,
+      "checkpoints_reached": 3,
+      "max_checkpoint_streak": 3,
+      "total_reward": 1.303192138671875,
+      "avg_speed": 0.6837726169162326,
+      "termination_reason": "collision"
+    },
+    {
+      "index": 3,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 3,
+      "max_checkpoint_streak": 3,
+      "total_reward": 8.81089973449707,
+      "avg_speed": 0.641583506266276,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 4,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 2,
+      "max_checkpoint_streak": 2,
+      "total_reward": 7.525126934051514,
+      "avg_speed": 0.455142339070638,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 5,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 2,
+      "max_checkpoint_streak": 2,
+      "total_reward": 6.977968215942383,
+      "avg_speed": 0.4572656949361165,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 6,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 4,
+      "max_checkpoint_streak": 4,
+      "total_reward": 11.68431568145752,
+      "avg_speed": 0.6054740905761719,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 7,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 240,
+      "checkpoints_reached": 3,
+      "max_checkpoint_streak": 3,
+      "total_reward": 10.284719467163086,
+      "avg_speed": 0.585447120666504,
+      "termination_reason": "max_steps"
+    }
+  ]
+}

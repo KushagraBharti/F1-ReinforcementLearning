@@ -1,0 +1,111 @@
+{
+  "timesteps": 1024,
+  "mean_reward": -10.0,
+  "mean_best_progress_m": 0.0,
+  "completion_rate": 0.0,
+  "segment_completion_rate": 0.0,
+  "mean_segment_best_progress_m": 1425.2549142187486,
+  "mean_segment_progress_delta_m": 24.358610323350376,
+  "episodes": [
+    {
+      "policy": "ppo_full_lap",
+      "episode": 0,
+      "seed": 2031,
+      "steps": 180,
+      "completed_lap": false,
+      "valid_lap": false,
+      "segment_complete": false,
+      "termination_reason": "no_progress",
+      "elapsed_time_s": 3.0,
+      "total_reward": -10.0,
+      "reward_totals": {
+        "progress": 0.0,
+        "finish": 0.0,
+        "collision": 0.0,
+        "off_track": 0.0,
+        "no_progress": -10.0,
+        "smoothness": 0.0
+      },
+      "final_progress_m": 0.0,
+      "best_progress_m": 0.0,
+      "segment_progress_delta_m": 0.0,
+      "segment_target_progress_m": null,
+      "segment_remaining_m": null,
+      "checkpoints_passed": 0,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 0.0,
+      "max_speed_kph": 0.0,
+      "crashed": false,
+      "off_track": false,
+      "curriculum_stage": null
+    }
+  ],
+  "full_lap_episodes": [
+    {
+      "policy": "ppo_full_lap",
+      "episode": 0,
+      "seed": 2031,
+      "steps": 180,
+      "completed_lap": false,
+      "valid_lap": false,
+      "segment_complete": false,
+      "termination_reason": "no_progress",
+      "elapsed_time_s": 3.0,
+      "total_reward": -10.0,
+      "reward_totals": {
+        "progress": 0.0,
+        "finish": 0.0,
+        "collision": 0.0,
+        "off_track": 0.0,
+        "no_progress": -10.0,
+        "smoothness": 0.0
+      },
+      "final_progress_m": 0.0,
+      "best_progress_m": 0.0,
+      "segment_progress_delta_m": 0.0,
+      "segment_target_progress_m": null,
+      "segment_remaining_m": null,
+      "checkpoints_passed": 0,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 0.0,
+      "max_speed_kph": 0.0,
+      "crashed": false,
+      "off_track": false,
+      "curriculum_stage": null
+    }
+  ],
+  "curriculum_segment_episodes": [
+    {
+      "policy": "ppo_curriculum_segment",
+      "episode": 0,
+      "seed": 52031,
+      "steps": 83,
+      "completed_lap": false,
+      "valid_lap": false,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "elapsed_time_s": 1.3833333333333333,
+      "total_reward": -23.02144223133246,
+      "reward_totals": {
+        "progress": 1.9785577686675389,
+        "finish": 0.0,
+        "collision": 0.0,
+        "off_track": -25.0,
+        "no_progress": 0.0,
+        "smoothness": 0.0
+      },
+      "final_progress_m": 1425.2549142187486,
+      "best_progress_m": 1425.2549142187486,
+      "segment_progress_delta_m": 24.358610323350376,
+      "segment_target_progress_m": 1700.522942110406,
+      "segment_remaining_m": 275.2680278916573,
+      "checkpoints_passed": 29,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 77.13228257644987,
+      "max_speed_kph": 80.66246382593859,
+      "crashed": false,
+      "off_track": true,
+      "curriculum_stage": "A-short-low-speed"
+    }
+  ]
+}

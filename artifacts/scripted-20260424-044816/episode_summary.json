@@ -1,0 +1,94 @@
+{
+  "run_id": "scripted-20260424-044816",
+  "mode": "scripted",
+  "seed": 7,
+  "termination_reason": "off_track",
+  "completed_lap": false,
+  "elapsed_time_s": 20.466666666666665,
+  "lap_time_s": null,
+  "checkpoints_reached": 19,
+  "distance_traveled_m": 923.6663336138756,
+  "avg_speed_kph": 162.24872135814573,
+  "max_speed_kph": 182.45625750073395,
+  "collision_count": 0,
+  "off_track_count": 1,
+  "reward_totals": {
+    "progress": 73.89330668911019,
+    "finish": 0.0,
+    "collision": 0.0,
+    "off_track": -25.0,
+    "no_progress": 0.0,
+    "smoothness": 0.0
+  },
+  "sector_times_s": [
+    8.3,
+    6.066666666666666,
+    null
+  ],
+  "sector_speed_kph": [
+    133.54212052248803,
+    182.70323082472265,
+    0.0
+  ],
+  "braking_zone_count": 1,
+  "braking_zones": [
+    {
+      "start_time_s": 18.966666666666665,
+      "end_time_s": 19.616666666666667,
+      "start_progress_m": 848.6818396268617,
+      "end_progress_m": 880.5295036192148,
+      "entry_speed_kph": 180.63803195826873,
+      "min_speed_kph": 176.1510379043351,
+      "max_brake": 0.0,
+      "peak_decel_g": 0.21858196766011959
+    }
+  ],
+  "avg_abs_racing_line_deviation_m": 0.8099619072149901,
+  "max_abs_racing_line_deviation_m": 15.096234290608663,
+  "avg_lateral_g": 0.11457832977449099,
+  "max_lateral_g": 1.4719032101359026,
+  "avg_longitudinal_g": 0.2435434353792217,
+  "min_longitudinal_g": -0.21858196766011959,
+  "steering_smoothness_avg": 0.0007173486958451435,
+  "steering_smoothness_max": 0.08344319170335625,
+  "throttle_smoothness_avg": 0.00148763964143022,
+  "brake_smoothness_avg": 0.0,
+  "avg_ghost_gap_m": null,
+  "final_ghost_gap_m": null,
+  "corner_count": 3,
+  "corner_summaries": [
+    {
+      "start_time_s": 0.016666666666666666,
+      "end_time_s": 0.35,
+      "start_progress_m": 0.003581786880180514,
+      "end_progress_m": 0.8252924194289726,
+      "entry_speed_kph": 0.7725375,
+      "apex_speed_kph": 0.7725375,
+      "exit_speed_kph": 16.203489825266715,
+      "peak_lateral_g": 0.012606141562731564,
+      "max_deviation_m": 0.02392949273086087
+    },
+    {
+      "start_time_s": 18.9,
+      "end_time_s": 19.816666666666666,
+      "start_progress_m": 845.3386741094179,
+      "end_progress_m": 889.9733591820985,
+      "entry_speed_kph": 180.95590809402873,
+      "apex_speed_kph": 175.56885254879526,
+      "exit_speed_kph": 175.6807503760541,
+      "peak_lateral_g": 1.4719032101359026,
+      "max_deviation_m": 8.361174226147341
+    },
+    {
+      "start_time_s": 20.05,
+      "end_time_s": 20.466666666666665,
+      "start_progress_m": 900.974796473776,
+      "end_progress_m": 923.6663336138756,
+      "entry_speed_kph": 176.87882785481906,
+      "apex_speed_kph": 176.03338992684976,
+      "exit_speed_kph": 176.03338992684976,
+      "peak_lateral_g": 1.358234101168888,
+      "max_deviation_m": 15.096234290608663
+    }
+  ]
+}

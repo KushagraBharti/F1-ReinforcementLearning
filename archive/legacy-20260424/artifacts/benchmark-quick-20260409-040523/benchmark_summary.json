@@ -1,0 +1,72 @@
+{
+  "checkpoint": "artifacts\\train-benchmark-20260409-040352\\checkpoints",
+  "profile": "quick",
+  "episodes": [
+    {
+      "seed": 101,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 107,
+      "lap_time_steps": null,
+      "total_reward": 3.7726507989012,
+      "avg_speed": 1.3980248036895353,
+      "progress_ratio": 0.03333333333333333,
+      "reverse_events": 0,
+      "negative_speed_fraction": 0.0,
+      "longest_reverse_streak": 0,
+      "stall_fraction": 0.018691588785046728,
+      "steering_oscillation": 0.0011187884956598282
+    },
+    {
+      "seed": 102,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 107,
+      "lap_time_steps": null,
+      "total_reward": 3.7726507989012,
+      "avg_speed": 1.3980248036895353,
+      "progress_ratio": 0.03333333333333333,
+      "reverse_events": 0,
+      "negative_speed_fraction": 0.0,
+      "longest_reverse_streak": 0,
+      "stall_fraction": 0.018691588785046728,
+      "steering_oscillation": 0.0011187884956598282
+    },
+    {
+      "seed": 103,
+      "completed_lap": false,
+      "collided": true,
+      "lap_count": 0,
+      "steps": 107,
+      "lap_time_steps": null,
+      "total_reward": 3.7726507989012,
+      "avg_speed": 1.3980248036895353,
+      "progress_ratio": 0.03333333333333333,
+      "reverse_events": 0,
+      "negative_speed_fraction": 0.0,
+      "longest_reverse_streak": 0,
+      "stall_fraction": 0.018691588785046728,
+      "steering_oscillation": 0.0011187884956598282
+    }
+  ],
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 1.0,
+    "avg_progress_ratio": 0.03333333333333333,
+    "avg_reward": 3.7726507989012,
+    "avg_speed": 1.398024803689535,
+    "avg_negative_speed_fraction": 0.0,
+    "avg_reverse_events": 0.0,
+    "avg_longest_reverse_streak": 0.0,
+    "avg_stall_fraction": 0.018691588785046728,
+    "avg_steering_oscillation": 0.0011187884956598282,
+    "avg_lap_time_steps": null,
+    "best_lap_time_steps": null
+  },
+  "clip_paths": {},
+  "backend": "artifact",
+  "promoted": false,
+  "comparison_reason": "promotion disabled"
+}

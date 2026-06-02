@@ -1,0 +1,137 @@
+{
+  "run_id": "throughput-cpu-dummy-20260602-072659",
+  "seed": 7,
+  "timesteps": 4096,
+  "n_envs": 8,
+  "max_steps": 600,
+  "device": "cpu",
+  "require_gpu": false,
+  "vec_env": "dummy",
+  "telemetry": "none",
+  "telemetry_every": 1,
+  "curriculum": "none",
+  "curriculum_config": {
+    "mode": "none",
+    "promotion_resets": 200,
+    "stages": [
+      {
+        "name": "A-short-low-speed",
+        "segment_length_m": 300.0,
+        "min_speed_kph": 45.0,
+        "max_speed_kph": 85.0,
+        "position_noise_m": 0.5,
+        "heading_noise_deg": 2.0,
+        "speed_noise_kph": 4.0
+      },
+      {
+        "name": "B-medium",
+        "segment_length_m": 700.0,
+        "min_speed_kph": 70.0,
+        "max_speed_kph": 130.0,
+        "position_noise_m": 0.8,
+        "heading_noise_deg": 3.0,
+        "speed_noise_kph": 6.0
+      },
+      {
+        "name": "C-long",
+        "segment_length_m": 1300.0,
+        "min_speed_kph": 90.0,
+        "max_speed_kph": 170.0,
+        "position_noise_m": 1.2,
+        "heading_noise_deg": 4.0,
+        "speed_noise_kph": 8.0
+      },
+      {
+        "name": "D-random-checkpoint",
+        "segment_length_m": 1800.0,
+        "min_speed_kph": 80.0,
+        "max_speed_kph": 220.0,
+        "position_noise_m": 1.5,
+        "heading_noise_deg": 5.0,
+        "speed_noise_kph": 10.0
+      },
+      {
+        "name": "E-flying-lap",
+        "segment_length_m": 5793.0,
+        "min_speed_kph": 240.0,
+        "max_speed_kph": 325.0,
+        "position_noise_m": 0.8,
+        "heading_noise_deg": 2.0,
+        "speed_noise_kph": 8.0
+      },
+      {
+        "name": "F-normal-lap",
+        "segment_length_m": 5793.0,
+        "min_speed_kph": 0.0,
+        "max_speed_kph": 20.0,
+        "position_noise_m": 0.5,
+        "heading_noise_deg": 2.0,
+        "speed_noise_kph": 3.0
+      }
+    ]
+  },
+  "compute_policy": {
+    "policy_device": "cpu",
+    "neural_training": "cpu",
+    "neural_inference": "cpu",
+    "env_stepping": "cpu",
+    "physics": "cpu",
+    "geometry": "cpu",
+    "rendering": "cpu",
+    "keyboard_input": "cpu",
+    "telemetry": "cpu",
+    "track_preprocessing": "cpu",
+    "vector_env_workers": "cpu",
+    "rule": "Use CUDA only for PyTorch model forward/backward/inference; keep simulator, rendering, IO, and geometry on CPU."
+  },
+  "benchmark_throughput": false,
+  "sim_config": {
+    "track_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\assets\\tracks\\monza\\track_spec.npz",
+    "car_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\ferrari.png",
+    "max_steps": 600,
+    "no_progress_limit_steps": 180,
+    "local_projection_window_m": 500.0,
+    "lookahead_m": [
+      40.0,
+      90.0,
+      160.0,
+      280.0
+    ],
+    "car": {
+      "mass": 798.0,
+      "wheelbase_m": 3.6,
+      "max_steer_deg": 18.0,
+      "steer_response": 6.0,
+      "engine_accel_mps2": 24.5,
+      "brake_accel_mps2": 38.0,
+      "drag_coefficient": 0.0025,
+      "rolling_resistance_mps2": 0.25,
+      "grip_g": 2.2,
+      "aero_grip_per_mps2": 0.00023,
+      "max_grip_g": 4.2,
+      "max_drive_g": 2.45,
+      "max_brake_g": 4.6,
+      "steering_speed_sensitivity": 0.0008,
+      "max_speed_mps": 110.0,
+      "dt": 0.016666666666666666
+    },
+    "sensors": {
+      "count": 7,
+      "spread_deg": 120.0,
+      "forward_bias": 1.6,
+      "range_m": 1300.0
+    },
+    "reward": {
+      "progress_scale": 0.08,
+      "finish_bonus": 100.0,
+      "collision_penalty": -25.0,
+      "off_track_penalty": -25.0,
+      "no_progress_penalty": -10.0,
+      "smoothness_penalty": 0.0
+    }
+  },
+  "wall_clock_s": 93.87673049999285,
+  "training_fps": 43.63168570299018,
+  "env_steps_per_second": 349.05348562392146,
+  "final_checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\throughput-cpu-dummy-20260602-072659\\checkpoints\\final_model.zip"
+}

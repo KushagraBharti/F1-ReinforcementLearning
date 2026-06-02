@@ -1,0 +1,72 @@
+{
+  "policy": "checkpoint",
+  "backend": "artifact",
+  "cars": 4,
+  "swarm_stage": "competence",
+  "logical_cars_target": 32,
+  "elapsed_s": 9.637538400013,
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 0.0,
+    "avg_checkpoints_reached": 0.0,
+    "max_checkpoints_reached": 0,
+    "avg_speed": 0.2954608457429069,
+    "best_reward": 0.5308035016059875,
+    "samples_per_second": 17.431457692610845
+  },
+  "failure_histogram": {
+    "wall_hugging": 4
+  },
+  "clip_paths": {},
+  "top_k_traces_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\swarm-competence-20260409-075800\\metrics\\top_k_traces.json",
+  "cars_summary": [
+    {
+      "index": 0,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.37650322914123535,
+      "avg_speed": 0.11075929233006068,
+      "termination_reason": "wall_hugging"
+    },
+    {
+      "index": 1,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.31367239356040955,
+      "avg_speed": 0.24530090604509627,
+      "termination_reason": "wall_hugging"
+    },
+    {
+      "index": 2,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.49296557903289795,
+      "avg_speed": 0.4715469451177688,
+      "termination_reason": "wall_hugging"
+    },
+    {
+      "index": 3,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 42,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.5308035016059875,
+      "avg_speed": 0.35423623947870164,
+      "termination_reason": "wall_hugging"
+    }
+  ]
+}

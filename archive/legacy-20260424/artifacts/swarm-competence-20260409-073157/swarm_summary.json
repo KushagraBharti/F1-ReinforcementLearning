@@ -1,0 +1,72 @@
+{
+  "policy": "checkpoint",
+  "backend": "artifact",
+  "cars": 4,
+  "swarm_stage": "competence",
+  "logical_cars_target": 32,
+  "elapsed_s": 13.316251200041734,
+  "aggregate": {
+    "completion_rate": 0.0,
+    "collision_rate": 0.0,
+    "avg_checkpoints_reached": 0.25,
+    "max_checkpoints_reached": 1,
+    "avg_speed": 0.6114826043446859,
+    "best_reward": 3.336534261703491,
+    "samples_per_second": 18.022934138647766
+  },
+  "failure_histogram": {
+    "max_steps": 4
+  },
+  "clip_paths": {},
+  "top_k_traces_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\swarm-competence-20260409-073157\\metrics\\top_k_traces.json",
+  "cars_summary": [
+    {
+      "index": 0,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.6559510827064514,
+      "avg_speed": 0.49704138437906903,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 1,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.6018087863922119,
+      "avg_speed": 0.3870002110799154,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 2,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 1,
+      "max_checkpoint_streak": 1,
+      "total_reward": 3.336534261703491,
+      "avg_speed": 1.0398207982381185,
+      "termination_reason": "max_steps"
+    },
+    {
+      "index": 3,
+      "completed_lap": false,
+      "collided": false,
+      "lap_count": 0,
+      "steps": 60,
+      "checkpoints_reached": 0,
+      "max_checkpoint_streak": 0,
+      "total_reward": 0.813620924949646,
+      "avg_speed": 0.5220680236816406,
+      "termination_reason": "max_steps"
+    }
+  ]
+}
