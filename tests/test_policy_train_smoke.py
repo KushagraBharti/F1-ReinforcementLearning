@@ -22,6 +22,7 @@ def test_ppo_smoke_checkpoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         eval_episodes=1,
         telemetry="selected",
         run_name="smoke",
+        reward_overrides={"lateral_penalty_scale": 0.0, "track_limit_penalty_scale": 0.0},
     )
     root = checkpoint.parents[1]
     assert checkpoint.exists()
@@ -36,6 +37,8 @@ def test_ppo_smoke_checkpoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert metadata["vec_env"] == "dummy"
     assert metadata["scratch_initialization"] is True
     assert metadata["initial_checkpoint"].endswith("initial_model.zip")
+    assert metadata["sim_config"]["reward"]["lateral_penalty_scale"] == 0.0
+    assert metadata["sim_config"]["reward"]["track_limit_penalty_scale"] == 0.0
     assert metadata["training_fps"] > 0.0
     eval_rows = [
         json.loads(line)

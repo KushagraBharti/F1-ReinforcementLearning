@@ -1378,6 +1378,61 @@ Results:
   - `uv run --no-sync pyright src/f1rl` passed
   - `uv run --no-sync pytest -q` passed, `31` tests
 
+### Shaped A0/A1 Scratch PPO Run
+- Command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 300000 --seed 60 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 2 --curriculum-promotion-resets 1000000 --n-steps 512 --batch-size 256 --n-epochs 8 --learning-rate 0.0005 --gamma 0.995 --ent-coef 0.001 --checkpoint-every 25000 --eval-every 25000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-shaped-a0a1-scratch-goal-300k`
+- Artifact:
+  - `artifacts\ppo-shaped-a0a1-scratch-goal-300k-20260602-180421`
+- Metadata:
+  - device: `cuda`
+  - `--require-gpu`: enabled
+  - `scratch_initialization`: `true`
+  - curriculum stage count: `2`
+  - active curriculum stages:
+    - `A0-short-control`
+    - `A1-short-low-speed`
+  - reward shaping active:
+    - `lateral_penalty_scale`: `0.025`
+    - `track_limit_penalty_scale`: `0.03`
+- Deterministic eval at timestep `25,000`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.0m`
+  - full-lap termination: no-progress
+  - checkpoint benchmark of `ppo_monza_25000_steps.zip` showed action `8` (`brake_right`) on every step
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `21.90m`
+- Deterministic eval at timestep `50,000`:
+  - full-lap mean reward: `-90.0`
+  - full-lap mean best progress: `0.0m`
+  - full-lap termination: no-progress
+  - segment completion rate: `0.0`
+  - mean segment progress delta: `8.02m`
+- Interpretation:
+  - dense track-discipline reward overcorrected the full-throttle exploit and produced a stationary deterministic normal-start policy.
+  - the run was stopped after `50,000` timesteps rather than burning the full budget.
+  - best PPO progress remains the earlier `797.6m` / `16` checkpoint benchmark; this shaped run is not promoted.
+
+### Experiment Controls Added
+- Added curriculum mixed-start control:
+  - `--curriculum-normal-start-probability`
+  - when enabled with segment curriculum, resets can include true normal starts while still sampling segment starts.
+  - intended use: train local control on segments without losing exposure to the real normal-start distribution.
+- Added trainer reward override controls:
+  - `--reward-progress-scale`
+  - `--reward-finish-bonus`
+  - `--reward-collision-penalty`
+  - `--reward-off-track-penalty`
+  - `--reward-no-progress-penalty`
+  - `--reward-lateral-deadzone-m`
+  - `--reward-lateral-penalty-scale`
+  - `--reward-track-limit-safe-ray-m`
+  - `--reward-track-limit-penalty-scale`
+  - `--reward-smoothness-penalty`
+- Validation after code change:
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `32` tests
+
 ### A0 -> A1 Transfer PPO Run
 - Command:
   - `uv run --no-sync python -m f1rl.train --timesteps 300000 --seed 50 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 2 --curriculum-promotion-resets 1000000 --resume-checkpoint "artifacts\ppo-a0-lowentropy-scratch-goal-200k-20260602-173740\checkpoints\ppo_monza_30000_steps.zip" --n-steps 512 --batch-size 256 --n-epochs 8 --learning-rate 0.0003 --gamma 0.995 --ent-coef 0.002 --checkpoint-every 25000 --eval-every 25000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-a0a1-transfer-goal-300k`

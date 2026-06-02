@@ -299,6 +299,7 @@ def run_training(
     curriculum: str = "none",
     curriculum_stage_count: int | None = None,
     curriculum_promotion_resets: int = 300,
+    curriculum_normal_start_probability: float = 0.0,
     vec_env: str = "dummy",
     save_best: bool = True,
     benchmark_throughput: bool = False,
@@ -475,9 +476,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--curriculum", choices=["none", "segments"], default="none")
     parser.add_argument("--curriculum-stage-count", type=int)
     parser.add_argument("--curriculum-promotion-resets", type=int, default=300)
+    parser.add_argument("--curriculum-normal-start-probability", type=float, default=0.0)
     parser.add_argument("--vec-env", choices=["dummy", "subproc"], default="dummy")
     parser.add_argument("--benchmark-throughput", action="store_true")
     parser.add_argument("--resume-checkpoint", type=Path)
+    parser.add_argument("--reward-progress-scale", type=float)
+    parser.add_argument("--reward-finish-bonus", type=float)
+    parser.add_argument("--reward-collision-penalty", type=float)
+    parser.add_argument("--reward-off-track-penalty", type=float)
+    parser.add_argument("--reward-no-progress-penalty", type=float)
+    parser.add_argument("--reward-lateral-deadzone-m", type=float)
+    parser.add_argument("--reward-lateral-penalty-scale", type=float)
+    parser.add_argument("--reward-track-limit-safe-ray-m", type=float)
+    parser.add_argument("--reward-track-limit-penalty-scale", type=float)
+    parser.add_argument("--reward-smoothness-penalty", type=float)
     parser.add_argument("--n-steps", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--n-epochs", type=int, default=4)
@@ -505,10 +517,12 @@ def main(argv: list[str] | None = None) -> int:
         curriculum=args.curriculum,
         curriculum_stage_count=args.curriculum_stage_count,
         curriculum_promotion_resets=args.curriculum_promotion_resets,
+        curriculum_normal_start_probability=args.curriculum_normal_start_probability,
         vec_env=args.vec_env,
         save_best=args.save_best,
         benchmark_throughput=args.benchmark_throughput,
         resume_checkpoint=args.resume_checkpoint,
+        reward_overrides=_reward_overrides_from_args(args),
         n_steps=args.n_steps,
         batch_size=args.batch_size,
         n_epochs=args.n_epochs,

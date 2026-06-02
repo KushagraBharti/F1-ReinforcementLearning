@@ -23,7 +23,12 @@ def test_curriculum_sampler_promotes_by_reset_count() -> None:
 
 
 def test_training_curriculum_config_can_limit_stages() -> None:
-    config = _build_curriculum_config(mode="segments", stage_count=1, promotion_resets=100_000)
+    config = _build_curriculum_config(
+        mode="segments",
+        stage_count=1,
+        promotion_resets=100_000,
+        normal_start_probability=0.0,
+    )
     sampler = CurriculumSampler(config, checkpoint_count=12)
     first = sampler.sample_options(seed=1)
     later = None
@@ -34,6 +39,16 @@ def test_training_curriculum_config_can_limit_stages() -> None:
     assert first["curriculum_stage"] == "A0-short-control"
     assert later is not None
     assert later["curriculum_stage"] == "A0-short-control"
+
+
+def test_curriculum_sampler_can_mix_normal_starts() -> None:
+    stage = CurriculumStage("unit", 25.0, 20.0, 20.0, 0.0, 0.0, 0.0)
+    sampler = CurriculumSampler(
+        CurriculumConfig(mode="segments", stages=(stage,), promotion_resets=100, normal_start_probability=1.0),
+        checkpoint_count=12,
+    )
+    options = sampler.sample_options(seed=1)
+    assert options == {"curriculum_stage": "normal-start-mix"}
 
 
 def test_env_curriculum_reset_sets_segment_metadata() -> None:
