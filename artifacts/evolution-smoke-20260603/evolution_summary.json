@@ -1,0 +1,398 @@
+{
+  "run_id": "evolution-smoke-20260603",
+  "created_at": "2026-06-03T12:09:29-0500",
+  "kind": "elitist_evolutionary_search",
+  "sim_config": {
+    "track_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\assets\\tracks\\monza\\track_spec.npz",
+    "car_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\ferrari.png",
+    "max_steps": 24,
+    "action_mode": "discrete",
+    "action_set": "straight",
+    "continuous_action_scheme": "drive_brake",
+    "observation_profile": "base",
+    "no_progress_limit_steps": 180,
+    "local_projection_window_m": 500.0,
+    "checkpoint_lateral_limit_m": 24.0,
+    "launch_guard_progress_m": 0.0,
+    "launch_guard_min_speed_kph": 0.0,
+    "launch_guard_throttle": 0.22,
+    "lookahead_m": [
+      40.0,
+      90.0,
+      160.0,
+      280.0
+    ],
+    "car": {
+      "mass": 798.0,
+      "wheelbase_m": 3.6,
+      "max_steer_deg": 18.0,
+      "steer_response": 6.0,
+      "engine_accel_mps2": 24.5,
+      "brake_accel_mps2": 38.0,
+      "drag_coefficient": 0.0025,
+      "rolling_resistance_mps2": 0.25,
+      "grip_g": 2.2,
+      "aero_grip_per_mps2": 0.00023,
+      "max_grip_g": 4.2,
+      "max_drive_g": 2.45,
+      "max_brake_g": 4.6,
+      "steering_speed_sensitivity": 0.0008,
+      "max_speed_mps": 110.0,
+      "dt": 0.016666666666666666
+    },
+    "sensors": {
+      "count": 7,
+      "spread_deg": 120.0,
+      "forward_bias": 1.6,
+      "range_m": 1300.0
+    },
+    "reward": {
+      "progress_scale": 0.08,
+      "finish_bonus": 100.0,
+      "collision_penalty": -60.0,
+      "off_track_penalty": -60.0,
+      "no_progress_penalty": -90.0,
+      "lateral_deadzone_m": 4.0,
+      "lateral_penalty_scale": 0.025,
+      "track_limit_safe_ray_m": 10.0,
+      "track_limit_penalty_scale": 0.03,
+      "heading_deadzone_deg": 5.0,
+      "heading_penalty_scale": 0.0,
+      "speed_target_min_kph": 80.0,
+      "speed_target_max_kph": 340.0,
+      "speed_target_heading_scale": 2.5,
+      "speed_target_deadzone_kph": 15.0,
+      "speed_target_penalty_scale": 0.0,
+      "overspeed_throttle_penalty_scale": 0.0,
+      "overspeed_brake_reward_scale": 0.0,
+      "steering_target_deadzone": 0.08,
+      "steering_target_penalty_scale": 0.0,
+      "smoothness_penalty": 0.0,
+      "scaffold_scale": 1.0,
+      "scaffold_brake_reward_scale": 0.0,
+      "scaffold_no_throttle_penalty_scale": 0.0,
+      "scaffold_turn_in_speed_penalty_scale": 0.0,
+      "scaffold_apex_clean_reward_scale": 0.0,
+      "scaffold_exit_alignment_reward_scale": 0.0,
+      "scaffold_exit_speed_reward_scale": 0.0,
+      "scaffold_release_reward_scale": 0.0,
+      "scaffold_overbrake_penalty_scale": 0.0,
+      "scaffold_release_min_speed_kph": 135.0,
+      "scaffold_release_max_speed_kph": 210.0,
+      "scaffold_brake_curve_penalty_scale": 0.0,
+      "scaffold_brake_curve_start_speed_kph": 335.0,
+      "scaffold_brake_curve_deadzone_kph": 8.0,
+      "scaffold_corridor_center_penalty_scale": 0.0,
+      "scaffold_corridor_center_deadzone_m": 2.0,
+      "scaffold_segment_speed_penalty_scale": 0.0
+    },
+    "assist": {
+      "enabled": false,
+      "overspeed_turn_in_terminate": false,
+      "overspeed_turn_in_margin_kph": 45.0,
+      "overspeed_turn_in_penalty": -80.0,
+      "throttle_brake_demand_penalty_scale": 0.0,
+      "throttle_brake_demand_terminate": false,
+      "throttle_brake_demand_min_throttle": 0.75,
+      "no_brake_penalty": 0.0,
+      "no_brake_min_brake": 0.05,
+      "no_brake_min_speed_kph": 0.0,
+      "no_brake_terminate": false,
+      "overbrake_penalty": 0.0,
+      "overbrake_terminate": false,
+      "overbrake_max_speed_kph": 135.0,
+      "overbrake_min_brake": 0.5,
+      "steering_gate_penalty": 0.0,
+      "steering_gate_terminate": false,
+      "steering_gate_start_m": 0.0,
+      "steering_gate_end_m": 0.0,
+      "steering_gate_min_abs_steer": 0.0,
+      "steering_gate_required_sign": 0.0,
+      "steering_gate_min_speed_kph": 0.0,
+      "forbidden_steering_gate_penalty": 0.0,
+      "forbidden_steering_gate_terminate": false,
+      "forbidden_steering_gate_start_m": 0.0,
+      "forbidden_steering_gate_end_m": 0.0,
+      "forbidden_steering_gate_min_abs_steer": 0.0,
+      "forbidden_steering_gate_sign": 0.0,
+      "forbidden_steering_gate_min_speed_kph": 0.0,
+      "virtual_corridor_m": 0.0,
+      "virtual_corridor_penalty": -80.0,
+      "virtual_corridor_terminate": false,
+      "brake_zone_progress_multiplier": 1.0
+    }
+  },
+  "config": {
+    "action_set": "straight",
+    "observation_profile": "base",
+    "max_steps": 24,
+    "population": 8,
+    "generations": 2,
+    "elite_count": 2,
+    "random_immigrants": 1,
+    "min_phases": 1,
+    "max_phases": 3,
+    "min_phase_steps": 2,
+    "max_phase_steps": 8,
+    "mutation_rate": 0.75,
+    "crossover_rate": 0.35,
+    "start_mutation_rate": 0.1,
+    "seed": 42,
+    "top_k": 2,
+    "workers": 1
+  },
+  "gates": {
+    "target_progress_m": 510.0,
+    "target_min_speed_kph": null,
+    "target_max_speed_kph": null,
+    "target_max_lateral_error_m": null,
+    "target_max_heading_error_deg": null,
+    "target_max_abs_yaw_rate_rps": null,
+    "target_max_abs_steering": null,
+    "segment_fail_on_speed_gate_miss": true,
+    "segment_require_release": false,
+    "segment_release_min_speed_kph": 135.0,
+    "segment_release_max_speed_kph": 210.0,
+    "segment_release_max_brake": 0.1,
+    "segment_release_max_throttle": 0.1
+  },
+  "state_library": null,
+  "snapshot_count": 1,
+  "attempt_count": 16,
+  "elite_state_library": "artifacts\\evolution-smoke-20260603\\elite_state_library.json",
+  "generation_summaries": [
+    {
+      "generation": 0,
+      "population": 8,
+      "best_score": 102155.45127574624,
+      "best_progress_m": 510.1600421228487,
+      "best_remaining_m": 0.0,
+      "completion_count": 2,
+      "completion_rate": 0.25,
+      "termination_reasons": {
+        "segment_complete": 1,
+        "max_steps": 7
+      },
+      "best_attempt": {
+        "candidate_index": 5,
+        "generation": 0,
+        "seed": 47,
+        "score": 102155.45127574624,
+        "snapshot_index": 0,
+        "start_snapshot_id": "evolution_start:000000:500.000",
+        "start_progress_m": 500.00006436014434,
+        "start_speed_kph": 80.0,
+        "genome": {
+          "phases": [
+            {
+              "action": "throttle",
+              "steps": 8
+            }
+          ]
+        },
+        "best_progress_m": 510.1600421228487,
+        "final_progress_m": 510.1600421228487,
+        "remaining_m": 0.0,
+        "segment_complete": true,
+        "completed_lap": false,
+        "valid_lap": false,
+        "termination_reason": "segment_complete",
+        "collided": false,
+        "off_track": false,
+        "final_speed_kph": 109.55127548483576,
+        "final_lateral_error_m": 0.0716232654711968,
+        "final_heading_error_deg": -2.391686360528345,
+        "final_yaw_rate_rps": 0.0,
+        "final_steering": 0.0,
+        "steps": 23,
+        "selected_telemetry": "artifacts\\evolution-smoke-20260603\\selected_telemetry\\evolution-rank-000-gen-000-candidate-00005-steps.jsonl"
+      }
+    },
+    {
+      "generation": 1,
+      "population": 8,
+      "best_score": 102155.45127574624,
+      "best_progress_m": 510.1600421228487,
+      "best_remaining_m": 0.0,
+      "completion_count": 4,
+      "completion_rate": 0.5,
+      "termination_reasons": {
+        "segment_complete": 3,
+        "max_steps": 5
+      },
+      "best_attempt": {
+        "candidate_index": 0,
+        "generation": 1,
+        "seed": 1000042,
+        "score": 102155.45127574624,
+        "snapshot_index": 0,
+        "start_snapshot_id": "evolution_start:000000:500.000",
+        "start_progress_m": 500.00006436014434,
+        "start_speed_kph": 80.0,
+        "genome": {
+          "phases": [
+            {
+              "action": "throttle",
+              "steps": 8
+            }
+          ]
+        },
+        "best_progress_m": 510.1600421228487,
+        "final_progress_m": 510.1600421228487,
+        "remaining_m": 0.0,
+        "segment_complete": true,
+        "completed_lap": false,
+        "valid_lap": false,
+        "termination_reason": "segment_complete",
+        "collided": false,
+        "off_track": false,
+        "final_speed_kph": 109.55127548483576,
+        "final_lateral_error_m": 0.0716232654711968,
+        "final_heading_error_deg": -2.391686360528345,
+        "final_yaw_rate_rps": 0.0,
+        "final_steering": 0.0,
+        "steps": 23,
+        "selected_telemetry": "artifacts\\evolution-smoke-20260603\\selected_telemetry\\evolution-rank-001-gen-001-candidate-00000-steps.jsonl"
+      }
+    }
+  ],
+  "latest_generation_top": [
+    {
+      "candidate_index": 0,
+      "generation": 1,
+      "seed": 1000042,
+      "score": 102155.45127574624,
+      "snapshot_index": 0,
+      "start_snapshot_id": "evolution_start:000000:500.000",
+      "start_progress_m": 500.00006436014434,
+      "start_speed_kph": 80.0,
+      "genome": {
+        "phases": [
+          {
+            "action": "throttle",
+            "steps": 8
+          }
+        ]
+      },
+      "best_progress_m": 510.1600421228487,
+      "final_progress_m": 510.1600421228487,
+      "remaining_m": 0.0,
+      "segment_complete": true,
+      "completed_lap": false,
+      "valid_lap": false,
+      "termination_reason": "segment_complete",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 109.55127548483576,
+      "final_lateral_error_m": 0.0716232654711968,
+      "final_heading_error_deg": -2.391686360528345,
+      "final_yaw_rate_rps": 0.0,
+      "final_steering": 0.0,
+      "steps": 23,
+      "selected_telemetry": "artifacts\\evolution-smoke-20260603\\selected_telemetry\\evolution-rank-001-gen-001-candidate-00000-steps.jsonl"
+    },
+    {
+      "candidate_index": 2,
+      "generation": 1,
+      "seed": 1000044,
+      "score": 102155.45127574624,
+      "snapshot_index": 0,
+      "start_snapshot_id": "evolution_start:000000:500.000",
+      "start_progress_m": 500.00006436014434,
+      "start_speed_kph": 80.0,
+      "genome": {
+        "phases": [
+          {
+            "action": "throttle",
+            "steps": 8
+          }
+        ]
+      },
+      "best_progress_m": 510.1600421228487,
+      "final_progress_m": 510.1600421228487,
+      "remaining_m": 0.0,
+      "segment_complete": true,
+      "completed_lap": false,
+      "valid_lap": false,
+      "termination_reason": "segment_complete",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 109.55127548483576,
+      "final_lateral_error_m": 0.0716232654711968,
+      "final_heading_error_deg": -2.391686360528345,
+      "final_yaw_rate_rps": 0.0,
+      "final_steering": 0.0,
+      "steps": 23
+    }
+  ],
+  "top_attempts": [
+    {
+      "candidate_index": 5,
+      "generation": 0,
+      "seed": 47,
+      "score": 102155.45127574624,
+      "snapshot_index": 0,
+      "start_snapshot_id": "evolution_start:000000:500.000",
+      "start_progress_m": 500.00006436014434,
+      "start_speed_kph": 80.0,
+      "genome": {
+        "phases": [
+          {
+            "action": "throttle",
+            "steps": 8
+          }
+        ]
+      },
+      "best_progress_m": 510.1600421228487,
+      "final_progress_m": 510.1600421228487,
+      "remaining_m": 0.0,
+      "segment_complete": true,
+      "completed_lap": false,
+      "valid_lap": false,
+      "termination_reason": "segment_complete",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 109.55127548483576,
+      "final_lateral_error_m": 0.0716232654711968,
+      "final_heading_error_deg": -2.391686360528345,
+      "final_yaw_rate_rps": 0.0,
+      "final_steering": 0.0,
+      "steps": 23,
+      "selected_telemetry": "artifacts\\evolution-smoke-20260603\\selected_telemetry\\evolution-rank-000-gen-000-candidate-00005-steps.jsonl"
+    },
+    {
+      "candidate_index": 0,
+      "generation": 1,
+      "seed": 1000042,
+      "score": 102155.45127574624,
+      "snapshot_index": 0,
+      "start_snapshot_id": "evolution_start:000000:500.000",
+      "start_progress_m": 500.00006436014434,
+      "start_speed_kph": 80.0,
+      "genome": {
+        "phases": [
+          {
+            "action": "throttle",
+            "steps": 8
+          }
+        ]
+      },
+      "best_progress_m": 510.1600421228487,
+      "final_progress_m": 510.1600421228487,
+      "remaining_m": 0.0,
+      "segment_complete": true,
+      "completed_lap": false,
+      "valid_lap": false,
+      "termination_reason": "segment_complete",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 109.55127548483576,
+      "final_lateral_error_m": 0.0716232654711968,
+      "final_heading_error_deg": -2.391686360528345,
+      "final_yaw_rate_rps": 0.0,
+      "final_steering": 0.0,
+      "steps": 23,
+      "selected_telemetry": "artifacts\\evolution-smoke-20260603\\selected_telemetry\\evolution-rank-001-gen-001-candidate-00000-steps.jsonl"
+    }
+  ]
+}
