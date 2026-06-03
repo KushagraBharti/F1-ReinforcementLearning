@@ -33,3 +33,7 @@ def test_qc_writes_report_and_dashboard(tmp_path: Path, monkeypatch) -> None:
     assert report["lap_validity"]["huge_progress_jump_invalidates_lap"] is True
     assert report["lap_validity"]["wide_checkpoint_crossing_invalidates_lap"] is True
     assert report["telemetry"]["steps"] == 1
+    assert "section_summaries" in report["telemetry"]
+    assert "failure_report" in report["telemetry"]
+    assert len(report["telemetry_reports"]) == 1
+    assert len(report["failure_table"]) == 1

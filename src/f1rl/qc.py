@@ -7,12 +7,14 @@ import html
 import json
 import sys
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from f1rl.calibration import calibration_report
 from f1rl.config import ARTIFACTS_DIR
 from f1rl.scripted import ScriptedController
+from f1rl.section_analysis import analyze_steps
 from f1rl.sim import MonzaSim
 from f1rl.telemetry import REWARD_COMPONENT_KEYS, load_steps
 
@@ -38,6 +40,22 @@ def latest_telemetry_path(root: Path = ARTIFACTS_DIR) -> Path | None:
     return max(candidates, key=lambda path: path.stat().st_mtime)
 
 
+def telemetry_paths_from_input(path: Path | None, *, max_files: int = 20) -> list[Path]:
+    if path is None:
+        latest = latest_telemetry_path()
+        return [latest] if latest is not None else []
+    if path.is_file():
+        return [path]
+    if path.is_dir():
+        candidates = sorted(
+            candidate for candidate in path.glob("**/*-steps.jsonl") if candidate.is_file()
+        )
+        if not candidates and (path / "steps.jsonl").is_file():
+            candidates = [path / "steps.jsonl"]
+        return candidates[:max_files]
+    raise FileNotFoundError(f"Telemetry path does not exist: {path}")
+
+
 def summarize_steps(path: Path) -> dict[str, Any]:
     steps = load_steps(path)
     if not steps:
@@ -53,7 +71,7 @@ def summarize_steps(path: Path) -> dict[str, Any]:
         for step in steps
         if step.get("ray_distances_m")
     ]
-    return {
+    summary = {
         "path": str(path),
         "steps": len(steps),
         "duration_s": float(final.get("sim_time_s", 0.0)),
@@ -79,6 +97,8 @@ def summarize_steps(path: Path) -> dict[str, Any]:
         "reward_total": sum(float(step.get("reward_total", 0.0)) for step in steps),
         "reward_totals": _reward_totals(steps),
     }
+    summary.update(analyze_steps(steps))
+    return summary
 
 
 def track_qc() -> dict[str, Any]:
@@ -133,12 +153,12 @@ def lap_validity_qc() -> dict[str, Any]:
     }
 
 
-def scripted_qc(*, steps: int, seed: int) -> dict[str, Any]:
+def scripted_rollout_steps(*, steps: int, seed: int) -> list[dict[str, Any]]:
     sim = MonzaSim()
     sim.config.max_steps = steps
     sim.reset(seed=seed)
     controller = ScriptedController()
-    last = None
+    rows: list[dict[str, Any]] = []
     for _ in range(steps):
         throttle, brake, steer = controller.controls(sim)
         result = sim.step_controls(
@@ -149,19 +169,30 @@ def scripted_qc(*, steps: int, seed: int) -> dict[str, Any]:
             collect_observation=False,
             collect_rays=False,
         )
-        last = result.telemetry
+        rows.append(asdict(result.telemetry))
         if result.terminated or result.truncated:
             break
+    return rows
+
+
+def scripted_qc(*, steps: int, seed: int) -> dict[str, Any]:
+    rows = scripted_rollout_steps(steps=steps, seed=seed)
+    if not rows:
+        return {"steps": 0, "termination_reason": "empty", "completed_lap": False, "valid_lap": False}
+    final = rows[-1]
+    analysis = analyze_steps(rows)
     return {
-        "steps": sim.state.elapsed_steps,
-        "elapsed_time_s": sim.state.elapsed_steps * sim.config.car.dt,
-        "termination_reason": sim.termination_reason,
-        "completed_lap": sim.completed_lap,
-        "valid_lap": bool(last.valid_lap) if last is not None else False,
-        "finish_crossed": bool(last.finish_crossed) if last is not None else False,
-        "progress_m": sim.state.monotonic_progress_m,
-        "checkpoints_passed": sim.checkpoints_passed,
-        "missed_checkpoint_count": sim.missed_checkpoint_count,
+        "steps": len(rows),
+        "elapsed_time_s": float(final.get("sim_time_s", 0.0)),
+        "termination_reason": final.get("termination_reason", "unknown"),
+        "completed_lap": final.get("termination_reason") == "lap_complete",
+        "valid_lap": bool(final.get("valid_lap", False)),
+        "finish_crossed": bool(final.get("finish_crossed", False)),
+        "progress_m": float(final.get("monotonic_progress_m", 0.0)),
+        "checkpoints_passed": int(final.get("checkpoints_passed", 0)),
+        "missed_checkpoint_count": int(final.get("missed_checkpoint_count", 0)),
+        "section_summaries": analysis["section_summaries"],
+        "failure_report": analysis["failure_report"],
     }
 
 
@@ -222,6 +253,72 @@ def _svg_line(values: list[float], *, title: str, width: int = 760, height: int 
     )
 
 
+def _html_table(rows: list[dict[str, Any]], columns: list[tuple[str, str]]) -> str:
+    if not rows:
+        return "<p>No rows.</p>"
+    header = "".join(f"<th>{html.escape(label)}</th>" for key, label in columns)
+    body_rows: list[str] = []
+    for row in rows:
+        cells: list[str] = []
+        for key, _ in columns:
+            value = row.get(key)
+            if isinstance(value, float):
+                rendered = f"{value:.2f}"
+            elif isinstance(value, dict):
+                rendered = json.dumps(value, sort_keys=True)
+            else:
+                rendered = "" if value is None else str(value)
+            cells.append(f"<td>{html.escape(rendered)}</td>")
+        body_rows.append(f"<tr>{''.join(cells)}</tr>")
+    return f"<table><thead><tr>{header}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+
+def compact_failure_row(summary: dict[str, Any]) -> dict[str, Any]:
+    failure = summary.get("failure_report") or {}
+    first_bad = failure.get("first_bad_event") or {}
+    terminal = failure.get("terminal_event") or {}
+    return {
+        "path": summary.get("path"),
+        "steps": summary.get("steps"),
+        "best_progress_m": summary.get("best_progress_m"),
+        "termination_reason": summary.get("termination_reason"),
+        "failed_section": failure.get("failed_section"),
+        "first_bad_kind": first_bad.get("kind"),
+        "first_bad_progress_m": first_bad.get("progress_m"),
+        "first_bad_speed_kph": first_bad.get("speed_kph"),
+        "first_bad_reason": first_bad.get("reason"),
+        "terminal_kind": terminal.get("kind"),
+        "terminal_progress_m": terminal.get("progress_m"),
+        "terminal_speed_kph": terminal.get("speed_kph"),
+        "actions_before_failure": failure.get("action_histogram_before_failure"),
+        "controls_before_failure": failure.get("control_histogram_before_failure"),
+    }
+
+
+def _section_table_rows(section_summaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for summary in section_summaries:
+        if int(summary.get("rows", 0) or 0) == 0:
+            continue
+        rows.append(
+            {
+                "section": summary.get("section"),
+                "rows": summary.get("rows"),
+                "entry_speed_kph": summary.get("entry_speed_kph"),
+                "min_speed_kph": summary.get("min_speed_kph"),
+                "exit_speed_kph": summary.get("exit_speed_kph"),
+                "max_speed_surplus_kph": summary.get("max_speed_surplus_kph"),
+                "brake_start_progress_m": summary.get("brake_start_progress_m"),
+                "avg_throttle": summary.get("avg_throttle"),
+                "avg_brake": summary.get("avg_brake"),
+                "min_ray_distance_m": summary.get("min_ray_distance_m"),
+                "max_abs_lateral_error_m": summary.get("max_abs_lateral_error_m"),
+                "termination_reason": summary.get("termination_reason"),
+            }
+        )
+    return rows
+
+
 def write_dashboard(root: Path, telemetry_path: Path | None, telemetry_summary: dict[str, Any] | None) -> Path | None:
     if telemetry_path is None:
         return None
@@ -235,9 +332,39 @@ def write_dashboard(root: Path, telemetry_path: Path | None, telemetry_summary: 
         _svg_line([abs(v) for v in _values(steps, "racing_line_deviation_m")], title="Abs racing-line deviation m"),
         _svg_line(_min_ray_values(steps), title="Minimum ray distance m"),
     ]
+    section_rows = _section_table_rows(telemetry_summary.get("section_summaries", []) if telemetry_summary else [])
+    failure_rows = [compact_failure_row(telemetry_summary)] if telemetry_summary else []
     summary_json = html.escape(json.dumps(telemetry_summary or {}, indent=2))
     source = html.escape(str(telemetry_path))
     body = "\n".join(charts)
+    section_table = _html_table(
+        section_rows,
+        [
+            ("section", "Section"),
+            ("rows", "Rows"),
+            ("entry_speed_kph", "Entry kph"),
+            ("min_speed_kph", "Min kph"),
+            ("exit_speed_kph", "Exit kph"),
+            ("max_speed_surplus_kph", "Max surplus"),
+            ("brake_start_progress_m", "Brake start m"),
+            ("avg_throttle", "Avg throttle"),
+            ("avg_brake", "Avg brake"),
+            ("min_ray_distance_m", "Min ray m"),
+            ("termination_reason", "Termination"),
+        ],
+    )
+    failure_table = _html_table(
+        failure_rows,
+        [
+            ("failed_section", "Failed section"),
+            ("first_bad_kind", "First bad event"),
+            ("first_bad_progress_m", "Bad progress m"),
+            ("first_bad_speed_kph", "Bad speed kph"),
+            ("first_bad_reason", "Reason"),
+            ("terminal_kind", "Terminal"),
+            ("terminal_progress_m", "Terminal progress m"),
+        ],
+    )
     html_text = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -248,6 +375,9 @@ def write_dashboard(root: Path, telemetry_path: Path | None, telemetry_summary: 
     h1, h2, h3 {{ margin-bottom: 8px; }}
     pre {{ background: #101418; color: #dbe5ea; padding: 16px; overflow: auto; }}
     svg {{ display: block; max-width: 100%; margin-bottom: 18px; }}
+    table {{ border-collapse: collapse; width: 100%; margin: 12px 0 24px; background: white; }}
+    th, td {{ border: 1px solid #d9e1e5; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 13px; }}
+    th {{ background: #eaf0f3; }}
   </style>
 </head>
 <body>
@@ -255,6 +385,10 @@ def write_dashboard(root: Path, telemetry_path: Path | None, telemetry_summary: 
   <p>Source: <code>{source}</code></p>
   <h2>Summary</h2>
   <pre>{summary_json}</pre>
+  <h2>Failure Table</h2>
+  {failure_table}
+  <h2>Section Summary</h2>
+  {section_table}
   <h2>Charts</h2>
   {body}
 </body>
@@ -310,12 +444,16 @@ def run_qc(
     telemetry_path: Path | None,
     run_scripted: bool,
     scripted_steps: int,
+    max_telemetry_files: int = 20,
 ) -> Path:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     root = output_root / f"qc-{timestamp}"
     root.mkdir(parents=True, exist_ok=True)
-    resolved_telemetry = telemetry_path or latest_telemetry_path()
-    telemetry_summary = summarize_steps(resolved_telemetry) if resolved_telemetry is not None else None
+    resolved_telemetry_paths = telemetry_paths_from_input(telemetry_path, max_files=max_telemetry_files)
+    telemetry_reports = [summarize_steps(path) for path in resolved_telemetry_paths]
+    telemetry_summary = telemetry_reports[0] if telemetry_reports else None
+    failure_table = [compact_failure_row(summary) for summary in telemetry_reports]
+    scripted_report = scripted_qc(steps=scripted_steps, seed=seed) if run_scripted else None
     report: dict[str, Any] = {
         "run_id": root.name,
         "seed": seed,
@@ -323,16 +461,19 @@ def run_qc(
         "lap_validity": lap_validity_qc(),
         "physics": physics_qc(),
         "telemetry": telemetry_summary,
-        "scripted": scripted_qc(steps=scripted_steps, seed=seed) if run_scripted else None,
+        "telemetry_reports": telemetry_reports,
+        "failure_table": failure_table,
+        "scripted": scripted_report,
     }
     (root / "qc_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-    dashboard = write_dashboard(root, resolved_telemetry, telemetry_summary)
+    dashboard = write_dashboard(root, resolved_telemetry_paths[0] if resolved_telemetry_paths else None, telemetry_summary)
     checklist = write_manual_checklist(root)
     summary_lines = [
         "# F1RL QC Report",
         "",
         f"- run: `{root.name}`",
-        f"- telemetry: `{resolved_telemetry}`" if resolved_telemetry else "- telemetry: none found",
+        f"- telemetry: `{resolved_telemetry_paths[0]}`" if resolved_telemetry_paths else "- telemetry: none found",
+        f"- telemetry files analyzed: `{len(telemetry_reports)}`",
         f"- dashboard: `{dashboard}`" if dashboard else "- dashboard: not generated",
         f"- manual checklist: `{checklist}`",
         "",
@@ -355,6 +496,49 @@ def run_qc(
                 f"- max speed: `{telemetry_summary['max_speed_kph']:.1f}kph`",
             ]
         )
+        failure = telemetry_summary.get("failure_report", {})
+        first_bad = failure.get("first_bad_event")
+        terminal = failure.get("terminal_event")
+        summary_lines.extend(["", "## Failure Analysis"])
+        if first_bad:
+            summary_lines.extend(
+                [
+                    f"- failed section: `{failure.get('failed_section')}`",
+                    f"- first bad event: `{first_bad.get('kind')}`",
+                    f"- first bad progress: `{float(first_bad.get('progress_m', 0.0)):.1f}m`",
+                    f"- first bad speed: `{float(first_bad.get('speed_kph', 0.0)):.1f}kph`",
+                    f"- reason: `{first_bad.get('reason')}`",
+                    f"- actions before failure: `{failure.get('action_histogram_before_failure')}`",
+                ]
+            )
+        if terminal:
+            summary_lines.extend(
+                [
+                    f"- terminal event: `{terminal.get('kind')}`",
+                    f"- terminal progress: `{float(terminal.get('progress_m', 0.0)):.1f}m`",
+                    f"- terminal speed: `{float(terminal.get('speed_kph', 0.0)):.1f}kph`",
+                ]
+            )
+        summary_lines.extend(["", "## Section Summary"])
+        for section in _section_table_rows(telemetry_summary.get("section_summaries", [])):
+            summary_lines.append(
+                "- "
+                f"`{section['section']}`: entry `{float(section['entry_speed_kph']):.1f}kph`, "
+                f"min `{float(section['min_speed_kph']):.1f}kph`, "
+                f"exit `{float(section['exit_speed_kph']):.1f}kph`, "
+                f"avg brake `{float(section['avg_brake'] or 0.0):.2f}`, "
+                f"termination `{section['termination_reason']}`"
+            )
+    if scripted_report is not None:
+        summary_lines.extend(
+            [
+                "",
+                "## Scripted Comparison",
+                f"- termination: `{scripted_report['termination_reason']}`",
+                f"- progress: `{float(scripted_report['progress_m']):.1f}m`",
+                f"- valid lap: `{scripted_report['valid_lap']}`",
+            ]
+        )
     (root / "qc_report.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
     print(f"qc_complete run={root}")
     print(f"report={root / 'qc_report.json'}")
@@ -370,6 +554,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--telemetry", type=Path)
     parser.add_argument("--run-scripted", action="store_true")
     parser.add_argument("--scripted-steps", type=int, default=18000)
+    parser.add_argument("--max-telemetry-files", type=int, default=20)
     parser.add_argument("--output-dir", type=Path, default=ARTIFACTS_DIR)
     return parser.parse_args(argv)
 
@@ -382,6 +567,7 @@ def main(argv: list[str] | None = None) -> int:
         telemetry_path=args.telemetry,
         run_scripted=args.run_scripted,
         scripted_steps=args.scripted_steps,
+        max_telemetry_files=args.max_telemetry_files,
     )
     return 0
 

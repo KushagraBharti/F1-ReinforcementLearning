@@ -19,7 +19,7 @@ class ScriptedController:
 
     def controls(self, sim: MonzaSim) -> tuple[float, float, float]:
         speed_kph = sim.state.speed_mps * 3.6
-        _, lateral_error_m, _ = sim._track_errors()
+        _, lateral_error_m, _, _ = sim._track_errors()
         dynamic_lookahead_m = float(np.clip(self.lookahead_m + speed_kph * 0.08, 28.0, 70.0))
         target_px = (
             sim.state.monotonic_progress_m / sim.track.meters_per_pixel

@@ -4,8 +4,11 @@ import os
 from pathlib import Path
 
 import pytest
+import torch
 
 from f1rl import policy_io, train
+from f1rl.curriculum import CurriculumConfig, CurriculumStage
+from f1rl.train import _full_lap_selection_score, _segment_eval_curriculum_config
 
 
 @pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
@@ -37,8 +40,12 @@ def test_ppo_smoke_checkpoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert metadata["vec_env"] == "dummy"
     assert metadata["scratch_initialization"] is True
     assert metadata["initial_checkpoint"].endswith("initial_model.zip")
+    assert metadata["sim_config"]["action_mode"] == "discrete"
+    assert metadata["sim_config"]["action_set"] == "legacy"
+    assert metadata["sim_config"]["observation_profile"] == "base"
     assert metadata["sim_config"]["reward"]["lateral_penalty_scale"] == 0.0
     assert metadata["sim_config"]["reward"]["track_limit_penalty_scale"] == 0.0
+    assert metadata["normalize_reward"] is False
     assert metadata["training_fps"] > 0.0
     eval_rows = [
         json.loads(line)
@@ -48,6 +55,45 @@ def test_ppo_smoke_checkpoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert eval_rows[0]["timesteps"] == 0
     assert eval_rows[0]["phase"] == "initial_scratch"
     assert eval_rows[0]["scratch_initial_policy"] is True
+    assert eval_rows[0]["selection_priority"] == "valid full-lap completion, then normal-start best progress"
+
+
+def test_full_lap_selection_score_keeps_segment_success_as_tiebreaker() -> None:
+    stronger_full_lap = {
+        "completion_rate": 0.0,
+        "mean_best_progress_m": 1000.0,
+        "segment_completion_rate": 0.0,
+        "mean_segment_progress_delta_m": 0.0,
+        "full_lap_episodes": [],
+    }
+    weaker_full_lap_with_segment_win = {
+        "completion_rate": 0.0,
+        "mean_best_progress_m": 900.0,
+        "segment_completion_rate": 1.0,
+        "mean_segment_progress_delta_m": 500.0,
+        "full_lap_episodes": [],
+    }
+    assert _full_lap_selection_score(stronger_full_lap) > _full_lap_selection_score(
+        weaker_full_lap_with_segment_win
+    )
+
+
+def test_segment_eval_curriculum_removes_normal_start_mix() -> None:
+    stage = CurriculumStage("unit", 25.0, 20.0, 20.0, 0.0, 0.0, 0.0)
+    config = CurriculumConfig(
+        mode="segments",
+        stages=(stage,),
+        promotion_resets=10,
+        normal_start_probability=0.75,
+        focus_start_progress_m=500.0,
+        focus_window_m=100.0,
+        start_mode="normal",
+    )
+    segment_eval = _segment_eval_curriculum_config(config)
+    assert segment_eval.normal_start_probability == 0.0
+    assert segment_eval.stages == config.stages
+    assert segment_eval.focus_start_progress_m == 500.0
+    assert segment_eval.start_mode == "normal"
 
 
 def test_latest_checkpoint_finds_named_runs(tmp_path: Path) -> None:
@@ -60,6 +106,27 @@ def test_latest_checkpoint_finds_named_runs(tmp_path: Path) -> None:
     os.utime(older, (1.0, 1.0))
     os.utime(newer, (2.0, 2.0))
     assert policy_io.latest_checkpoint(tmp_path) == newer
+
+
+@pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
+def test_ppo_smoke_can_save_reward_normalization_stats(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(train, "ARTIFACTS_DIR", tmp_path)
+    checkpoint = train.run_training(
+        timesteps=64,
+        seed=8,
+        n_envs=1,
+        max_steps=50,
+        device="cpu",
+        checkpoint_every=64,
+        eval_every=0,
+        run_name="norm-smoke",
+        normalize_reward=True,
+    )
+    root = checkpoint.parents[1]
+    metadata = json.loads((root / "run_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["normalize_reward"] is True
+    assert metadata["final_vecnormalize"] is not None
+    assert (root / "vecnormalize.pkl").exists()
 
 
 @pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
@@ -90,3 +157,95 @@ def test_ppo_resume_checkpoint_metadata(tmp_path: Path, monkeypatch: pytest.Monk
     metadata = json.loads((root / "run_metadata.json").read_text(encoding="utf-8"))
     assert metadata["scratch_initialization"] is False
     assert metadata["resume_checkpoint"] == str(base_checkpoint)
+
+
+@pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
+def test_ppo_transfer_initialization_can_expand_observation_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(train, "ARTIFACTS_DIR", tmp_path)
+    base_checkpoint = train.run_training(
+        timesteps=64,
+        seed=9,
+        n_envs=1,
+        max_steps=50,
+        device="cpu",
+        checkpoint_every=64,
+        eval_every=0,
+        run_name="base-transfer",
+        observation_profile="base",
+    )
+    transfer_checkpoint = train.run_training(
+        timesteps=64,
+        seed=10,
+        n_envs=1,
+        max_steps=50,
+        device="cpu",
+        checkpoint_every=64,
+        eval_every=0,
+        run_name="racing-transfer",
+        observation_profile="racing",
+        initialize_from_checkpoint=base_checkpoint,
+    )
+    root = transfer_checkpoint.parents[1]
+    metadata = json.loads((root / "run_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["scratch_initialization"] is False
+    assert metadata["transfer_initialization"] is True
+    assert metadata["resume_checkpoint"] is None
+    assert metadata["initialize_from_checkpoint"] == str(base_checkpoint)
+    assert metadata["sim_config"]["observation_profile"] == "racing"
+    assert any(row["mode"] == "expanded_input" for row in metadata["transfer_weight_report"])
+
+
+class _FakePolicy:
+    def __init__(self, state: dict[str, torch.Tensor]) -> None:
+        self._state = state
+
+    def state_dict(self) -> dict[str, torch.Tensor]:
+        return {key: value.clone() for key, value in self._state.items()}
+
+    def load_state_dict(self, state: dict[str, torch.Tensor]) -> None:
+        self._state = {key: value.clone() for key, value in state.items()}
+
+
+class _FakeActionSpace:
+    def __init__(self, n: int) -> None:
+        self.n = n
+
+
+class _FakeModel:
+    def __init__(self, state: dict[str, torch.Tensor], action_count: int) -> None:
+        self.policy = _FakePolicy(state)
+        self.action_space = _FakeActionSpace(action_count)
+
+
+def test_transfer_initialization_can_expand_discrete_action_head() -> None:
+    source_weight = torch.stack([torch.full((3,), float(index)) for index in range(9)])
+    source_bias = torch.arange(9, dtype=torch.float32)
+    target = _FakeModel(
+        {
+            "action_net.weight": torch.zeros((20, 3), dtype=torch.float32),
+            "action_net.bias": torch.zeros(20, dtype=torch.float32),
+        },
+        action_count=20,
+    )
+    source = _FakeModel(
+        {
+            "action_net.weight": source_weight,
+            "action_net.bias": source_bias,
+        },
+        action_count=9,
+    )
+
+    report = train._copy_compatible_policy_weights(target, source, target_action_set="racing")
+    target_state = target.policy.state_dict()
+
+    assert torch.equal(target_state["action_net.weight"][2], source_weight[1])
+    assert target_state["action_net.bias"][2].item() == pytest.approx(source_bias[1].item())
+    assert torch.equal(target_state["action_net.weight"][15], source_weight[7])
+    assert target_state["action_net.bias"][15].item() == pytest.approx(source_bias[7].item())
+    assert target_state["action_net.bias"][12].item() < source_bias[2].item()
+    assert [row["mode"] for row in report].count("expanded_discrete_action_head") == 2
+    bias_report = next(row for row in report if row["key"] == "action_net.bias")
+    soft_brake_row = next(row for row in bias_report["rows"] if row["target_action"] == "soft_brake")
+    assert soft_brake_row["mode"] == "nearest_with_bias_penalty"

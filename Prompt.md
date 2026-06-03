@@ -52,6 +52,8 @@ Verified PPO progression:
 - scratch initial PPO: `0.0m`, no-progress
 - final checkpoint: `431.4m`, off-track
 - best checkpoint: `797.6m`, collision
+- robust post-curriculum benchmark: `966.3m`, `20/120` checkpoints, off-track
+- single eval high after focus-window continuation: `970.1m`, `20/120` checkpoints, collision
 
 The next major goal is serious PPO training, curriculum-to-full-lap transfer, and artifact-backed results.
 

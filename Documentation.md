@@ -1505,3 +1505,1383 @@ Results:
   - `uv run --no-sync ruff check .` passed
   - `uv run --no-sync pyright src/f1rl` passed
   - `uv run --no-sync pytest -q` passed, `31` tests
+
+### Expanded-Action Scratch PPO Diagnosis
+- Added an expanded action table for explicit soft throttle/steer/brake combinations while preserving legacy action IDs `0..8`.
+- Validation after action expansion:
+  - `uv run --no-sync python -m f1rl.hardware --json` passed; CUDA available on `NVIDIA GeForce RTX 4060 Laptop GPU`
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `33` tests
+- A0 expanded-actions mixed-start run:
+  - command: `uv run --no-sync python -m f1rl.train --timesteps 120000 --seed 80 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 1 --curriculum-promotion-resets 1000000 --curriculum-normal-start-probability 0.15 --reward-lateral-penalty-scale 0.0 --reward-track-limit-penalty-scale 0.0 --n-steps 512 --batch-size 256 --n-epochs 10 --learning-rate 0.001 --gamma 0.995 --ent-coef 0.02 --checkpoint-every 10000 --eval-every 10000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-a0-expanded-actions-scratch-goal-120k`
+  - artifact: `artifacts\ppo-a0-expanded-actions-scratch-goal-120k-20260602-183508`
+  - 10k deterministic full-lap eval: `0.0m`, `0/120` checkpoints, no-progress, mean reward `-90.0`
+  - segment eval at 10k: completion rate `0.2`, mean segment delta `73.98m`
+  - selected telemetry showed normal-start deterministic action collapsed to `coast`; segment sample used repeated `half_throttle`
+  - result: not promoted
+- Full-lap expanded-actions scratch run:
+  - command: `uv run --no-sync python -m f1rl.train --timesteps 200000 --seed 90 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum none --reward-lateral-penalty-scale 0.0 --reward-track-limit-penalty-scale 0.0 --n-steps 512 --batch-size 256 --n-epochs 10 --learning-rate 0.0007 --gamma 0.995 --ent-coef 0.02 --checkpoint-every 10000 --eval-every 10000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-full-expanded-actions-scratch-goal-200k`
+  - artifact: `artifacts\ppo-full-expanded-actions-scratch-goal-200k-20260602-185814`
+  - initial deterministic eval: `431.38m`, `8/120` checkpoints, off-track, inherited random full-throttle style behavior
+  - 10k deterministic eval: `12.87m`, `0/120` checkpoints, off-track
+  - 20k deterministic eval: `13.84m`, `0/120` checkpoints, collision
+  - selected telemetry at 20k was dominated by hard right-launch actions, especially `throttle_right`
+  - result: stopped at 20k and not promoted
+- A0 low-entropy expanded-actions scratch run:
+  - command: `uv run --no-sync python -m f1rl.train --timesteps 120000 --seed 110 --n-envs 8 --max-steps 3600 --device auto --require-gpu --vec-env subproc --curriculum segments --curriculum-stage-count 1 --curriculum-promotion-resets 1000000 --reward-lateral-penalty-scale 0.0 --reward-track-limit-penalty-scale 0.0 --n-steps 512 --batch-size 256 --n-epochs 10 --learning-rate 0.001 --gamma 0.995 --ent-coef 0.0 --checkpoint-every 10000 --eval-every 10000 --eval-episodes 5 --telemetry selected --telemetry-every 10 --run-name ppo-a0-lowentropy-expanded-actions-scratch-goal-120k`
+  - artifact: `artifacts\ppo-a0-lowentropy-expanded-actions-scratch-goal-120k-20260602-190404`
+  - eval sequence:
+    - 0: `12.51m`, `0/120`, collision; segment completion `0.2`
+    - 10k: `161.09m`, `3/120`, off-track; segment completion `0.2`
+    - 20k: `37.54m`, `0/120`, off-track; segment completion `0.8`
+    - 30k: `0.0m`, `0/120`, no-progress; segment completion `0.2`
+    - 40k: `0.0m`, `0/120`, no-progress; segment completion `0.0`
+  - selected telemetry at 40k showed the full-lap sample dominated by `half_throttle_soft_left` and braking/turning actions, while the segment sample collapsed to repeated `brake_right`
+  - result: stopped at 40k and not promoted
+- Interpretation:
+  - the expanded 21-action space mechanically works, but deterministic PPO repeatedly collapses to idle, braking, or hard-steering attractors.
+  - the best measured normal-start PPO progress remains the earlier `797.6m` / `16` checkpoint benchmark; none of the expanded-action experiments improved it.
+
+### Action-Set Selector Added
+- Added `SimConfig.action_set` with selectable action spaces:
+  - `legacy`: original 9 discrete actions; now the default
+  - `expanded`: 21 actions including soft throttle/steer/brake controls
+- Added trainer CLI option:
+  - `--action-set legacy|expanded`
+- Updated `MonzaEnv.action_space`, `MonzaSim.action_dim`, rollout evals, and training metadata to use the selected action set.
+- Rationale:
+  - legacy 9-action PPO produced the strongest measured scratch progress so far and is compatible with older/better checkpoints.
+  - expanded actions remain available for explicit experiments without changing the default PPO model shape.
+- Validation after selector change:
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `35` tests
+  - `uv run --no-sync python -m f1rl.hardware --json` passed; CUDA available on `NVIDIA GeForce RTX 4060 Laptop GPU`
+
+### Best-Checkpoint Legacy Continuation Rejected
+- Best measured normal-start PPO checkpoint before this loop:
+  - run: `artifacts\ppo-curriculum-balanced-scratch-20260602-085522`
+  - checkpoint: `checkpoints\ppo_monza_150000_steps.zip`
+  - normal-start eval: `797.58m`, `16/120` checkpoints, collision at `11.30s`, no valid lap
+  - selected telemetry action mix: mostly `throttle`, then late `brake_right`
+- Resumed continuation command:
+  - `uv run --no-sync python -m f1rl.train --timesteps 500000 --seed 121 --n-envs 8 --max-steps 5000 --device auto --require-gpu --vec-env subproc --action-set legacy --curriculum segments --curriculum-promotion-resets 300 --curriculum-normal-start-probability 0.05 --resume-checkpoint "artifacts\ppo-curriculum-balanced-scratch-20260602-085522\checkpoints\ppo_monza_150000_steps.zip" --reward-lateral-penalty-scale 0.0 --reward-track-limit-penalty-scale 0.0 --n-steps 256 --batch-size 128 --n-epochs 4 --learning-rate 0.0001 --gamma 0.995 --ent-coef 0.01 --checkpoint-every 25000 --eval-every 25000 --eval-episodes 1 --telemetry selected --telemetry-every 1 --run-name ppo-best797-legacy-normalmix-goal-500k`
+- Artifact:
+  - `artifacts\ppo-best797-legacy-normalmix-goal-500k-20260602-192141`
+- Metadata verified:
+  - device: `cuda`
+  - `--require-gpu`: enabled
+  - `scratch_initialization`: `false`
+  - `action_set`: `legacy`
+  - reward dense penalties disabled:
+    - `lateral_penalty_scale`: `0.0`
+    - `track_limit_penalty_scale`: `0.0`
+- Deterministic normal-start eval sequence:
+  - `0`: `797.58m`, `16/120`, collision, no valid lap
+  - `25k`: `431.38m`, `8/120`, off-track, no valid lap
+  - `50k`: `431.38m`, `8/120`, off-track, no valid lap
+  - `75k`: `431.38m`, `8/120`, off-track, no valid lap
+  - `100k`: `431.38m`, `8/120`, off-track, no valid lap
+  - `125k`: `431.38m`, `8/120`, off-track, no valid lap
+  - `150k`: `431.38m`, `8/120`, off-track, no valid lap
+- Telemetry diagnosis:
+  - the regressed policy used `throttle` on all `431` full-lap steps.
+  - final speed: `331.8kph`
+  - final lateral error: `15.51m`
+  - terminal reason: off-track
+- Interpretation:
+  - this continuation was negative for normal-start performance and was stopped at `150k`.
+  - segment evals stayed positive for several checkpoints, but that did not transfer to normal-start driving.
+  - best measured PPO progress remains `797.58m`; no PPO checkpoint has completed a valid normal-start lap.
+
+### Focus-Window Curriculum Added
+- Added focused segment reset controls:
+  - `--curriculum-focus-start-progress-m`
+  - `--curriculum-focus-window-m`
+  - `--curriculum-focus-segment-length-m`
+  - `--curriculum-focus-min-speed-kph`
+  - `--curriculum-focus-max-speed-kph`
+  - `--curriculum-focus-position-noise-m`
+  - `--curriculum-focus-heading-noise-deg`
+  - `--curriculum-focus-speed-noise-kph`
+- Behavior:
+  - when focus start progress is set, segment curriculum samples `start_progress_m` inside the requested progress window instead of random checkpoint starts.
+  - normal-start mix remains available through `--curriculum-normal-start-probability`.
+  - run metadata records `focus_start_progress_m` and `focus_window_m`.
+- Rationale:
+  - the current best `797.58m` failure is localized around progress `730-800m`, where the policy brakes/steers too late at roughly `280-330kph` and collides.
+  - focused resets should create more gradient signal around that failure section than random checkpoint sampling.
+- Validation after focus-window change:
+  - `uv run --no-sync ruff check .` passed
+  - `uv run --no-sync pyright src/f1rl` passed
+  - `uv run --no-sync pytest -q` passed, `37` tests
+
+### Strategy Reset: Full-Lap-First PPO Experiments
+- User direction:
+  - stop optimizing tiny `~10m` local gains.
+  - zoom out, run targeted experiments, use online research, and change strategy toward materially better learning.
+- Online sources checked on 2026-06-02:
+  - Stable-Baselines3 PPO docs: `https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html`
+    - PPO supports both `Discrete` and `Box` action spaces.
+    - PPO supports multiprocessing and gSDE options.
+    - SB3 warns that MLP PPO is primarily CPU-oriented, but this project still requires CUDA-backed PyTorch policy training for goal runs.
+  - Stable-Baselines3 RL tips: `https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html`
+    - evaluate with a separate test environment and deterministic `predict`.
+    - PPO/A2C are reasonable for multiprocessed continuous-control experiments.
+    - normalization is critical for continuous-action algorithms.
+    - continuous action spaces should be normalized and symmetric, typically rescaled to `[-1, 1]` inside the environment.
+    - shaped rewards and simplified problems are recommended for custom environments.
+  - Stable-Baselines3 custom env docs: `https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html`
+    - SB3-compatible discrete spaces should start at `0`.
+  - Gymnasium Env docs: `https://gymnasium.farama.org/api/env/`
+    - active `step`/`reset` contract remains `(obs, reward, terminated, truncated, info)`.
+  - Gymnasium spaces docs: `https://gymnasium.farama.org/api/spaces/fundamental/`
+    - active `Box` and `Discrete` spaces match Gymnasium semantics.
+  - uv docs: `https://docs.astral.sh/uv/`
+    - `uv` remains the project/package manager.
+  - Pygame docs: `https://www.pygame.org/docs/`
+    - current manual/render loop expectations remain compatible with Pygame 2.x.
+- Local package versions checked:
+  - `uv 0.9.26`
+  - `gymnasium 1.2.3`
+  - `pygame 2.6.1`
+  - `stable_baselines3 2.8.0`
+  - `torch 2.10.0+cu128`
+  - CUDA device: `NVIDIA GeForce RTX 4060 Laptop GPU`
+- Focus-window results before reset:
+  - `ppo-focus-650-legacy-resume-goal-200k-20260602-194242`
+    - best deterministic normal-start eval: `959.13m`, `19/120`, off-track/collision around `13.1s`.
+  - `ppo-focus-850-legacy-resume-goal-120k-20260602-195514`
+    - best benchmarked checkpoint: `966.32m`, `20/120`, off-track at `13.07s`, repeated identically across `5` deterministic episodes.
+  - `ppo-focus-900-heading-legacy-resume-goal-80k-20260602-200700`
+    - single eval high: `970.10m`, `20/120`, collision at `13.03s`.
+    - stopped because the gain was tiny and did not change the learning regime.
+- Global discrete speed-target resume rejected:
+  - artifact: `artifacts\ppo-discrete-speedtarget-best966-resume-goal-150k-20260602-202301`
+  - command used legacy discrete actions, speed-target/heading penalties, normal-start mix, and resumed the `966.32m` checkpoint.
+  - eval sequence:
+    - `0`: `966.32m`, `20/120`, off-track
+    - `10k`: `966.95m`, `20/120`, off-track
+    - `20k`: `967.13m`, `20/120`, off-track; segment eval completed a short A0 segment
+    - `30k`: `959.13m`, `19/120`, collision
+  - result: stopped at `30k`; no promotion.
+  - important diagnosis: the old `best_model` score let easy segment completion dominate normal-start full-lap progress, so best-checkpoint selection was misaligned with the real goal.
+- Continuous drive/brake scratch experiment rejected:
+  - artifact: `artifacts\ppo-continuous-speedtarget-scratch-goal-250k-20260602-201820`
+  - technically valid `Box([-1, 1], shape=(2,))` continuous path with gSDE.
+  - deterministic full-lap eval stayed at `0.0m`/no-progress through `20k`.
+  - likely cause: policy mean `0` mapped to coast in the drive/brake scheme, creating a no-movement attractor.
+- Strategic code changes made:
+  - added `SimConfig.continuous_action_scheme`.
+  - preserved `drive_brake`: action `0` maps to coast; negative drive maps to brake.
+  - added `throttle_bias`: action mean `0` maps to `0.5` throttle and `0` brake while remaining a normalized scratch PPO policy.
+  - added optional trainer reward normalization through SB3 `VecNormalize` with observation normalization disabled.
+  - saved `vecnormalize.pkl` and `best_vecnormalize.pkl` when reward normalization is active.
+  - changed best-checkpoint scoring to prioritize valid full-lap completion and normal-start best progress; segment completion is now only a tiny diagnostic tie-breaker.
+  - changed segment evaluation to use the segment curriculum with `normal_start_probability=0.0`, so normal-start mix can no longer leak into segment diagnostics.
+- Validation after strategy-reset code:
+  - `uv run --no-sync ruff check .` passed.
+  - `uv run --no-sync pyright src/f1rl` passed.
+  - `uv run --no-sync pytest -q` passed, `39` tests.
+- New targeted experiment launched:
+  - artifact: `artifacts\ppo-continuous-throttlebias-norm-scratch-goal-120k-20260602-203340`
+  - command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 120000 --seed 310 --n-envs 8 --max-steps 5000 --device auto --require-gpu --vec-env subproc --action-mode continuous --continuous-action-scheme throttle_bias --normalize-reward --curriculum segments --curriculum-promotion-resets 500 --curriculum-normal-start-probability 0.20 --reward-lateral-penalty-scale 0.003 --reward-track-limit-penalty-scale 0.003 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.001 --reward-speed-target-min-kph 85 --reward-speed-target-max-kph 320 --reward-speed-target-heading-scale 3.0 --reward-speed-target-deadzone-kph 20 --reward-speed-target-penalty-scale 0.0015 --n-steps 1024 --batch-size 512 --n-epochs 5 --learning-rate 0.0001 --gamma 0.997 --ent-coef 0.004 --use-sde --sde-sample-freq 16 --checkpoint-every 10000 --eval-every 10000 --eval-episodes 1 --telemetry selected --telemetry-every 1 --run-name ppo-continuous-throttlebias-norm-scratch-goal-120k
+    ```
+  - status: running.
+  - promotion rule: do not promote unless normal-start progress materially improves or a valid full lap is completed.
+- Continuous run crash and fix:
+  - initial deterministic eval before training:
+    - normal-start progress: `958.92m`
+    - checkpoints: `19/120`
+    - termination: collision at `18.12s`
+    - average speed: `191.3kph`
+    - max speed: `247.6kph`
+    - A0 segment eval completed `120.02m`
+  - interpretation:
+    - the `throttle_bias` mapping fixed the no-progress continuous-policy attractor, but initial scratch behavior still collides before the second chicane.
+  - crash:
+    - at the first training eval, selected telemetry tried to rewrite the same `ppo_curriculum_segment-episode-000-steps.jsonl` path used by the initial eval.
+    - on the OneDrive-backed workspace this failed with `OSError: [Errno 22] Invalid argument`.
+  - fix:
+    - selected telemetry filenames now include the eval phase and timestep, e.g. `ppo_full_lap_train_00010000-episode-000-steps.jsonl`.
+    - this also makes per-eval telemetry auditable instead of overwriting previous evidence.
+  - validation after fix:
+    - `uv run --no-sync ruff check .` passed.
+    - `uv run --no-sync pyright src/f1rl` passed.
+    - `uv run --no-sync pytest tests/test_policy_train_smoke.py tests/test_sim.py -q` passed, `14` tests.
+
+### Continuous Throttle-Bias Reward-Normalized PPO Rejected
+- Artifact:
+  - `artifacts\ppo-continuous-throttlebias-norm-scratch-goal-120k-r2-20260602-203742`
+- Command:
+  - same strategy as the first continuous throttle-bias run, relaunched with seed `311` and run name `ppo-continuous-throttlebias-norm-scratch-goal-120k-r2`.
+- Eval sequence:
+  - `0`: `284.74m`, `5/120`, off-track at `7.90s`; A0 segment completed `120.08m`.
+  - `10k`: `88.46m`, `1/120`, collision at `6.12s`; segment failed at `88.61m`.
+  - `20k`: `0.00m`, `0/120`, no-progress; segment completed slowly at `30.7kph` average.
+  - `30k`: `0.00m`, `0/120`, no-progress; segment failed at `3.15m`.
+  - `40k`: `14.10m`, `0/120`, no-progress; segment failed at `38.96m`.
+- Result:
+  - stopped and rejected.
+  - no checkpoint improved the robust `966.32m` discrete PPO benchmark.
+- Diagnosis:
+  - the continuous action path is mechanically valid, and `throttle_bias` fixed the initial no-progress attractor.
+  - training still converged toward stopping/crawling because the default segment curriculum starts at very slow A0 behavior for too long.
+  - the current default curriculum is misaligned with the `<=80s` target; for a racing policy, the next serious run should skip directly to longer/faster stages or use a custom fast curriculum.
+
+### Fast-Stage Curriculum Offset Added
+- Added trainer CLI option:
+  - `--curriculum-start-stage-index`
+- Behavior:
+  - segment curriculum now slices `DEFAULT_SEGMENT_STAGES` from the requested start index before applying `--curriculum-stage-count`.
+  - example: `--curriculum-start-stage-index 3 --curriculum-stage-count 4` selects `C-long`, `D-random-checkpoint`, `E-flying-lap`, and `F-normal-lap`.
+- Rationale:
+  - A0/A1 stages are useful smoke curricula, but they are teaching low-speed/no-progress behavior during serious racing runs.
+  - a fast-stage run should produce gradients around long, high-speed survival and normal-start transfer rather than repeated 120m crawling.
+
+### Fast-Stage Discrete Resume Rejected
+- Artifact:
+  - `artifacts\ppo-faststage-discrete-norm-best966-resume-goal-120k-20260602-204447`
+- Command:
+  - used legacy discrete actions, reward normalization, `--curriculum-start-stage-index 3`, `--curriculum-stage-count 4`, normal-start mix `0.35`, and resumed from the benchmarked `966.32m` checkpoint.
+- Eval sequence:
+  - `0`: `966.32m`, `20/120`, off-track at `13.07s`.
+  - `10k`: `966.99m`, `20/120`, off-track at `13.05s`.
+  - `20k`: `968.51m`, `20/120`, collision at `13.03s`.
+  - `30k`: `959.13m`, `19/120`, off-track at `13.10s`.
+  - `40k`: `959.13m`, `19/120`, off-track at `13.10s`.
+- Result:
+  - stopped after two consecutive evals below the `966.32m` starting benchmark.
+  - best observed checkpoint was `20k`, but this is still a tiny local improvement and no lap was completed.
+- Diagnosis:
+  - skipping A0/A1/B avoided the continuous run's no-progress curriculum collapse.
+  - the policy still drives into the same second-chicane failure envelope at roughly `270kph` average and `350kph` max.
+  - next strategy should make speed discipline/braking materially stronger, not keep nudging the local trajectory by meters.
+
+### Strong Speed-Discipline Resume Rejected
+- Artifact:
+  - `artifacts\ppo-speeddiscipline-discrete-best966-resume-goal-100k-20260602-205132`
+- Command:
+  - resumed from the same `966.32m` checkpoint.
+  - used fast-stage curriculum, no reward normalization, and much stronger speed/heading shaping:
+    - `reward_speed_target_penalty_scale=0.01`
+    - `reward_speed_target_max_kph=300`
+    - `reward_speed_target_heading_scale=3.5`
+    - `reward_speed_target_deadzone_kph=5`
+    - `reward_heading_penalty_scale=0.003`
+- Eval sequence:
+  - `0`: `966.32m`, `20/120`, off-track; speed-target reward total `-409.77`.
+  - `10k`: `969.19m`, `20/120`, collision; speed-target reward total `-412.33`.
+  - `20k`: `966.31m`, `20/120`, off-track; speed-target reward total `-410.07`.
+  - `30k`: `959.40m`, `19/120`, collision; speed-target reward total `-408.38`.
+- Result:
+  - stopped at `30k`.
+  - best row was `10k`, but it remained a tiny local improvement with the same failure mode.
+- Telemetry action diagnosis:
+  - fast-stage `20k`: actions were `throttle` `768/782` steps, `brake_right` `11/782`, `brake_left` `3/782`.
+  - speed-discipline `10k`: actions were `throttle` `767/781`, `brake_right` `11/781`, `brake_left` `3/781`.
+  - speed-discipline `30k`: actions were `throttle` `757/785`, `brake_right` `20/785`, `brake_left` `8/785`.
+  - final failure remained around lateral error `19-21m` and heading error about `-52deg`.
+- Interpretation:
+  - stronger speed penalties changed reward accounting but did not change deterministic control.
+  - the discrete PPO policy is stuck in a strong full-throttle attractor; late brake/steer actions are not enough to alter the trajectory before the second chicane.
+  - next strategic change should alter the learning problem more directly, for example by adding braking-relevant observation features or using a staged normal-start/failure-zone curriculum with explicit earlier braking signal.
+
+### Overspeed Action Credit Added
+- Added reward component:
+  - `overspeed_action`
+- New reward fields:
+  - `overspeed_throttle_penalty_scale`
+  - `overspeed_brake_reward_scale`
+- Behavior:
+  - uses the same speed-target calculation as `speed_target`.
+  - when current speed is above target plus deadzone, throttle gets an immediate penalty.
+  - braking while overspeeding gets immediate positive credit.
+- Rationale:
+  - prior strong speed-target penalties changed reward totals but did not change deterministic action selection.
+  - telemetry showed almost all steps were still `throttle`, with only a few late brake/steer actions near impact.
+  - this directly attacks credit assignment for braking before the chicane.
+- Validation:
+  - `uv run --no-sync ruff check .` passed.
+  - `uv run --no-sync pyright src/f1rl` passed.
+  - `uv run --no-sync pytest -q` passed, `40` tests.
+
+### Brake-Credit Resume Rejected
+- Artifact:
+  - `artifacts\ppo-brakecredit-discrete-best966-resume-goal-80k-20260602-210050`
+- Command:
+  - resumed from the `966.32m` checkpoint.
+  - used fast-stage curriculum and new overspeed action shaping:
+    - `reward_speed_target_penalty_scale=0.006`
+    - `reward_overspeed_throttle_penalty_scale=0.8`
+    - `reward_overspeed_brake_reward_scale=0.35`
+- Eval sequence:
+  - `0`: `966.32m`, `20/120`, off-track; `overspeed_action=-311.08`.
+  - `10k`: `966.28m`, `20/120`, off-track; `overspeed_action=-313.69`.
+  - `20k`: `960.82m`, `19/120`, off-track; `overspeed_action=-282.79`.
+- Action diagnosis:
+  - `10k`: `throttle` `767/784`, `brake_right` `14/784`, `brake_left` `3/784`.
+  - `20k`: `throttle` `757/787`, `brake_right` `23/787`, `brake_left` `7/787`.
+- Result:
+  - stopped and rejected.
+  - action-credit shaping increased late brake actions slightly, but did not introduce early braking or reduce the failure speed envelope enough.
+- Current diagnosis:
+  - reward-only changes are not breaking the entrenched discrete policy.
+  - the next meaningful strategy likely needs a different policy/data regime: reset exactly before the braking zone with a segment target beyond the chicane, reduce initial speed to force learnable braking/turning sequence, then test transfer back to normal start; or add explicit brake-zone/target-speed observation features and train a new policy shape from scratch.
+
+### Brake-Zone Focus Curriculum Rejected
+- Artifact:
+  - `artifacts\ppo-brakezone-focus600-discrete-best966-resume-goal-80k-20260602-210614`
+- Command:
+  - resumed from the `966.32m` checkpoint.
+  - focus window centered at `600m`, width `120m`, segment length `900m`, start speed `120-220kph`, normal-start mix `0.25`.
+  - used overspeed action credit.
+- Eval sequence:
+  - `0`: full lap `966.32m`; focus segment delta `325.44m`, collision.
+  - `10k`: full lap `959.13m`; focus segment delta `391.42m`, collision.
+  - `20k`: full lap `959.13m`; focus segment delta `380.21m`, collision.
+- Result:
+  - stopped and rejected.
+  - focused reset distribution slightly improved local segment progress but did not complete the target segment and regressed normal-start performance.
+- Diagnosis:
+  - reward/focus changes are still asking the existing policy to infer braking from indirect signals.
+  - next change: add explicit target-speed/brake-demand observation features and train a new policy shape, rather than trying to preserve compatibility with the entrenched 966m discrete checkpoint.
+
+### Brake Observation Profile Added
+- Added `SimConfig.observation_profile`:
+  - `base`: existing observation shape; default; compatible with old checkpoints.
+  - `brake`: appends three normalized features:
+    - target speed from upcoming heading change.
+    - current speed minus target speed.
+    - brake demand above target plus deadzone.
+- Added trainer CLI:
+  - `--observation-profile base|brake`
+- Rationale:
+  - previous runs showed reward-only braking signals did not change the entrenched full-throttle policy.
+  - the new profile makes braking demand observable directly, at the cost of requiring a new policy shape trained from scratch.
+- Validation:
+  - `uv run --no-sync ruff check .` passed.
+  - `uv run --no-sync pyright src/f1rl` passed.
+  - `uv run --no-sync pytest -q` passed, `41` tests.
+
+### Brake-Observation Discrete Scratch Rejected
+- Artifact:
+  - `artifacts\ppo-brakeobs-discrete-scratch-goal-120k-20260602-211429`
+- Command:
+  - trained from scratch with `--observation-profile brake`, legacy discrete actions, stages `B` through `F`, normal-start mix `0.30`, speed-target and overspeed-action shaping.
+- Eval sequence:
+  - `0`: full lap `0.0m`, no-progress; segment delta `19.68m`, off-track.
+  - `10k`: full lap `0.0m`, no-progress; segment delta `11.89m`, collision.
+- Result:
+  - stopped and rejected.
+  - new observation features are valid, but scratch discrete PPO with legacy actions still collapsed into no-progress.
+- Diagnosis:
+  - the observation change alone is not enough if the action distribution can settle on non-driving actions.
+  - next test combines brake observations with the continuous `throttle_bias` action scheme so the deterministic policy starts with forward drive.
+
+### Step-Back Protocol And Milestone 0 Baseline Audit
+- User direction:
+  - pause the active PPO loop.
+  - keep the original `LearningPlan.md` success criterion active.
+  - treat `fine-tuned learning plan.md` as an inserted course correction, not a reset.
+  - do not launch another serious PPO run until eval truth, observability, curriculum, and section training are improved.
+- Docs reread:
+  - `AGENTS.md`
+  - `Prompt.md`
+  - `Plan.md`
+  - `Implement.md`
+  - `LearningPlan.md`
+  - `Documentation.md`
+  - `fine-tuned learning plan.md`
+  - `README.md`
+- Process audit:
+  - no active `f1rl.train` process remained after stopping the previous launch-guard/guidance run.
+  - the only process-list match was the process-list command itself.
+- Active code path remapped:
+  - track geometry: `src/f1rl/track_build.py`, `track_model.py`, `geometry.py`, `config.py`
+  - physics: `src/f1rl/physics.py`
+  - shared simulator: `src/f1rl/sim.py`
+  - manual/scripted/reference: `manual.py`, `scripted.py`, `reference_agent.py`
+  - telemetry/QC: `telemetry.py`, `qc.py`
+  - Gymnasium wrapper: `env.py`
+  - PPO training: `train.py`
+  - eval/benchmark/replay: `eval.py`, `benchmark.py`, `replay.py`, `policy_io.py`
+- Current best robust PPO checkpoint:
+  - `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip`
+  - benchmark artifact: `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\benchmark_40000`
+  - result over `5` deterministic normal-start episodes:
+    - valid lap rate: `0.0`
+    - completion rate: `0.0`
+    - best/mean progress: `966.317m`
+    - checkpoints passed: `20/120`
+    - termination: `off_track`
+    - elapsed time: `13.067s`
+    - average speed: `269.8kph`
+    - max speed: `347.2kph`
+  - selected telemetry:
+    - `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\benchmark_40000\selected_telemetry\ppo_focus_40000_full_lap-episode-000-steps.jsonl`
+- Single higher but unpromoted eval:
+  - `artifacts\ppo-focus-900-heading-legacy-resume-goal-80k-20260602-200700`
+  - `10k` eval reached `970.104m`, `20/120`, collision.
+  - this is not the robust best because it is a single eval row and did not materially change the failure mode.
+- Most recent stopped scout:
+  - `artifacts\ppo-guidance-launchguard-p1-multidiscrete-scratch-goal-100k-20260602-220326`
+  - initial scratch eval: `31.455m`, `0/120`, collision.
+  - `10k` eval: `12.013m`, `0/120`, collision.
+  - result is negative and unpromoted.
+- Current failure statement:
+  - no PPO checkpoint has completed a valid normal-start lap.
+  - the robust best reaches roughly the second-chicane region and exits the track at very high speed.
+  - QC reports `966.317m`, `20/120`, no missed checkpoints, `off_track`, max speed `347.2kph`, minimum ray distance `0.337m`.
+  - broader training history shows a full-throttle/late-braking attractor; reward-only penalties and small focus-window nudges did not break it.
+- Validation commands:
+  - `uv run --no-sync ruff check .` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - `uv run --no-sync pytest -q` -> passed; only the known SB3 `VecMonitor` warning appeared.
+  - `uv run --no-sync python -m f1rl.hardware --json` -> CUDA available on `NVIDIA GeForce RTX 4060 Laptop GPU`, Torch `2.10.0+cu128`, CUDA `12.8`.
+  - `uv run --no-sync python -m f1rl.scripted --steps 18000 --no-telemetry` -> `lap_complete`, `5800.3m`, `214.5s`.
+  - `uv run --no-sync python -m f1rl.qc --telemetry "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\benchmark_40000\selected_telemetry\ppo_focus_40000_full_lap-episode-000-steps.jsonl" --run-scripted --scripted-steps 18000` -> passed.
+- QC artifact:
+  - `artifacts\qc-20260602-221250\qc_report.json`
+  - `artifacts\qc-20260602-221250\qc_report.md`
+  - `artifacts\qc-20260602-221250\telemetry_dashboard.html`
+- Live API check:
+  - official Stable-Baselines3 PPO docs still show PPO support for `Discrete`, `Box`, and `MultiDiscrete` action spaces, with a note that MLP PPO is often CPU-oriented even though this project intentionally requires CUDA for goal training.
+  - official SB3 custom env docs still require `Discrete` and `MultiDiscrete` starts compatible with SB3 and recommend `check_env`.
+  - official SB3 tips still recommend separate deterministic evaluation, shaped rewards for custom problems, and normalized symmetric continuous action spaces.
+  - Gymnasium docs still use the `step -> (obs, reward, terminated, truncated, info)` and `reset -> (obs, info)` API.
+- Decision:
+  - Milestone 0 is complete.
+  - Do not start another PPO training run yet.
+  - Next implementation milestone is `fine-tuned learning plan.md` Milestone 1: make `eval.py` and `benchmark.py` load trained-run metadata, action mode/action set, observation profile, reward overrides, and `VecNormalize` stats, and fail loudly on model/environment shape mismatches.
+
+### Milestone 1: Metadata-Faithful Eval And Benchmark
+- Purpose:
+  - prevent standalone eval/benchmark from silently scoring a PPO checkpoint with the wrong action mode, action set, observation profile, reward settings, or normalization stats.
+- Implementation:
+  - expanded `src\f1rl\policy_io.py` with a shared `PpoEvalConfig` resolver.
+  - checkpoint inputs now support:
+    - `latest`
+    - exact `.zip` model paths
+    - artifact directories such as `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514`
+  - artifact directories resolve in priority order:
+    - `best_model.zip`
+    - `final_model.zip`
+    - `checkpoints\best_model.zip`
+    - `checkpoints\final_model.zip`
+    - newest `checkpoints\*.zip`
+    - newest root `*.zip`
+  - `run_metadata.json` is loaded by default when found.
+  - metadata restores:
+    - `action_mode`
+    - `action_set`
+    - `continuous_action_scheme`
+    - `observation_profile`
+    - launch guard fields
+    - reward settings
+    - car/sensor/lookahead settings
+  - `max_steps` remains an eval/benchmark override so short smoke checks can run without changing trained-run metadata.
+  - `best_vecnormalize.pkl` or `vecnormalize.pkl` is loaded when present.
+  - observations are normalized before `model.predict()` when VecNormalize stats are loaded.
+  - model observation/action spaces are validated before rollout; mismatches raise a clear `ValueError`.
+  - `src\f1rl\eval.py` now reports `config_source` and VecNormalize path.
+  - `src\f1rl\benchmark.py` now writes `ppo_eval_config` into `config.json` and `summary.json`, and labels PPO episode rows with action mode/action set/observation profile/config source.
+  - added `--metadata-mode auto|require|ignore` to eval and benchmark.
+    - `auto`: default; load metadata when available.
+    - `require`: fail if metadata is missing.
+    - `ignore`: use explicit CLI flags; intended only for compatibility tests.
+- Tests:
+  - added `tests\test_policy_io.py`.
+  - coverage includes:
+    - metadata resolution from checkpoint path.
+    - artifact-directory checkpoint selection.
+    - metadata ignore mode.
+    - observation shape mismatch failure.
+    - action-space mismatch failure.
+    - matching `MultiDiscrete` validation.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/policy_io.py src/f1rl/eval.py src/f1rl/benchmark.py tests/test_policy_io.py tests/test_benchmark.py` -> passed.
+  - `uv run --no-sync pytest tests/test_policy_io.py tests/test_benchmark.py -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - `uv run --no-sync python -m f1rl.eval --checkpoint "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip" --steps 50 --seed 17 --device auto --metadata-mode require` -> passed, wrote `artifacts\eval-20260602-222415`, reported `config_source=run_metadata`.
+  - `uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514" --episodes 1 --max-steps 80 --seed 23 --device auto --telemetry none --metadata-mode require` -> passed, wrote `artifacts\benchmark-20260602-222405`, reported legacy discrete/base profile from metadata.
+  - `uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-brakeobs-continuous-throttlebias-norm-scratch-goal-80k-20260602-211740" --episodes 1 --max-steps 20 --seed 31 --device auto --telemetry none --metadata-mode require` -> passed, wrote `artifacts\benchmark-20260602-222501`, loaded continuous `throttle_bias`, `brake` observation profile, and `best_vecnormalize.pkl`.
+  - intentional mismatch check:
+    - `uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-brakeobs-continuous-throttlebias-norm-scratch-goal-80k-20260602-211740\best_model.zip" --episodes 1 --max-steps 5 --seed 31 --device auto --telemetry none --metadata-mode ignore`
+    - expected failure occurred: `ValueError: Model observation shape does not match eval environment: model=(21,) env=(18,)`.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 1 is complete.
+  - Next milestone is failure-first observability: section definitions, per-section summaries, first-bad-event detection, and QC failure tables.
+
+### Milestone 2: Failure-First Observability
+- Purpose:
+  - make telemetry answer why PPO failed, not only how far it went.
+  - support the next section curriculum by identifying the failed section, first bad event, action distribution before failure, and section speed/brake behavior.
+- Implementation:
+  - added `src\f1rl\section_analysis.py`.
+  - defined Monza section boundaries by progress distance:
+    - `start_finish_straight`: `0-450m`
+    - `rettifilo_chicane`: `450-1150m`
+    - `curva_grande_roggia_run`: `1150-1850m`
+    - `roggia_chicane`: `1850-2500m`
+    - `lesmo_1`: `2500-3150m`
+    - `lesmo_2_serraglio`: `3150-3850m`
+    - `ascari_approach`: `3850-4450m`
+    - `ascari_chicane`: `4450-5150m`
+    - `parabolica_finish`: `5150-5793m`
+  - per-section summaries now include:
+    - entry/exit/min/max/average speed,
+    - brake start progress,
+    - throttle reapplication progress,
+    - average throttle and brake,
+    - action histogram,
+    - control histogram,
+    - max speed surplus vs section target,
+    - minimum ray distance,
+    - lateral/heading error aggregates,
+    - reward totals,
+    - section termination reason.
+  - first-bad-event detection now flags:
+    - `throttle_during_brake_demand`,
+    - `no_brake_before_turn_in`,
+    - `overspeed_at_braking_zone`,
+    - `boundary_contact_risk`,
+    - `excessive_lateral_error`,
+    - `wrong_heading`,
+    - terminal `collision`, `off_track`, or `no_progress`.
+  - QC now accepts either a telemetry file or a telemetry folder.
+  - QC writes:
+    - `telemetry_reports`,
+    - `failure_table`,
+    - section summaries inside the primary `telemetry` report,
+    - scripted section comparison when `--run-scripted` is enabled.
+  - QC Markdown and HTML dashboard now include a compact failure table and section summary table.
+- Tests:
+  - added `tests\test_section_analysis.py`.
+  - updated `tests\test_qc.py`.
+  - coverage includes:
+    - section lookup for the `966m` failure region,
+    - detection of throttle during brake demand,
+    - action histogram before failure,
+    - section speed/brake summaries,
+    - QC JSON failure-table output.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/section_analysis.py src/f1rl/qc.py tests/test_section_analysis.py tests/test_qc.py` -> passed after import-order fix.
+  - `uv run --no-sync pytest tests/test_section_analysis.py tests/test_qc.py -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Real artifact validation:
+  - command:
+    ```powershell
+    uv run --no-sync python -m f1rl.qc --telemetry "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\benchmark_40000\selected_telemetry" --max-telemetry-files 2 --run-scripted --scripted-steps 18000
+    ```
+  - artifact:
+    - `artifacts\qc-20260602-223327`
+  - result:
+    - telemetry files analyzed: `2`
+    - robust-best PPO failed in `rettifilo_chicane`.
+    - first bad event: `throttle_during_brake_demand`.
+    - first bad event location/speed: `521.4m`, `333.2kph`.
+    - reason: car is overspeed in a braking zone while still applying throttle.
+    - actions before failure: `{'brake_right': 3, 'throttle': 177}`.
+    - terminal event: `off_track` at `966.3m`, `325.0kph`.
+    - section summary:
+      - `start_finish_straight`: entry `1.3kph`, exit `328.7kph`, avg brake `0.01`.
+      - `rettifilo_chicane`: entry `328.8kph`, min `325.0kph`, avg brake `0.04`, max speed surplus `232.2kph`, min ray `0.337m`, terminal `off_track`.
+    - scripted comparison: `lap_complete`, valid lap, `5800.3m`.
+- Decision:
+  - Milestone 2 is complete.
+  - The next section curriculum should target the first heavy braking/chicane failure window beginning around `520m`, not the old vague `~966m` terminal point.
+  - Next milestone is the racing observation profile: signed lateral error, previous throttle/brake, target-speed/lookahead features, and braking-gate distance.
+
+### Milestone 3: Racing Observation Profile
+- Purpose:
+  - give PPO direct state needed for high-speed braking and car placement while preserving existing checkpoint compatibility.
+- Implementation:
+  - added `src\f1rl\track_sections.py` as shared Monza section/braking-gate metadata for simulator observations and QC analysis.
+  - kept existing observation profiles stable:
+    - `base`: `18`
+    - `brake`: `21`
+    - `guidance`: `23`
+  - added `observation_profile="racing"` with dimension `31`.
+  - racing profile includes the existing base signals plus:
+    - brake profile features: target speed, speed surplus, brake demand,
+    - guidance features: target steer and steer error,
+    - signed lateral error,
+    - previous throttle,
+    - previous brake,
+    - per-lookahead target-speed features,
+    - normalized distance to the next Monza braking gate.
+  - legacy base lateral observation now explicitly uses the absolute lateral magnitude, preserving old behavior even though signed lateral is computed for racing.
+- Tests:
+  - added Gymnasium env-check coverage for `observation_profile="racing"`.
+  - verified old profile dimensions remain unchanged and `racing` is `base + 13`.
+  - verified racing observations stay bounded in `[-1, 1]`.
+  - verified signed lateral observation flips sign on opposite sides of the centerline.
+  - added braking-gate distance wraparound coverage.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/sim.py src/f1rl/scripted.py src/f1rl/section_analysis.py src/f1rl/track_sections.py tests/test_env.py tests/test_sim.py tests/test_section_analysis.py` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - `uv run --no-sync pytest tests/test_env.py tests/test_sim.py tests/test_section_analysis.py tests/test_qc.py -q` -> passed.
+  - `uv run --no-sync python -c "from f1rl.config import SimConfig, OBSERVATION_PROFILES; from f1rl.sim import MonzaSim; print(sorted(OBSERVATION_PROFILES)); print({p: MonzaSim(SimConfig(observation_profile=p)).observation_dim for p in sorted(OBSERVATION_PROFILES)})"` -> `{'base': 18, 'brake': 21, 'guidance': 23, 'racing': 31}`.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 3 is complete.
+  - The next milestone is successful-state snapshots and state-library curriculum, so section starts can come from physically coherent lap states instead of arbitrary progress-only resets.
+
+### Milestone 4: Successful-State Snapshots And State Libraries
+- Purpose:
+  - let curricula start from physically coherent successful states instead of only approximate checkpoint/progress resets.
+  - support future chicane and elite-search curricula with exact simulator states from scripted, manual, reference, PPO, or search telemetry.
+- Implementation:
+  - added `src\f1rl\state_snapshot.py`.
+  - `StateSnapshot` stores:
+    - `x`, `y`, `heading_rad`, `speed_mps`, `yaw_rate_rps`, `steering_rad`,
+    - raw and monotonic progress,
+    - checkpoint/lap validity bookkeeping,
+    - previous throttle/brake/steer/action,
+    - source metadata.
+  - added `MonzaSim.reset(..., options={"state_snapshot": ...})`.
+    - restores physical state and checkpoint/lap fields,
+    - keeps elapsed steps fresh for the new curriculum episode,
+    - supports optional position/heading/speed noise,
+    - still supports `segment_length_m` targets after restore.
+  - added `src\f1rl\state_library.py` / `f1-state-library`.
+    - `--source scripted` runs the scripted controller and samples snapshots.
+    - `--source telemetry` samples snapshots from telemetry JSONL files or folders, covering manual/reference/PPO artifacts.
+  - added curriculum integration:
+    - `CurriculumConfig.start_mode="state_library"`.
+    - `--curriculum-state-library PATH`.
+    - `--curriculum-state-library-segment-length-m`.
+    - optional state-library position/heading/speed noise flags.
+    - run metadata records `curriculum_state_library`, `start_mode`, and `state_library_count`.
+- Tests:
+  - added `tests\test_state_library.py`.
+  - updated `tests\test_curriculum.py`.
+  - coverage includes:
+    - simulator reset from a snapshot and continuing,
+    - library generation from telemetry JSONL,
+    - scripted library write/load,
+    - curriculum sampler state-library options,
+    - `MonzaEnv` reset from a state library.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/state_snapshot.py src/f1rl/state_library.py src/f1rl/sim.py src/f1rl/curriculum.py src/f1rl/train.py tests/test_state_library.py tests/test_curriculum.py` -> passed after formatter fixes.
+  - `uv run --no-sync pytest tests/test_state_library.py tests/test_curriculum.py -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - state-library CLI smoke:
+    - `uv run --no-sync python -m f1rl.state_library --source scripted --steps 120 --sample-every-steps 30 --sample-every-m 0 --output artifacts\state-library-smoke-20260602-m4\state_library.json`
+    - artifact: `artifacts\state-library-smoke-20260602-m4\state_library.json`
+    - snapshots: `5`.
+  - training integration smoke:
+    - `uv run --no-sync python -m f1rl.train --timesteps 64 --seed 42 --n-envs 1 --max-steps 60 --device cpu --checkpoint-every 64 --eval-every 32 --eval-episodes 1 --telemetry none --curriculum segments --curriculum-state-library "artifacts\state-library-smoke-20260602-m4\state_library.json" --curriculum-state-library-segment-length-m 30 --run-name state-library-curriculum-smoke`
+    - artifact: `artifacts\state-library-curriculum-smoke-20260602-225555`
+    - metadata check: `start_mode=state_library`, `state_library_count=5`.
+  - full scripted state library:
+    - `uv run --no-sync python -m f1rl.state_library --source scripted --steps 18000 --sample-every-m 100 --sample-every-steps 0 --output artifacts\state-library-scripted-full-m4-20260602\state_library.json`
+    - artifact: `artifacts\state-library-scripted-full-m4-20260602\state_library.json`
+    - snapshots: `59`
+    - final snapshot: `5800.35m`, `checkpoint_index=0`, `next_checkpoint_index=120`, `valid_lap=True`, `completed_lap=True`, source step `12868`.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 4 is complete.
+  - Next milestone is the chicane-specific skill curriculum. It should use the new `racing` observation profile and state-library starts, with honest normal-start eval kept separate from section diagnostics.
+
+### Milestone 5: Chicane-Specific Skill Curriculum
+- Purpose:
+  - replace a vague focus window with staged chicane skill tasks: approach/brake, turn-in, apex, exit, post-exit, full chicane, and mixed normal-start/chicane training.
+  - support both the current Rettifilo first-bad-event window and the later Roggia/second-chicane section that will become relevant after the first chicane is solved.
+- Implementation:
+  - extended `CurriculumStage` with optional:
+    - `start_min_progress_m`,
+    - `start_max_progress_m`,
+    - `target_progress_m`.
+  - added `CHICANE_SKILL_STAGES`:
+    - `rettifilo`: approach/brake, turn-in, apex, exit, post-exit, full-chicane stages.
+    - `roggia`: approach/brake, turn-in, apex, exit, post-exit, full-chicane stages.
+  - added `--curriculum-preset chicane-skill`.
+  - added `--curriculum-chicane rettifilo|roggia`.
+  - chicane stages can sample:
+    - progress ranges when no state library is provided,
+    - filtered successful-state snapshots when `--curriculum-state-library` is provided.
+  - state-library chicane sampling respects `--curriculum-start-stage-index` and `--curriculum-stage-count`.
+  - added `curriculum_stage_metrics` to eval summaries:
+    - episodes per stage,
+    - segment completion rate,
+    - mean segment progress delta,
+    - mean best progress,
+    - termination reason counts.
+- Tests:
+  - updated `tests\test_curriculum.py`.
+  - coverage includes:
+    - progress-range sampling for Rettifilo,
+    - state-library filtering by stage progress window,
+    - dynamic segment target length from snapshot to target gate,
+    - actual per-stage success metric aggregation.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/curriculum.py src/f1rl/train.py tests/test_curriculum.py` -> passed after formatter fix.
+  - `uv run --no-sync pytest tests/test_curriculum.py -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - chicane-skill integration smoke:
+    - `uv run --no-sync python -m f1rl.train --timesteps 64 --seed 43 --n-envs 1 --max-steps 120 --device cpu --checkpoint-every 64 --eval-every 32 --eval-episodes 2 --telemetry none --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --run-name chicane-skill-curriculum-smoke`
+    - artifact: `artifacts\chicane-skill-curriculum-smoke-20260602-230601`
+    - metadata check: `start_mode=state_library`, `state_library_count=59`, stages `rettifilo-approach-brake`, `rettifilo-turn-in`.
+    - eval summary includes `curriculum_stage_metrics`.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 5 is complete as infrastructure.
+  - It does not prove the PPO agent can complete the chicane yet; it makes the next scaffolded section-training experiment measurable and reproducible.
+  - Next milestone is training-only brake/exit scaffold rewards, with honest unassisted eval remaining separate.
+
+### Milestone 6: Temporary Brake/Exit Scaffold Rewards
+- Purpose:
+  - add explicit training-only reward scaffolds for braking, turn-in speed, clean apex passage, and exit quality.
+  - keep them zero by default and make scaffold-free eval explicit.
+- Implementation:
+  - added zero-default reward config fields:
+    - `scaffold_brake_reward_scale`,
+    - `scaffold_no_throttle_penalty_scale`,
+    - `scaffold_turn_in_speed_penalty_scale`,
+    - `scaffold_apex_clean_reward_scale`,
+    - `scaffold_exit_alignment_reward_scale`,
+    - `scaffold_exit_speed_reward_scale`,
+    - `scaffold_scale`.
+  - added reward components:
+    - `scaffold_brake`,
+    - `scaffold_no_throttle`,
+    - `scaffold_turn_in_speed`,
+    - `scaffold_apex_clean`,
+    - `scaffold_exit_alignment`,
+    - `scaffold_exit_speed`.
+  - scaffold rewards are active only in sections with braking/turn-in metadata and only when explicit scales are nonzero.
+  - added `MonzaEnv.set_reward_scaffold_scale()` for schedule callbacks.
+  - added optional linear scaffold schedule:
+    - `--reward-scaffold-final-scale`,
+    - `--reward-scaffold-schedule-timesteps`.
+  - training metadata records:
+    - `scaffold_rewards_enabled`,
+    - `scaffold_reward_schedule`.
+  - added `--disable-scaffold-rewards` to `f1rl.eval` and `f1rl.benchmark`.
+    - this loads checkpoint metadata normally but zeros training-only scaffold fields before rollout/reward accounting.
+- Tests:
+  - updated `tests\test_sim.py`:
+    - scaffold components are zero by default,
+    - braking is credited in the chicane brake zone when enabled,
+    - throttle is penalized in the chicane brake zone when enabled.
+  - updated `tests\test_env.py`:
+    - env method clamps and applies scaffold scale.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/config.py src/f1rl/telemetry.py src/f1rl/sim.py src/f1rl/env.py src/f1rl/train.py src/f1rl/eval.py src/f1rl/benchmark.py tests/test_sim.py tests/test_env.py` -> passed after formatter fixes.
+  - `uv run --no-sync pytest tests/test_sim.py tests/test_env.py tests/test_policy_train_smoke.py -q` -> passed; known SB3 warning only.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - scaffold training smoke:
+    - `uv run --no-sync python -m f1rl.train --timesteps 64 --seed 44 --n-envs 1 --max-steps 120 --device cpu --checkpoint-every 64 --eval-every 32 --eval-episodes 2 --telemetry none --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --reward-scaffold-brake-reward-scale 0.4 --reward-scaffold-no-throttle-penalty-scale 0.6 --reward-scaffold-turn-in-speed-penalty-scale 0.2 --reward-scaffold-apex-clean-reward-scale 0.05 --reward-scaffold-exit-alignment-reward-scale 0.05 --reward-scaffold-exit-speed-reward-scale 0.05 --reward-scaffold-final-scale 0.0 --reward-scaffold-schedule-timesteps 64 --run-name scaffold-reward-smoke`
+    - artifact: `artifacts\scaffold-reward-smoke-20260602-231335`
+    - metadata check: `scaffold_rewards_enabled=True`, schedule `1.0 -> 0.0` over `64` timesteps.
+  - scaffold-free benchmark smoke:
+    - `uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\scaffold-reward-smoke-20260602-231335" --episodes 1 --max-steps 5 --seed 55 --device cpu --telemetry none --metadata-mode require --disable-scaffold-rewards`
+    - artifact: `artifacts\benchmark-20260602-231438`
+    - config and summary record `disable_scaffold_rewards=True`.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 6 is complete as infrastructure.
+  - Scaffolded training must still be reported as assisted training.
+  - Promotion requires normal-start benchmark/eval with scaffold rewards disabled.
+
+### Milestone 7: Training-Only Forced Exploration
+- Purpose:
+  - make lazy full-throttle chicane behavior fail or become costly during assisted section training.
+  - keep those gates explicitly disabled for honest full-lap eval.
+- Implementation:
+  - added `AssistConfig` to `SimConfig`.
+  - added zero-default assist telemetry/reward components:
+    - `assist_overspeed_gate`,
+    - `assist_throttle_brake_demand`,
+    - `assist_no_brake_gate`,
+    - `assist_virtual_corridor`.
+  - added simulator assist logic:
+    - overspeed near turn-in can terminate with `assist_overspeed_gate`,
+    - throttle during brake demand can be penalized,
+    - no-brake behavior before turn-in can be penalized,
+    - an optional virtual corridor can penalize or terminate lateral excursions.
+  - added training CLI flags:
+    - `--assist-enabled`,
+    - `--assist-overspeed-turn-in-terminate`,
+    - `--assist-overspeed-turn-in-margin-kph`,
+    - `--assist-overspeed-turn-in-penalty`,
+    - `--assist-throttle-brake-demand-penalty-scale`,
+    - `--assist-no-brake-penalty`,
+    - `--assist-no-brake-min-brake`,
+    - `--assist-virtual-corridor-m`,
+    - `--assist-virtual-corridor-penalty`,
+    - `--assist-virtual-corridor-terminate`.
+  - training metadata records:
+    - `training_assists_enabled`,
+    - `assist_config`.
+  - added `--disable-training-assists` to `f1rl.eval` and `f1rl.benchmark`.
+  - `policy_io` now restores `AssistConfig` from metadata.
+- Tests:
+  - updated `tests\test_sim.py`:
+    - assist components are zero by default,
+    - throttle/no-brake penalties fire in the chicane brake zone,
+    - overspeed turn-in gate can terminate assisted episodes.
+  - updated `tests\test_policy_io.py`:
+    - assist config survives metadata resolution.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/config.py src/f1rl/telemetry.py src/f1rl/sim.py src/f1rl/train.py src/f1rl/eval.py src/f1rl/benchmark.py src/f1rl/policy_io.py tests/test_sim.py tests/test_policy_io.py` -> passed after formatter fix.
+  - `uv run --no-sync pytest tests/test_sim.py tests/test_policy_io.py tests/test_env.py -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - assisted training smoke:
+    - `uv run --no-sync python -m f1rl.train --timesteps 64 --seed 45 --n-envs 1 --max-steps 120 --device cpu --checkpoint-every 64 --eval-every 32 --eval-episodes 2 --telemetry none --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --assist-enabled --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 20 --assist-throttle-brake-demand-penalty-scale 0.8 --assist-no-brake-penalty -8 --run-name forced-exploration-smoke`
+    - artifact: `artifacts\forced-exploration-smoke-20260602-232142`
+    - metadata check: `training_assists_enabled=True`, `enabled=True`, `overspeed_turn_in_terminate=True`, `throttle_brake_demand_penalty_scale=0.8`, `no_brake_penalty=-8.0`.
+  - assist-free benchmark smoke:
+    - `uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\forced-exploration-smoke-20260602-232142" --episodes 1 --max-steps 5 --seed 56 --device cpu --telemetry none --metadata-mode require --disable-training-assists`
+    - artifact: `artifacts\benchmark-20260602-232229`
+    - config and summary record `disable_training_assists=True`.
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 7 is complete as infrastructure.
+  - Assisted training artifacts must not be presented as unassisted performance.
+  - Promotion remains based on normal-start benchmark/eval with assists disabled.
+
+### Milestone 8: Segment Elite Search
+- Purpose:
+  - discover high-quality section exits through many short attempts and save the best resulting states for future curricula.
+  - provide an artifact path from section attempts to new state-library starts.
+- Implementation:
+  - added `src\f1rl\elite_search.py` / `f1-elite-search`.
+  - inputs:
+    - source state library,
+    - progress filter,
+    - segment length,
+    - attempt count,
+    - top-K elite count,
+    - scripted/random/optional PPO policy mode,
+    - optional action/start perturbations.
+  - outputs:
+    - `attempts.jsonl`,
+    - `selected_telemetry\elite-rank-...jsonl`,
+    - `elite_state_library.json`,
+    - `elite_search_summary.json`.
+  - scoring favors:
+    - segment completion,
+    - valid/no-collision/no-offtrack behavior,
+    - progress delta,
+    - exit speed,
+    - heading alignment,
+    - low lateral error,
+    - no missed checkpoints.
+  - PPO modes are available through:
+    - `--policy ppo-deterministic`,
+    - `--policy ppo-stochastic`,
+    - `--checkpoint`,
+    - metadata-aware policy loading.
+- Tests:
+  - added `tests\test_elite_search.py`.
+  - coverage verifies:
+    - runner writes an elite library,
+    - selected telemetry is produced for top attempts,
+    - summary and attempts artifacts are written.
+- Validation commands:
+  - `uv run --no-sync ruff check src/f1rl/elite_search.py tests/test_elite_search.py` -> passed.
+  - `uv run --no-sync pytest tests/test_elite_search.py -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - Roggia elite-search artifact:
+    - `uv run --no-sync python -m f1rl.elite_search --state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --output-dir artifacts\elite-search-roggia-m8-20260602 --attempts 6 --max-steps 240 --top-k 3 --segment-length-m 800 --start-min-progress-m 1850 --start-max-progress-m 2020 --policy scripted --action-noise 0.05 --seed 80`
+    - artifact: `artifacts\elite-search-roggia-m8-20260602`
+    - result: `6` attempts, `3` elite states.
+    - top attempt final progress range: about `2028.4m` to `2126.9m`; no full segment completion claimed.
+  - QC display validation:
+    - `uv run --no-sync python -m f1rl.qc --telemetry "artifacts\elite-search-roggia-m8-20260602\selected_telemetry" --max-telemetry-files 3`
+    - artifact: `artifacts\qc-20260602-232815`
+  - full validation after the milestone:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Decision:
+  - Milestone 8 is complete as infrastructure.
+  - The elite search produced seed states, not proof of chicane mastery.
+  - Next milestone is a properly shaped continuous-control retry using racing observations, state-library starts, scaffold/assist controls, VecNormalize, and gSDE.
+
+### Milestone 9: Continuous-Control Retry
+- Purpose:
+  - retry continuous control only after adding racing observations, metadata-faithful eval, state-library curriculum, section stages, scaffold rewards, and assist gates.
+- Experiment 1: hard-assisted continuous retry:
+  - command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 20000 --seed 90 --n-envs 8 --max-steps 900 --device auto --require-gpu --vec-env subproc --action-mode continuous --continuous-action-scheme throttle_bias --observation-profile racing --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --reward-scaffold-brake-reward-scale 0.4 --reward-scaffold-no-throttle-penalty-scale 0.6 --reward-scaffold-turn-in-speed-penalty-scale 0.2 --reward-scaffold-apex-clean-reward-scale 0.05 --reward-scaffold-exit-alignment-reward-scale 0.05 --reward-scaffold-exit-speed-reward-scale 0.05 --reward-scaffold-final-scale 0.1 --reward-scaffold-schedule-timesteps 20000 --assist-enabled --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 25 --assist-throttle-brake-demand-penalty-scale 0.8 --assist-no-brake-penalty -8 --normalize-reward --use-sde --sde-sample-freq 16 --n-steps 256 --batch-size 256 --n-epochs 3 --learning-rate 0.0001 --gamma 0.995 --ent-coef 0.004 --checkpoint-every 5000 --eval-every 5000 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-continuous-racing-rettifilo-m9-20k
+    ```
+  - artifact: `artifacts\ppo-continuous-racing-rettifilo-m9-20k-20260602-233058`
+  - result:
+    - initial section delta `183.5m`, no completion, assisted overspeed-gate terminations.
+    - final section delta `59.9m`.
+    - final normal-start eval `43.6m`.
+  - decision: rejected; hard assist termination collapsed continuous behavior.
+- Experiment 2: discrete-expanded comparison:
+  - artifact: `artifacts\ppo-discrete-expanded-racing-rettifilo-m9-10k-20260602-233450`
+  - result:
+    - initial section delta `30.7m`.
+    - `5k/10k` section delta `183.2m`, still no section completion.
+    - honest scaffold/assist-disabled benchmark: `artifacts\benchmark-20260602-233826`, `431.60m`, `8` checkpoints, off-track.
+  - decision: better than collapsed hard-assisted continuous, but still far below robust `966.32m`.
+- Experiment 3: soft continuous retry:
+  - command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 10000 --seed 94 --n-envs 8 --max-steps 900 --device auto --require-gpu --vec-env subproc --action-mode continuous --continuous-action-scheme throttle_bias --observation-profile racing --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 1 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --reward-scaffold-brake-reward-scale 0.4 --reward-scaffold-no-throttle-penalty-scale 0.6 --reward-scaffold-turn-in-speed-penalty-scale 0.2 --reward-scaffold-apex-clean-reward-scale 0.05 --reward-scaffold-exit-alignment-reward-scale 0.05 --reward-scaffold-exit-speed-reward-scale 0.05 --reward-scaffold-final-scale 0.2 --reward-scaffold-schedule-timesteps 10000 --normalize-reward --use-sde --sde-sample-freq 16 --n-steps 256 --batch-size 256 --n-epochs 3 --learning-rate 0.00005 --gamma 0.995 --ent-coef 0.008 --checkpoint-every 5000 --eval-every 5000 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-continuous-racing-rettifilo-soft-m9-10k
+    ```
+  - artifact: `artifacts\ppo-continuous-racing-rettifilo-soft-m9-10k-20260602-234003`
+  - result:
+    - section eval completed the approach/brake stage at `0`, `5k`, and `10k`.
+    - normal-start eval reached `770.2m` at `10k`.
+  - honest benchmark:
+    - command:
+      ```powershell
+      uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-continuous-racing-rettifilo-soft-m9-10k-20260602-234003" --episodes 3 --max-steps 1200 --seed 95 --device auto --telemetry selected --telemetry-every 1 --metadata-mode require --disable-scaffold-rewards --disable-training-assists
+      ```
+    - artifact: `artifacts\benchmark-20260602-234321`
+    - result: best/avg `951.76m`, `19/120`, collision, no valid lap.
+  - QC:
+    - artifact: `artifacts\qc-20260602-234452`
+    - first bad event: `throttle_during_brake_demand` at `521.1m`, `244.0kph`.
+    - terminal: collision at `951.76m`, `252.9kph`.
+- Decision:
+  - Milestone 9 is complete as a controlled retry and comparison.
+  - The soft continuous setup is the best M9 candidate, but it is not promoted over the robust `966.32m` baseline.
+  - Continuous control is not rejected globally; hard assist termination is rejected for now.
+  - Next step is Milestone 10: use the soft continuous setup for full-lap transfer/scaffold reduction, but benchmark promotion only with scaffold/assist disabled.
+
+### Milestone 10: Full-Lap Transfer And Scaffold Removal
+- Purpose:
+  - transfer the best M9 section behavior back toward normal-start full-lap performance while decaying scaffolds and keeping forced assists disabled.
+- Transfer run:
+  - command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 20000 --seed 96 --n-envs 8 --max-steps 1500 --device auto --require-gpu --vec-env subproc --resume-checkpoint "artifacts\ppo-continuous-racing-rettifilo-soft-m9-10k-20260602-234003\best_model.zip" --vec-normalize-path "artifacts\ppo-continuous-racing-rettifilo-soft-m9-10k-20260602-234003\best_vecnormalize.pkl" --action-mode continuous --continuous-action-scheme throttle_bias --observation-profile racing --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-normal-start-probability 0.5 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --reward-scaffold-brake-reward-scale 0.25 --reward-scaffold-no-throttle-penalty-scale 0.35 --reward-scaffold-turn-in-speed-penalty-scale 0.1 --reward-scaffold-apex-clean-reward-scale 0.03 --reward-scaffold-exit-alignment-reward-scale 0.03 --reward-scaffold-exit-speed-reward-scale 0.03 --reward-scaffold-final-scale 0.0 --reward-scaffold-schedule-timesteps 20000 --normalize-reward --use-sde --sde-sample-freq 16 --n-steps 256 --batch-size 256 --n-epochs 3 --learning-rate 0.00003 --gamma 0.997 --ent-coef 0.006 --checkpoint-every 5000 --eval-every 5000 --eval-episodes 3 --telemetry selected --telemetry-every 1 --run-name ppo-continuous-racing-full-transfer-m10-20k
+    ```
+  - artifact: `artifacts\ppo-continuous-racing-full-transfer-m10-20k-20260602-234628`
+  - result:
+    - initial resume: `951.8m`, segment completion rate `1.0`.
+    - `5k`: `204.4m`.
+    - `10k`: `99.1m`.
+    - `15k`: `73.6m`.
+    - `20k`: `60.3m`.
+  - decision: continuation settings were destructive; final checkpoint rejected.
+- Preserved-best honest benchmark:
+  - command:
+    ```powershell
+    uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-continuous-racing-full-transfer-m10-20k-20260602-234628" --episodes 3 --max-steps 1500 --seed 97 --device auto --telemetry selected --telemetry-every 1 --metadata-mode require --disable-scaffold-rewards --disable-training-assists
+    ```
+  - artifact: `artifacts\benchmark-20260602-235140`
+  - result: `951.76m`, `19/120`, collision, no valid lap.
+- Decision:
+  - Milestone 10 is complete as a transfer attempt.
+  - No checkpoint from M9/M10 is promoted above the robust `966.32m` baseline.
+  - Fine-tuned course-correction milestones are now complete as infrastructure plus controlled experiments.
+  - Return to the original `LearningPlan.md` goal loop. The strict target remains unchanged: valid normal-start PPO lap in `<=80.0s`.
+
+### Original Learning Loop Resumed: Turn-In Continuation Rejected
+- Purpose:
+  - after completing the fine-tuned milestones, test a narrower continuation that teaches only the Rettifilo turn-in stage from the soft continuous M9 checkpoint.
+  - avoid the destructive M10 normal-start mixed transfer settings.
+- Command:
+  ```powershell
+  uv run --no-sync python -m f1rl.train --timesteps 10000 --seed 98 --n-envs 8 --max-steps 900 --device auto --require-gpu --vec-env subproc --resume-checkpoint "artifacts\ppo-continuous-racing-rettifilo-soft-m9-10k-20260602-234003\best_model.zip" --vec-normalize-path "artifacts\ppo-continuous-racing-rettifilo-soft-m9-10k-20260602-234003\best_vecnormalize.pkl" --action-mode continuous --continuous-action-scheme throttle_bias --observation-profile racing --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-start-stage-index 1 --curriculum-stage-count 1 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --reward-scaffold-brake-reward-scale 0.15 --reward-scaffold-no-throttle-penalty-scale 0.25 --reward-scaffold-turn-in-speed-penalty-scale 0.15 --reward-scaffold-apex-clean-reward-scale 0.05 --reward-scaffold-exit-alignment-reward-scale 0.05 --reward-scaffold-exit-speed-reward-scale 0.04 --reward-scaffold-final-scale 0.1 --reward-scaffold-schedule-timesteps 10000 --normalize-reward --use-sde --sde-sample-freq 16 --n-steps 256 --batch-size 256 --n-epochs 3 --learning-rate 0.00002 --gamma 0.997 --ent-coef 0.006 --checkpoint-every 5000 --eval-every 5000 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-continuous-racing-rettifilo-turnin-resume-goal-10k
+  ```
+- Artifact:
+  - `artifacts\ppo-continuous-racing-rettifilo-turnin-resume-goal-10k-20260602-235421`
+- Result:
+  - initial resume: normal-start eval `770.2m`; turn-in segment completion `1.0`.
+  - `5k`: normal-start eval `447.4m`; turn-in segment completion `1.0`, but terminations were collisions.
+  - `10k`: normal-start eval `285.4m`; turn-in segment completion `0.0`.
+- Decision:
+  - rejected.
+  - continuing PPO from the soft continuous candidate remains unstable even with a narrow turn-in stage and lower learning rate.
+  - robust best remains `966.32m`, `20/120`, off-track from `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514`.
+
+### Original Learning Loop Continued: Strategy Reset Experiments - 2026-06-03
+- Validation gate before new work:
+  - `uv run --no-sync python -m f1rl.hardware --json` -> CUDA available on `NVIDIA GeForce RTX 4060 Laptop GPU`.
+  - `uv run --no-sync ruff check .` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+  - `uv run --no-sync python -m f1rl.scripted --steps 18000 --no-telemetry` -> `lap_complete`, valid slow lap `214.5s`.
+  - TensorBoard was still running at `127.0.0.1:6006`.
+- New implementation:
+  - added continuous action scheme `exclusive_throttle_bias`.
+    - positive drive maps to throttle only,
+    - negative drive maps to brake only,
+    - zero drive maps to a small launch throttle,
+    - this avoids the old `throttle_bias` behavior where braking actions still carried throttle unless drive saturated to `-1`.
+  - added PPO transfer initialization through `f1rl.train --initialize-from-checkpoint`.
+    - creates a fresh PPO model for the requested environment.
+    - copies compatible SB3 MLP policy tensors from a source checkpoint.
+    - expands first-layer observation-input tensors when the target observation space is larger.
+    - zero-initializes new observation columns so transferred behavior initially matches the source policy while new features remain trainable.
+    - metadata records `transfer_initialization`, `initialize_from_checkpoint`, and `transfer_weight_report`.
+  - tests:
+    - `tests\test_sim.py` covers `exclusive_throttle_bias`.
+    - `tests\test_policy_train_smoke.py` covers transfer initialization from `base` observations into `racing` observations.
+- Focused validation for new code:
+  - `uv run --no-sync ruff check src/f1rl/config.py src/f1rl/sim.py tests/test_sim.py` -> passed.
+  - `uv run --no-sync pytest tests/test_sim.py -q` -> passed.
+  - `uv run --no-sync ruff check src/f1rl/train.py tests/test_policy_train_smoke.py` -> passed.
+  - `uv run --no-sync pytest tests/test_policy_train_smoke.py -q` -> passed.
+  - `uv run --no-sync pytest tests/test_policy_train_smoke.py::test_ppo_transfer_initialization_can_expand_observation_inputs -q` -> passed after zero-initializing new observation columns.
+- Experiment: exclusive continuous control smoke:
+  - artifact: `artifacts\exclusive-throttlebias-smoke-20260603-000620`.
+  - result: smoke train completed on CPU; metadata confirms `continuous_action_scheme=exclusive_throttle_bias`, `observation_profile=racing`, state-library curriculum count `59`.
+- Experiment: exclusive continuous Rettifilo state-library run:
+  - artifact: `artifacts\ppo-continuous-exclusive-racing-rettifilo-soft-goal-40k-20260603-000722`.
+  - stopped after `10k`.
+  - result: normal-start eval reached only `168.1m`, off-track on the start-finish straight.
+  - diagnosis: the new action scheme worked, but the policy learned tiny steering and drifted off before testing Rettifilo.
+  - decision: rejected.
+- Experiment: exclusive continuous prefix-start steering run:
+  - artifact: `artifacts\ppo-continuous-exclusive-racing-prefix-steering-goal-60k-20260603-001222`.
+  - stopped after `10k`.
+  - result: selected 10k telemetry regressed to `72.6m`, collision, very low throttle, small brake, crawl/placement behavior.
+  - decision: rejected; steering/placement penalties overpowered forward progress.
+- Experiment: racing-discrete prefix-start runs:
+  - artifact without launch guard: `artifacts\ppo-racingdiscrete-racingobs-prefix-goal-80k-20260603-001928`.
+    - initial deterministic eval no-progressed; stopped.
+  - artifact with launch guard: `artifacts\ppo-racingdiscrete-racingobs-prefix-launchguard-goal-60k-20260603-002116`.
+    - `10k`: `12.4m`, off-track.
+  - decision: both rejected; scratch racing-discrete is not competitive with the robust legacy checkpoint.
+- Experiment: legacy robust checkpoint exit-transfer focus:
+  - artifact: `artifacts\ppo-legacy-best966-rettifilo-exit-transfer-goal-100k-20260603-002435`.
+  - stopped after `10k`.
+  - result: `970.3m`, `20/120`, collision.
+  - telemetry: same first bad event, `throttle_during_brake_demand` at `520.2m`, `335.5kph`; brake still starts around `960.8m`.
+  - decision: rejected as another small local movement without braking improvement.
+- Experiment: legacy robust checkpoint soft assist brake-gate:
+  - artifact: `artifacts\ppo-legacy-best966-softassist-brakegate-goal-60k-20260603-002832`.
+  - stopped after `20k`.
+  - result: still `966.3m`, off-track.
+  - telemetry at `10k`: still throttle through the brake zone; Rettifilo reward totals included large training-only penalties:
+    - `assist_throttle_brake_demand=-343.7`,
+    - `assist_no_brake_gate=-254.0`,
+    - `assist_overspeed_gate=-1100.0`,
+    - but deterministic policy still selected throttle.
+  - decision: soft reward pressure alone did not move deterministic action selection.
+- Experiment: legacy robust checkpoint hard assist brake-gate:
+  - artifact: `artifacts\ppo-legacy-best966-hardassist-brakegate-goal-40k-20260603-003346`.
+  - stopped after `10k`.
+  - result: assisted eval still terminated at `686.5m` with `assist_overspeed_gate`.
+  - decision: rejected; low-LR hard gate did not shift deterministic braking.
+- Experiment: legacy robust checkpoint aggressive hard assist brake-gate:
+  - artifact: `artifacts\ppo-legacy-best966-hardassist-brakegate-aggressive-goal-30k-20260603-003724`.
+  - stopped after `10k`.
+  - result: still terminated at the assisted overspeed gate around `686m`.
+  - direct policy-probability inspection at a `520m`, `333kph` brake-zone state:
+    - robust checkpoint deterministic action: `throttle`.
+    - action probabilities were close: `throttle=0.1317`, `brake_left=0.1176`, `brake_right=0.1165`, but training barely moved them by `10k`.
+  - decision: the old base-observation policy is stuck in a brittle throttle argmax; reward-only continuation is weak.
+- Experiment: transfer-initialized racing-observation soft assist:
+  - artifact: `artifacts\ppo-transfer-racingobs-best966-softassist-goal-60k-20260603-005219`.
+  - stopped after `20k`.
+  - initial transfer reproduced the robust baseline: `966.3m`, `20/120`, off-track, `transfer_initialization=True`, `observation_profile=racing`.
+  - `10k`: still `966.3m`; segment completion improved to `1.0`.
+  - `20k`: regressed to `960.7m`, collision.
+  - decision: promising infrastructure, but this soft-assist run did not improve normal-start behavior.
+- Experiment: transfer-initialized racing-observation aggressive hard assist:
+  - artifact: `artifacts\ppo-transfer-racingobs-best966-hardassist-aggressive-goal-20k-20260603-005723`.
+  - stopped after `10k`.
+  - initial transfer with hard assist terminated at `686.5m`, as expected.
+  - `5k`: still `assist_overspeed_gate`.
+  - `10k`: collapsed to `3.6m`, max-steps.
+  - decision: rejected; hard assist was destructive even with racing observations.
+- Current best remains unchanged:
+  - robust best checkpoint: `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip`.
+  - robust best benchmark: `966.32m`, `20/120`, off-track, no valid PPO lap.
+- Current diagnosis:
+  - the repeated first bad event remains `throttle_during_brake_demand` in `rettifilo_chicane` around `520-521m`.
+  - robust policy action probabilities at the brake-zone state are close, but deterministic argmax still picks `throttle`.
+  - reward/assist continuation has not reliably moved deterministic action preference.
+  - transfer initialization is now available and preserves old competence when expanding from `base` to `racing` observations, but the attempted soft/hard transfer schedules were not sufficient.
+  - strict goal remains unmet: no PPO valid normal-start lap, and no lap at `<=80.0s`.
+
+### Fine-Tuned Plan Closure Audit And Stochastic Check - 2026-06-03
+- Plan file audit:
+  - Found `LearningPlan.md` and `fine-tuned learning plan.md`.
+  - No separate `finetune learning plan.md` file exists at the repo root or in the active tracked file list; the user wording is treated as referring to the original learning plan plus the fine-tuned course-correction plan.
+- Runtime state:
+  - TensorBoard remains live on `127.0.0.1:6006`.
+  - Active Python processes are TensorBoard wrappers only; no PPO training process is currently running.
+- Fine-tuned milestone status:
+  - Milestone 0 baseline audit: complete. Robust best is `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip`, `966.32m`, `20/120`, off-track, no valid lap.
+  - Milestone 1 metadata-faithful eval/benchmark: complete. PPO eval/benchmark resolve `run_metadata.json`, trained action/observation config, and VecNormalize stats when present, and fail on space mismatches.
+  - Milestone 2 failure-first observability: complete. QC/section analysis identify the current first bad event as `throttle_during_brake_demand` in `rettifilo_chicane` near `520m`.
+  - Milestone 3 racing observation profile: complete. `racing` observations preserve `base`/`brake` behavior and add signed lateral, prior control, target-speed, brake-demand, and braking-gate features.
+  - Milestone 4 successful-state curriculum: complete. `StateSnapshot`, telemetry/scripted state libraries, and state-library curriculum starts exist and are tested.
+  - Milestone 5 chicane-specific skill curriculum: complete as infrastructure. Both `rettifilo` and `roggia` staged curricula exist; current measured PPO failure is Rettifilo, not Roggia.
+  - Milestone 6 temporary scaffold rewards: complete. Brake, no-throttle, turn-in, apex, exit alignment, and exit speed scaffolds are zero by default, schedulable, logged, and disableable for honest eval.
+  - Milestone 7 forced exploration gates: complete. Training-only assists are explicit, logged, and disableable for honest eval.
+  - Milestone 8 segment elite search: complete. `f1rl.elite_search` writes attempts, selected telemetry, summaries, and elite state libraries.
+  - Milestone 9 continuous-control retry: complete as controlled experiments. `exclusive_throttle_bias` was added, but current continuous retries are rejected because they underperform the robust `966.32m` discrete checkpoint.
+  - Milestone 10 full-lap transfer/scaffold removal: complete as controlled experiments, not as goal completion. Transfer-initialized racing-observation attempts preserved the baseline initially but did not improve honest normal-start progress; no valid PPO lap exists.
+- Stochastic PPO eval/benchmark implementation:
+  - Added `--ppo-deterministic` / `--ppo-stochastic` flags to `f1rl.eval` and `f1rl.benchmark`.
+  - Benchmark/eval config and per-episode PPO rows now record `ppo_deterministic`.
+  - Focused validation:
+    - `uv run --no-sync ruff check src/f1rl/benchmark.py src/f1rl/eval.py tests/test_benchmark.py` -> passed.
+    - `uv run --no-sync pytest tests/test_benchmark.py -q` -> passed.
+- Stochastic benchmark evidence:
+  - Interrupted exploratory artifact: `artifacts\benchmark-20260603-010726`.
+    - It produced partial selected telemetry but no complete summary.
+    - Partial behavior was poor: mostly max-step crawling under about `200m` or early failures.
+  - Complete artifact: `artifacts\benchmark-20260603-011203`.
+    - Command shape: benchmark robust best checkpoint with `--metadata-mode require --ppo-stochastic --episodes 4 --max-steps 1000 --telemetry selected --telemetry-every 1`.
+    - Result: `0/4` valid laps, `0/4` finish crossings, `0.0` completion rate.
+    - Average progress: `73.74m`.
+    - Best progress: `129.31m`.
+    - Terminations: `4/4` `max_steps`.
+    - Recorded config confirms `ppo_deterministic=false`, `ppo_action_set=legacy`, `ppo_observation_profile=base`, and `config_source=run_metadata`.
+  - Decision: stochastic inference is not a hidden solution for the current robust checkpoint. It is worse than deterministic normal-start evaluation and should not be promoted.
+- Online research notes used for the next strategy:
+  - Gymnasium official docs still define the `reset()`/`step()` API and reinforce keeping env checker coverage for custom environments: https://gymnasium.farama.org/api/env/
+  - Stable-Baselines3 PPO docs confirm the current PPO constructor surface, including `policy_kwargs`, gSDE, `device`, and load/eval behavior: https://stable-baselines3.readthedocs.io/en/v2.5.0/modules/ppo.html
+  - Stable-Baselines3 VecNormalize docs confirm normalization stats are separate from model files and must be loaded with the eval vector env, with training disabled for evaluation: https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html
+  - Stable-Baselines3 custom policy docs support `policy_kwargs`/custom MLP structure as the low-complexity way to change policy capacity without reviving archive-era systems: https://stable-baselines3.readthedocs.io/en/v2.3.0/guide/custom_policy.html
+  - Reverse Curriculum Generation supports the state-library/restart direction already implemented here: https://arxiv.org/abs/1707.05300
+  - Potential-based reward-shaping work reinforces why scaffold rewards must remain training-only and why honest unassisted evaluation is the promotion gate: https://ai.stanford.edu/~ang/papers/shaping-icml99.pdf
+- Strategic decision after the closure audit:
+  - The fine-tuned infrastructure milestones are complete enough to return to the original `LearningPlan.md` loop.
+  - The next serious run should not be another small `10m` focus-window tweak.
+  - Next candidate strategy should combine:
+    - metadata-faithful transfer from the robust `966.32m` checkpoint,
+    - `racing` observations,
+    - normal-start pressure from the beginning,
+    - Rettifilo state-library/chicane starts as a minority curriculum source,
+    - no hard assist termination,
+    - mild scaffold schedule only if it does not damage normal-start eval,
+    - and promotion only if deterministic honest normal-start progress clears the robust `966.32m` checkpoint by a meaningful margin or produces a valid lap.
+- Validation gate after the audit/docs update:
+  - `uv run --no-sync ruff check .` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+  - `uv run --no-sync python -m f1rl.hardware --json` -> CUDA available on `NVIDIA GeForce RTX 4060 Laptop GPU`; policy training/inference on CUDA and simulator work on CPU.
+  - `uv run --no-sync python -m f1rl.scripted --steps 18000 --no-telemetry` -> `lap_complete`, `completed=True`, progress `5800.3m`, time `214.5s`.
+- Fresh deterministic robust-checkpoint benchmark and QC anchor:
+  - Benchmark command:
+    ```powershell
+    uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip" --episodes 1 --max-steps 1500 --seed 9400 --device auto --telemetry selected --telemetry-every 1 --metadata-mode require --ppo-deterministic
+    ```
+  - Benchmark artifact: `artifacts\benchmark-20260603-012314`.
+  - Result: `966.317m`, `20/120`, `off_track`, no finish crossing, no valid lap.
+  - Per-episode config: `ppo_deterministic=true`, `ppo_config_source=run_metadata`, `ppo_action_set=legacy`, `ppo_observation_profile=base`.
+  - QC command:
+    ```powershell
+    uv run --no-sync python -m f1rl.qc --telemetry "artifacts\benchmark-20260603-012314\selected_telemetry" --max-telemetry-files 1
+    ```
+  - QC artifact: `artifacts\qc-20260603-012346`.
+  - QC failure table:
+    - failed section: `rettifilo_chicane`.
+    - first bad event: `throttle_during_brake_demand`.
+    - first bad progress: `521.414m`.
+    - first bad speed: `333.213kph`.
+    - actions before failure: `177` `throttle`, `3` `brake_right`.
+    - terminal event: `off_track` at `966.317m`, `324.984kph`.
+  - Rettifilo section summary:
+    - entry speed `328.85kph`.
+    - min speed `324.98kph`.
+    - max speed `347.18kph`.
+    - average throttle `0.964`.
+    - average brake `0.036`.
+    - termination `off_track`.
+  - Decision:
+    - This is the current anchor failure artifact for the resumed original learning loop.
+    - The policy does not have a subtle line-choice issue at Rettifilo; it has a high-speed braking/action-selection issue.
+
+### Original Learning Loop Resumed: Action-Head Transfer - 2026-06-03
+- Reason for code change:
+  - Previous transfer initialization could preserve a robust policy when only the observation space expanded (`base` -> `racing`).
+  - It could not preserve behavior when changing discrete action spaces (`legacy` -> `racing` or `expanded`) because SB3 `action_net` tensors changed from `9` logits to a larger logit count and were left random.
+  - This made richer-action experiments behave like scratch policies even when `--initialize-from-checkpoint` was used.
+- Implementation:
+  - `src\f1rl\train.py` now expands discrete PPO action heads during transfer initialization.
+  - Exact target actions copy the matching source action row, e.g. `throttle`, `brake_left`, `brake_right`.
+  - New target actions copy the nearest source action row by throttle/brake/steer distance and receive an initial bias penalty so they do not steal deterministic behavior before training.
+  - Transfer reports now include `expanded_discrete_action_head` rows in `run_metadata.json`.
+- Tests:
+  - Added `tests\test_policy_train_smoke.py::test_transfer_initialization_can_expand_discrete_action_head`.
+  - Validated that exact rows copy and approximate rows get the bias-penalty mode.
+- Focused validation:
+  - `uv run --no-sync ruff check src/f1rl/train.py tests/test_policy_train_smoke.py` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest tests/test_policy_train_smoke.py::test_transfer_initialization_can_expand_discrete_action_head -q` -> passed.
+  - `uv run --no-sync pytest tests/test_policy_train_smoke.py::test_ppo_transfer_initialization_can_expand_observation_inputs -q` -> passed; known SB3 `VecMonitor` warning only.
+- Full validation after code change:
+  - `uv run --no-sync ruff check .` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Transfer probe:
+  - Command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 64 --seed 950 --n-envs 2 --max-steps 1500 --device auto --require-gpu --vec-env subproc --initialize-from-checkpoint "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip" --action-mode discrete --action-set racing --observation-profile racing --curriculum none --checkpoint-every 64 --eval-every 64 --eval-episodes 1 --telemetry selected --telemetry-every 1 --run-name ppo-transfer-racing-actionhead-probe-goal-64
+    ```
+  - Artifact: `artifacts\ppo-transfer-racing-actionhead-probe-goal-64-20260603-012854`.
+  - Metadata confirms:
+    - `transfer_initialization=true`.
+    - `observation_profile=racing`.
+    - `action_set=racing`.
+    - transfer report includes both `expanded_input` and `expanded_discrete_action_head`.
+  - Initial-transfer eval:
+    - `966.107m`, `20/120`, `collision`, no valid lap.
+  - Decision:
+    - The new transfer path preserves the robust baseline while exposing the richer `racing` action set.
+    - This is a materially better starting point than previous scratch `racing` action-set experiments.
+    - Next experiment should train from this transfer path with strong normal-start pressure and a minority of Rettifilo state-library starts, without hard assist termination.
+
+### Racing Action-Head Transfer Run And QC Truth Fix - 2026-06-03
+- Serious transfer run:
+  - Command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 60000 --seed 960 --n-envs 8 --max-steps 5000 --device auto --require-gpu --vec-env subproc --initialize-from-checkpoint "artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip" --action-mode discrete --action-set racing --observation-profile racing --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 6 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --curriculum-promotion-resets 120 --curriculum-normal-start-probability 0.65 --reward-lateral-penalty-scale 0.004 --reward-track-limit-penalty-scale 0.004 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.001 --reward-speed-target-min-kph 80 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 18 --reward-speed-target-penalty-scale 0.001 --reward-overspeed-throttle-penalty-scale 0.003 --reward-overspeed-brake-reward-scale 0.001 --reward-scaffold-brake-reward-scale 0.10 --reward-scaffold-no-throttle-penalty-scale 0.15 --reward-scaffold-turn-in-speed-penalty-scale 0.05 --reward-scaffold-apex-clean-reward-scale 0.02 --reward-scaffold-exit-alignment-reward-scale 0.02 --reward-scaffold-exit-speed-reward-scale 0.02 --reward-scaffold-final-scale 0.0 --reward-scaffold-schedule-timesteps 60000 --normalize-reward --n-steps 512 --batch-size 256 --n-epochs 4 --learning-rate 0.00005 --gamma 0.997 --ent-coef 0.004 --checkpoint-every 10000 --eval-every 10000 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k
+    ```
+  - Artifact: `artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341`.
+  - Runtime: CUDA, subproc vector env, `60000` timesteps, approximately `133` training fps.
+  - Eval progression:
+    - initial transfer: `966.107m`, `20/120`, `collision`, no valid lap.
+    - `10000`: `968.478m`, `20/120`, `collision`.
+    - `20000`: `970.775m`, `20/120`, `collision`, best checkpoint.
+    - `30000`: regressed to `283.987m`, `5/120`, `collision`.
+    - `40000`: `283.496m`, `5/120`, `collision`.
+    - `50000`: `320.510m`, `6/120`, `off_track`.
+    - `60000`: `326.170m`, `6/120`, `off_track`.
+  - Decision:
+    - Do not promote this run as goal progress. The best checkpoint improved the deterministic distance by only about `4.5m` over the robust anchor and still fails the same Rettifilo braking behavior.
+    - The late collapse after `20000` confirms that the current scaffold/curriculum mix can damage normal-start behavior if left running.
+    - Use it as evidence for a strategy change: preserve transfer initialization, reduce destructive scaffold pressure, and optimize for earlier braking rather than marginal extra meters.
+- Honest benchmark of the best model:
+  - Command:
+    ```powershell
+    uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341" --episodes 5 --max-steps 5000 --seed 9700 --device auto --telemetry selected --telemetry-every 1 --metadata-mode require --disable-scaffold-rewards --disable-training-assists --ppo-deterministic
+    ```
+  - Artifact: `artifacts\benchmark-20260603-014242`.
+  - Result: `0/5` valid laps, `0/5` finish crossings, `5/5` collisions, average/best progress `970.775m`, `20/120`.
+- Observability bug found:
+  - The simulator persisted only `action_id` in telemetry.
+  - `f1rl.qc`/section analysis fell back to legacy action labels, which misnamed `racing` action-set IDs in reports.
+  - This did not affect controls or benchmark metrics, but it made human failure diagnosis misleading.
+- Implementation fix:
+  - `src\f1rl\telemetry.py` `StepTelemetry` now records `action_name`.
+  - `src\f1rl\sim.py` emits action names from the configured action set for discrete policies, describes multidiscrete actions, and labels scripted/reference actions explicitly.
+  - `src\f1rl\reference_agent.py` writes `action_name="reference_ghost"`.
+  - `src\f1rl\section_analysis.py` prefers telemetry `action_name` and falls back to legacy labels only for old telemetry files.
+  - Tests cover racing discrete telemetry labels, multidiscrete labels, and QC failure reports preferring telemetry labels.
+- Validation after the action-name fix:
+  - `uv run --no-sync ruff check src/f1rl/telemetry.py src/f1rl/sim.py src/f1rl/reference_agent.py src/f1rl/section_analysis.py tests/test_sim.py tests/test_section_analysis.py` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest tests/test_sim.py tests/test_section_analysis.py tests/test_reference_agent.py -q` -> passed.
+  - Full validation:
+    - `uv run --no-sync ruff check .` -> passed.
+    - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+    - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Fresh post-fix benchmark/QC:
+  - Benchmark command:
+    ```powershell
+    uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341" --episodes 1 --max-steps 1500 --seed 9800 --device auto --telemetry selected --telemetry-every 1 --metadata-mode require --disable-scaffold-rewards --disable-training-assists --ppo-deterministic
+    ```
+  - Benchmark artifact: `artifacts\benchmark-20260603-015016`.
+  - QC command:
+    ```powershell
+    uv run --no-sync python -m f1rl.qc --telemetry "artifacts\benchmark-20260603-015016\selected_telemetry" --max-telemetry-files 1
+    ```
+  - QC artifact: `artifacts\qc-20260603-015045`.
+  - Confirmed QC labels are now correct for the `racing` action set:
+    - first bad event: `throttle_during_brake_demand`.
+    - first bad progress: `520.806m`.
+    - first bad speed: `334.094kph`.
+    - actions before failure: `177` `throttle`, `3` `brake_right`.
+    - terminal event: `collision` at `970.775m`, `273.825kph`.
+    - terminal action: `brake_left`.
+  - Interpretation:
+    - The transferred racing-action policy learned some late braking compared with the robust legacy checkpoint, but it still delays braking until too late and collides in Rettifilo.
+    - Next training must target brake timing and retention, not merely more normal-start distance.
+
+### Retention Runs Rejected And Curriculum Truth Bug Fixed - 2026-06-03
+- User progress concern:
+  - The best honest PPO distance was still about `970m` after several hours.
+  - That concern was correct: raw normal-start driving progress was effectively flat.
+  - The useful progress in this loop was diagnostic and infrastructural, not a new lap-distance breakthrough.
+- Failed retention experiments:
+  - `artifacts\ppo-racing-best970-brakedemand-retention-goal-20k-20260603-015740`
+    - stopped because the assist overspeed gate inherited a destructive default penalty and produced extremely large negative rewards.
+    - not used as learning evidence.
+  - `artifacts\ppo-racing-best970-brakedemand-retention-v2-goal-20k-20260603-020001`
+    - started from the `970.775m` best racing-action checkpoint and matching `best_vecnormalize.pkl`.
+    - initial eval preserved `970.775m`.
+    - `5000` eval regressed to `967.8m`.
+    - `10000` eval was `968.7m`.
+    - `15000` eval collapsed to about `209.5m`; run was stopped.
+    - honest benchmark/QC of the `10000` checkpoint remained the same root failure: first bad event around `520.76m` at about `334.18kph`, with actions before failure dominated by throttle.
+  - Decision:
+    - Neither retention run is promoted.
+    - More training against the same signal is not expected to break the plateau.
+- `racing_v2` observation profile:
+  - Added `observation_profile="racing_v2"` while preserving old `base` and `racing` profile compatibility.
+  - `racing_v2` adds explicit section-skill features:
+    - named-section target speed normalized;
+    - speed surplus relative to the named-section target;
+    - in-brake-zone flag;
+    - brake-zone phase.
+  - Rationale:
+    - The older `racing` profile exposed distance to the next braking gate, but after crossing the gate that feature jumped to the next gate.
+    - The policy therefore had weak explicit evidence that it was inside the Rettifilo brake zone while QC was already demanding braking.
+  - Transfer probe:
+    - `artifacts\ppo-racingv2-transfer-probe-goal-64-20260603-020826`.
+    - Initial transfer preserved `970.773m`, proving the observation expansion did not destroy the current behavior.
+  - Failed `racing_v2` training run:
+    - `artifacts\ppo-racingv2-brakedemand-transfer-goal-10k-20260603-021215`.
+    - Initial eval: `970.775m`, `20/120`, collision.
+    - `2504` timesteps: unchanged.
+    - `5008` timesteps: collapsed to about `213.22m`.
+    - `7512` timesteps: still collapsed; run was killed.
+  - Decision:
+    - `racing_v2` is retained as a useful observation upgrade, but observation features alone did not fix the learning loop.
+- Root-cause diagnosis:
+  - The chicane-skill segment curriculum counted completion using progress only.
+  - Example: `rettifilo-approach-brake` could start around `450-560m`, target `720m`, and count as `segment_complete` even if the policy arrived at `720m` at roughly `330kph`.
+  - That made segment completion metrics look successful while teaching the exact behavior that later fails the real normal-start lap.
+  - This explains why repeated runs could preserve or return to the `966-971m` range without learning the missing braking behavior.
+- Implementation fix:
+  - `CurriculumStage` now supports `target_max_speed_kph`.
+  - Chicane-skill stages for Rettifilo and Roggia now have target max speeds at approach, turn-in, apex, exit, post-exit, and full-chicane targets.
+  - `CurriculumSampler.sample_options` emits `segment_target_max_speed_kph` when a stage has a speed gate.
+  - `MonzaSim` stores the segment speed gate from reset options, includes it in `info`, and marks `segment_complete` only when both progress and speed requirements are met.
+  - State restoration clears stale segment speed gates.
+  - State-library chicane curriculum now preserves the target max speed in train-time stage construction.
+- Validation:
+  - `uv run --no-sync ruff check src/f1rl/curriculum.py src/f1rl/sim.py src/f1rl/train.py tests/test_curriculum.py` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest tests/test_curriculum.py -q` -> passed.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warnings only.
+- Current status after this fix:
+  - Strict goal remains unmet: no valid normal-start PPO lap and no `<=80.0s` lap.
+  - Best honest candidate remains `970.775m`, `20/120`, collision.
+  - The next PPO run must use the speed-gated chicane curriculum so segment success means braking skill, not merely reaching the target distance.

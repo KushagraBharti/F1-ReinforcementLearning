@@ -15,6 +15,30 @@ The workflow is:
 7. Promote only checkpoints that improve benchmark evidence.
 8. Repeat with full-lap and curriculum PPO until the strict completion target is met or a hard external blocker prevents continued work.
 
+## Fine-Tuning Course Correction
+
+If the goal-mode agent has already completed the initial simulator/RL setup, run baseline training, and reached a PPO plateau, treat `fine-tuned learning plan.md` as an inserted break in this plan.
+
+That file does not replace this goal. The single success criterion below still stands. The purpose of the fine-tuned plan is to make the agent pause, audit the current best artifacts, improve eval truth and observability, add targeted section curricula, and then return to this original full-lap objective with a stronger learning loop.
+
+When entering that course correction:
+
+1. Do not mark this goal complete.
+2. Do not abandon the original `<=80.0s` valid normal-start lap target.
+3. Do not restart the repo from scratch.
+4. Read `fine-tuned learning plan.md`.
+5. Execute its Step-Back Protocol and milestones.
+6. Resume this learning plan only after the fine-tuning infrastructure improves evaluation, telemetry, curriculum, and section training.
+
+Status as of 2026-06-03:
+
+- The fine-tuning course correction has been executed through its implementation, validation, and controlled-experiment milestones.
+- The original success criterion is still unmet.
+- Current best honest PPO evidence is `970.775m`, `20/120`, `collision`, no finish crossing, no valid lap, from `artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip`.
+- The robust legacy anchor remains `966.317m`, `20/120`, no valid lap, from `artifacts\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\checkpoints\ppo_monza_40000_steps.zip`.
+- Current trusted failure signature is late/no braking in `rettifilo_chicane`: `throttle_during_brake_demand` around `520.8m` at about `334kph`, then collision/off-track around `966-971m`.
+- Continue this learning plan with the upgraded metadata-faithful eval, QC, racing observations, state-library curriculum, scaffold controls, training assists, and action-head transfer. Do not claim completion until PPO produces a valid normal-start lap with `lap_time <= 80.0s`.
+
 ## Success Criterion
 
 There is exactly one success criterion:
@@ -515,6 +539,22 @@ Stop and ask the user before continuing if:
 - the repo cannot commit/persist artifacts due to external storage problems.
 
 Do not stop only because one training run failed. A failed run is expected evidence for the next experiment. Do not report goal completion unless the `<=80.0s` valid normal-start lap target is met. Running for 8+ hours is a persistence requirement, not a completion criterion.
+
+## Current Plateau Note - 2026-06-03
+
+The strict goal is still open:
+
+- no PPO valid normal-start full lap;
+- no PPO lap time;
+- best honest normal-start candidate remains about `970.775m`, `20/120`, collision.
+
+The plateau is now understood as more than insufficient runtime:
+
+- the previous chicane-skill curriculum could count overspeed progress-only segment completions;
+- this could reinforce reaching Rettifilo targets too fast instead of braking correctly;
+- segment completion is now speed-gated, so future chicane-skill success must include being slow enough at the target.
+
+Continue the original goal loop from the corrected curriculum, not by repeating long runs against the old progress-only segment signal.
 
 ## Concise Goal Prompt
 

@@ -16,7 +16,21 @@ REWARD_COMPONENT_KEYS = (
     "no_progress",
     "lateral",
     "track_limit",
+    "heading",
+    "speed_target",
+    "overspeed_action",
+    "steering_target",
     "smoothness",
+    "scaffold_brake",
+    "scaffold_no_throttle",
+    "scaffold_turn_in_speed",
+    "scaffold_apex_clean",
+    "scaffold_exit_alignment",
+    "scaffold_exit_speed",
+    "assist_overspeed_gate",
+    "assist_throttle_brake_demand",
+    "assist_no_brake_gate",
+    "assist_virtual_corridor",
 )
 
 
@@ -41,6 +55,7 @@ class StepTelemetry:
     brake_delta: float
     steering_delta: float
     action_id: int
+    action_name: str
     raw_progress_m: float
     monotonic_progress_m: float
     progress_delta_m: float

@@ -204,6 +204,7 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
             brake_delta=float(brake - previous_brake),
             steering_delta=float(steering - previous_steering),
             action_id=-100,
+            action_name="reference_ghost",
             raw_progress_m=float(progress_m),
             monotonic_progress_m=float(progress_m),
             progress_delta_m=float(progress_delta),

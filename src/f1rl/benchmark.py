@@ -8,14 +8,33 @@ import json
 import shutil
 import sys
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from f1rl.config import ARTIFACTS_DIR, DISCRETE_ACTIONS, SimConfig
-from f1rl.policy_io import load_sb3_ppo
+from f1rl.config import (
+    ACTION_MODES,
+    ACTION_SETS,
+    ARTIFACTS_DIR,
+    CONTINUOUS_ACTION_SCHEMES,
+    OBSERVATION_PROFILES,
+    SimConfig,
+    build_sim_config,
+    disable_scaffold_rewards,
+    disable_training_assists,
+    multidiscrete_action_nvec,
+)
+from f1rl.env import MonzaEnv
+from f1rl.policy_io import (
+    close_vecnormalize,
+    load_sb3_ppo,
+    load_vecnormalize_stats,
+    normalize_observation,
+    resolve_ppo_eval_config,
+    validate_model_spaces,
+)
 from f1rl.reference_agent import load_reference_profile, run_reference_ghost
 from f1rl.scripted import ScriptedController
 from f1rl.sim import MonzaSim
@@ -125,25 +144,45 @@ def _run_sim_policy(
     telemetry: str,
     telemetry_every: int,
     model: Any | None = None,
+    sim_config: SimConfig | None = None,
+    vec_normalize: Any | None = None,
+    ppo_config_source: str | None = None,
+    ppo_deterministic: bool = True,
 ) -> dict[str, Any]:
-    sim = MonzaSim(SimConfig(max_steps=max_steps))
+    resolved_config = replace(sim_config or SimConfig(), max_steps=max_steps)
+    sim = MonzaSim(resolved_config)
     obs, _ = sim.reset(seed=seed)
+    obs_for_model = normalize_observation(obs, vec_normalize)
     rng = np.random.default_rng(seed)
     scripted = ScriptedController()
     rows: list[dict[str, Any]] = []
     started = time.perf_counter()
     for _ in range(max_steps):
         if policy == "random":
-            result = sim.step(int(rng.integers(0, len(DISCRETE_ACTIONS))))
+            if resolved_config.action_mode == "continuous":
+                result = sim.step_continuous(rng.uniform(-1.0, 1.0, size=2))
+            elif resolved_config.action_mode == "multidiscrete":
+                nvec = multidiscrete_action_nvec()
+                result = sim.step_multidiscrete(
+                    [int(rng.integers(0, nvec[0])), int(rng.integers(0, nvec[1]))]
+                )
+            else:
+                result = sim.step(int(rng.integers(0, sim.action_dim)))
             obs = result.observation
         elif policy == "scripted":
             throttle, brake, steer = scripted.controls(sim)
             result = sim.step_controls(throttle=throttle, brake=brake, steer=steer, action_id=-10)
             obs = result.observation
         elif policy == "ppo" and model is not None:
-            action, _ = model.predict(obs, deterministic=True)
-            result = sim.step(_action_to_int(action))
+            action, _ = model.predict(obs_for_model, deterministic=ppo_deterministic)
+            if resolved_config.action_mode == "continuous":
+                result = sim.step_continuous(np.asarray(action, dtype=np.float32))
+            elif resolved_config.action_mode == "multidiscrete":
+                result = sim.step_multidiscrete(np.asarray(action, dtype=np.int64))
+            else:
+                result = sim.step(_action_to_int(action))
             obs = result.observation
+            obs_for_model = normalize_observation(obs, vec_normalize)
         else:
             raise ValueError(f"Unsupported policy: {policy}")
         rows.append(asdict(result.telemetry))
@@ -152,7 +191,15 @@ def _run_sim_policy(
     wall_clock_s = time.perf_counter() - started
     if _should_write_telemetry(telemetry, episode, telemetry_every):
         _write_jsonl(telemetry_dir / f"{policy}-episode-{episode:03d}-steps.jsonl", rows)
-    return _episode_metrics(policy=policy, episode=episode, seed=seed, rows=rows, wall_clock_s=wall_clock_s)
+    metrics = _episode_metrics(policy=policy, episode=episode, seed=seed, rows=rows, wall_clock_s=wall_clock_s)
+    if policy == "ppo":
+        metrics["ppo_config_source"] = ppo_config_source
+        metrics["ppo_action_mode"] = resolved_config.action_mode
+        metrics["ppo_action_set"] = resolved_config.action_set
+        metrics["ppo_observation_profile"] = resolved_config.observation_profile
+        metrics["ppo_continuous_action_scheme"] = resolved_config.continuous_action_scheme
+        metrics["ppo_deterministic"] = ppo_deterministic
+    return metrics
 
 
 def _run_reference_policy(
@@ -271,11 +318,58 @@ def run_benchmark(
     device: str,
     telemetry: str,
     telemetry_every: int,
+    action_mode: str = "discrete",
+    action_set: str = "legacy",
+    continuous_action_scheme: str = "drive_brake",
+    observation_profile: str = "base",
+    launch_guard_progress_m: float = 0.0,
+    launch_guard_min_speed_kph: float = 0.0,
+    launch_guard_throttle: float = 0.22,
+    metadata_mode: str = "auto",
+    disable_scaffold: bool = False,
+    disable_assists: bool = False,
+    ppo_deterministic: bool = True,
 ) -> Path:
     run_id = f"benchmark-{time.strftime('%Y%m%d-%H%M%S')}"
     run_root = ARTIFACTS_DIR / run_id
     telemetry_dir = run_root / "selected_telemetry"
     run_root.mkdir(parents=True, exist_ok=True)
+    fallback_config = build_sim_config(
+        max_steps=max_steps,
+        action_mode=action_mode,
+        action_set=action_set,
+        continuous_action_scheme=continuous_action_scheme,
+        observation_profile=observation_profile,
+        launch_guard_progress_m=launch_guard_progress_m,
+        launch_guard_min_speed_kph=launch_guard_min_speed_kph,
+        launch_guard_throttle=launch_guard_throttle,
+    )
+    ppo_config = None
+    model = None
+    vec_normalize = None
+    if "ppo" in policies:
+        ppo_config = resolve_ppo_eval_config(
+            checkpoint,
+            max_steps=max_steps,
+            fallback_config=fallback_config,
+            metadata_mode=metadata_mode,
+        )
+        if disable_scaffold:
+            disable_scaffold_rewards(ppo_config.sim_config)
+        if disable_assists:
+            disable_training_assists(ppo_config.sim_config)
+        validation_env = MonzaEnv(ppo_config.sim_config)
+        try:
+            vec_normalize = load_vecnormalize_stats(ppo_config)
+            model = load_sb3_ppo(ppo_config.checkpoint_path, device=device)
+            validate_model_spaces(
+                model,
+                observation_space=validation_env.observation_space,
+                action_space=validation_env.action_space,
+            )
+        finally:
+            validation_env.close()
+    effective_config = ppo_config.sim_config if ppo_config is not None else fallback_config
     (run_root / "config.json").write_text(
         json.dumps(
             {
@@ -284,43 +378,71 @@ def run_benchmark(
                 "max_steps": max_steps,
                 "seed": seed,
                 "checkpoint": checkpoint,
+                "resolved_checkpoint": str(ppo_config.checkpoint_path) if ppo_config is not None else None,
                 "device": device,
                 "telemetry": telemetry,
                 "telemetry_every": telemetry_every,
+                "metadata_mode": metadata_mode,
+                "disable_scaffold_rewards": disable_scaffold,
+                "disable_training_assists": disable_assists,
+                "ppo_deterministic": ppo_deterministic,
+                "requested_sim_config": {
+                    "action_mode": action_mode,
+                    "action_set": action_set,
+                    "continuous_action_scheme": continuous_action_scheme,
+                    "observation_profile": observation_profile,
+                    "launch_guard_progress_m": launch_guard_progress_m,
+                    "launch_guard_min_speed_kph": launch_guard_min_speed_kph,
+                    "launch_guard_throttle": launch_guard_throttle,
+                },
+                "ppo_eval_config": ppo_config.report() if ppo_config is not None else None,
             },
             indent=2,
         ),
         encoding="utf-8",
     )
-    model = load_sb3_ppo(checkpoint, device=device) if "ppo" in policies else None
     rows: list[dict[str, Any]] = []
-    for policy in policies:
-        for episode in range(episodes):
-            episode_seed = seed + episode
-            if policy == "reference_ghost":
-                row = _run_reference_policy(
-                    episode=episode,
-                    seed=episode_seed,
-                    telemetry_dir=telemetry_dir,
-                    telemetry=telemetry,
-                    telemetry_every=telemetry_every,
-                )
-            else:
-                row = _run_sim_policy(
-                    policy=policy,
-                    episode=episode,
-                    seed=episode_seed,
-                    max_steps=max_steps,
-                    telemetry_dir=telemetry_dir,
-                    telemetry=telemetry,
-                    telemetry_every=telemetry_every,
-                    model=model,
-                )
-            rows.append(row)
+    try:
+        for policy in policies:
+            for episode in range(episodes):
+                episode_seed = seed + episode
+                if policy == "reference_ghost":
+                    row = _run_reference_policy(
+                        episode=episode,
+                        seed=episode_seed,
+                        telemetry_dir=telemetry_dir,
+                        telemetry=telemetry,
+                        telemetry_every=telemetry_every,
+                    )
+                else:
+                    row = _run_sim_policy(
+                        policy=policy,
+                        episode=episode,
+                        seed=episode_seed,
+                        max_steps=max_steps,
+                        telemetry_dir=telemetry_dir,
+                        telemetry=telemetry,
+                        telemetry_every=telemetry_every,
+                        model=model,
+                        sim_config=effective_config,
+                        vec_normalize=vec_normalize if policy == "ppo" else None,
+                        ppo_config_source=ppo_config.config_source if ppo_config is not None else None,
+                        ppo_deterministic=ppo_deterministic,
+                    )
+                rows.append(row)
+    finally:
+        close_vecnormalize(vec_normalize)
 
     _write_jsonl(run_root / "per_episode.jsonl", rows)
     summary_rows = [_aggregate([row for row in rows if row["policy"] == policy]) for policy in policies]
-    summary = {"run_id": run_id, "policies": summary_rows, "episodes": rows}
+    summary = {
+        "run_id": run_id,
+        "policies": summary_rows,
+        "episodes": rows,
+        "ppo_eval_config": ppo_config.report() if ppo_config is not None else None,
+        "disable_scaffold_rewards": disable_scaffold,
+        "disable_training_assists": disable_assists,
+    }
     (run_root / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     fieldnames = sorted({key for row in summary_rows for key in row.keys()})
     with (run_root / "summary.csv").open("w", newline="", encoding="utf-8") as file:
@@ -341,6 +463,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--telemetry", choices=["none", "selected", "all"], default="selected")
     parser.add_argument("--telemetry-every", type=int, default=1)
+    parser.add_argument("--action-mode", choices=sorted(ACTION_MODES), default="discrete")
+    parser.add_argument("--action-set", choices=sorted(ACTION_SETS), default="legacy")
+    parser.add_argument("--continuous-action-scheme", choices=sorted(CONTINUOUS_ACTION_SCHEMES), default="drive_brake")
+    parser.add_argument("--observation-profile", choices=sorted(OBSERVATION_PROFILES), default="base")
+    parser.add_argument("--launch-guard-progress-m", type=float, default=0.0)
+    parser.add_argument("--launch-guard-min-speed-kph", type=float, default=0.0)
+    parser.add_argument("--launch-guard-throttle", type=float, default=0.22)
+    parser.add_argument("--metadata-mode", choices=["auto", "require", "ignore"], default="auto")
+    parser.add_argument("--disable-scaffold-rewards", action="store_true")
+    parser.add_argument("--disable-training-assists", action="store_true")
+    parser.set_defaults(ppo_deterministic=True)
+    parser.add_argument("--ppo-deterministic", dest="ppo_deterministic", action="store_true")
+    parser.add_argument("--ppo-stochastic", dest="ppo_deterministic", action="store_false")
     return parser.parse_args(argv)
 
 
@@ -355,6 +490,17 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
         telemetry=args.telemetry,
         telemetry_every=args.telemetry_every,
+        action_mode=args.action_mode,
+        action_set=args.action_set,
+        continuous_action_scheme=args.continuous_action_scheme,
+        observation_profile=args.observation_profile,
+        launch_guard_progress_m=args.launch_guard_progress_m,
+        launch_guard_min_speed_kph=args.launch_guard_min_speed_kph,
+        launch_guard_throttle=args.launch_guard_throttle,
+        metadata_mode=args.metadata_mode,
+        disable_scaffold=args.disable_scaffold_rewards,
+        disable_assists=args.disable_training_assists,
+        ppo_deterministic=args.ppo_deterministic,
     )
     return 0
 

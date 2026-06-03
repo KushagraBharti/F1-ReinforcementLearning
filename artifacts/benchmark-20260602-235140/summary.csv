@@ -1,0 +1,2 @@
+avg_checkpoints_passed,avg_elapsed_time_s,avg_missed_checkpoint_count,avg_progress_m,avg_reward,avg_segment_progress_delta_m,avg_steps,avg_steps_per_second,best_lap_time_s,best_progress_m,completion_rate,crash_rate,episodes,finish_crossed_rate,invalid_lap_rate,max_missed_checkpoint_count,max_steps_observed,policy,segment_completion_rate,termination_reasons,valid_lap_rate
+19.0,17.65,0.0,951.7602499537555,-46.32578433446913,951.7571353565787,1059.0,47.09732037166236,,951.7602499537555,0.0,1.0,3,0.0,1.0,0,1059,ppo,0.0,{'collision': 3},0.0

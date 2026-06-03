@@ -1,0 +1,174 @@
+{
+  "run_id": "ppo-discrete-speedtarget-best966-resume-goal-150k-20260602-202301",
+  "seed": 210,
+  "timesteps": 150000,
+  "n_envs": 8,
+  "max_steps": 5000,
+  "device": "cuda",
+  "require_gpu": true,
+  "vec_env": "subproc",
+  "telemetry": "selected",
+  "telemetry_every": 1,
+  "curriculum": "segments",
+  "curriculum_stage_count": 7,
+  "curriculum_promotion_resets": 250,
+  "curriculum_config": {
+    "mode": "segments",
+    "promotion_resets": 250,
+    "normal_start_probability": 0.25,
+    "focus_start_progress_m": null,
+    "focus_window_m": 0.0,
+    "stages": [
+      {
+        "name": "A0-short-control",
+        "segment_length_m": 120.0,
+        "min_speed_kph": 10.0,
+        "max_speed_kph": 30.0,
+        "position_noise_m": 0.0,
+        "heading_noise_deg": 0.0,
+        "speed_noise_kph": 1.0
+      },
+      {
+        "name": "A1-short-low-speed",
+        "segment_length_m": 240.0,
+        "min_speed_kph": 20.0,
+        "max_speed_kph": 55.0,
+        "position_noise_m": 0.2,
+        "heading_noise_deg": 1.0,
+        "speed_noise_kph": 2.0
+      },
+      {
+        "name": "B-medium-control",
+        "segment_length_m": 500.0,
+        "min_speed_kph": 35.0,
+        "max_speed_kph": 85.0,
+        "position_noise_m": 0.5,
+        "heading_noise_deg": 2.0,
+        "speed_noise_kph": 4.0
+      },
+      {
+        "name": "C-long",
+        "segment_length_m": 1200.0,
+        "min_speed_kph": 70.0,
+        "max_speed_kph": 140.0,
+        "position_noise_m": 1.0,
+        "heading_noise_deg": 3.0,
+        "speed_noise_kph": 7.0
+      },
+      {
+        "name": "D-random-checkpoint",
+        "segment_length_m": 1800.0,
+        "min_speed_kph": 80.0,
+        "max_speed_kph": 200.0,
+        "position_noise_m": 1.2,
+        "heading_noise_deg": 4.0,
+        "speed_noise_kph": 8.0
+      },
+      {
+        "name": "E-flying-lap",
+        "segment_length_m": 5793.0,
+        "min_speed_kph": 240.0,
+        "max_speed_kph": 325.0,
+        "position_noise_m": 0.8,
+        "heading_noise_deg": 2.0,
+        "speed_noise_kph": 8.0
+      },
+      {
+        "name": "F-normal-lap",
+        "segment_length_m": 5793.0,
+        "min_speed_kph": 0.0,
+        "max_speed_kph": 20.0,
+        "position_noise_m": 0.5,
+        "heading_noise_deg": 2.0,
+        "speed_noise_kph": 3.0
+      }
+    ]
+  },
+  "compute_policy": {
+    "policy_device": "cuda",
+    "neural_training": "cuda",
+    "neural_inference": "cuda",
+    "env_stepping": "cpu",
+    "physics": "cpu",
+    "geometry": "cpu",
+    "rendering": "cpu",
+    "keyboard_input": "cpu",
+    "telemetry": "cpu",
+    "track_preprocessing": "cpu",
+    "vector_env_workers": "cpu",
+    "rule": "Use CUDA only for PyTorch model forward/backward/inference; keep simulator, rendering, IO, and geometry on CPU."
+  },
+  "benchmark_throughput": false,
+  "scratch_initialization": false,
+  "resume_checkpoint": "artifacts\\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\\checkpoints\\ppo_monza_40000_steps.zip",
+  "initial_checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-discrete-speedtarget-best966-resume-goal-150k-20260602-202301\\checkpoints\\initial_model.zip",
+  "ppo_hyperparams": {
+    "n_steps": 512,
+    "batch_size": 256,
+    "n_epochs": 4,
+    "learning_rate": 2e-05,
+    "gamma": 0.995,
+    "ent_coef": 0.002,
+    "use_sde": false,
+    "sde_sample_freq": -1
+  },
+  "sim_config": {
+    "track_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\assets\\tracks\\monza\\track_spec.npz",
+    "car_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\ferrari.png",
+    "max_steps": 5000,
+    "action_mode": "discrete",
+    "action_set": "legacy",
+    "no_progress_limit_steps": 180,
+    "local_projection_window_m": 500.0,
+    "checkpoint_lateral_limit_m": 24.0,
+    "lookahead_m": [
+      40.0,
+      90.0,
+      160.0,
+      280.0
+    ],
+    "car": {
+      "mass": 798.0,
+      "wheelbase_m": 3.6,
+      "max_steer_deg": 18.0,
+      "steer_response": 6.0,
+      "engine_accel_mps2": 24.5,
+      "brake_accel_mps2": 38.0,
+      "drag_coefficient": 0.0025,
+      "rolling_resistance_mps2": 0.25,
+      "grip_g": 2.2,
+      "aero_grip_per_mps2": 0.00023,
+      "max_grip_g": 4.2,
+      "max_drive_g": 2.45,
+      "max_brake_g": 4.6,
+      "steering_speed_sensitivity": 0.0008,
+      "max_speed_mps": 110.0,
+      "dt": 0.016666666666666666
+    },
+    "sensors": {
+      "count": 7,
+      "spread_deg": 120.0,
+      "forward_bias": 1.6,
+      "range_m": 1300.0
+    },
+    "reward": {
+      "progress_scale": 0.08,
+      "finish_bonus": 100.0,
+      "collision_penalty": -60.0,
+      "off_track_penalty": -60.0,
+      "no_progress_penalty": -90.0,
+      "lateral_deadzone_m": 4.0,
+      "lateral_penalty_scale": 0.004,
+      "track_limit_safe_ray_m": 10.0,
+      "track_limit_penalty_scale": 0.004,
+      "heading_deadzone_deg": 8.0,
+      "heading_penalty_scale": 0.002,
+      "speed_target_min_kph": 85.0,
+      "speed_target_max_kph": 330.0,
+      "speed_target_heading_scale": 2.5,
+      "speed_target_deadzone_kph": 15.0,
+      "speed_target_penalty_scale": 0.002,
+      "smoothness_penalty": 0.0
+    }
+  }
+}

@@ -40,6 +40,25 @@ def test_random_benchmark_writes_required_artifacts(tmp_path, monkeypatch) -> No
     assert "steps_per_second" in rows[0]
 
 
+def test_benchmark_records_ppo_stochastic_mode(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(benchmark, "ARTIFACTS_DIR", tmp_path)
+
+    root = benchmark.run_benchmark(
+        policies=["random"],
+        episodes=1,
+        max_steps=1,
+        seed=3,
+        checkpoint="latest",
+        device="cpu",
+        telemetry="none",
+        telemetry_every=1,
+        ppo_deterministic=False,
+    )
+
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    assert config["ppo_deterministic"] is False
+
+
 def test_episode_metrics_uses_max_checkpoint_count_when_final_row_wraps() -> None:
     def row(step: int, checkpoint_index: int, checkpoints_passed: int) -> dict:
         return {
@@ -62,6 +81,10 @@ def test_episode_metrics_uses_max_checkpoint_count_when_final_row_wraps() -> Non
                 "no_progress": 0.0,
                 "lateral": 0.0,
                 "track_limit": 0.0,
+                "heading": 0.0,
+                "speed_target": 0.0,
+                "overspeed_action": 0.0,
+                "steering_target": 0.0,
                 "smoothness": 0.0,
             },
             "reward_total": 1.0,

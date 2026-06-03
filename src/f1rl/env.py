@@ -7,14 +7,14 @@ from typing import Any
 import gymnasium as gym
 import numpy as np
 
-from f1rl.config import DISCRETE_ACTIONS, SimConfig
+from f1rl.config import SimConfig, multidiscrete_action_nvec
 from f1rl.curriculum import CurriculumConfig, CurriculumSampler
 from f1rl.render import PygameRenderer
 from f1rl.sim import MonzaSim
 from f1rl.telemetry import StepTelemetry
 
 
-class MonzaEnv(gym.Env[np.ndarray, int]):
+class MonzaEnv(gym.Env[np.ndarray, Any]):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 60}
 
     def __init__(
@@ -31,7 +31,12 @@ class MonzaEnv(gym.Env[np.ndarray, int]):
         self.curriculum_sampler = CurriculumSampler(self.curriculum, checkpoint_count=len(self.sim.track.checkpoints))
         obs, _ = self.sim.reset()
         self.last_telemetry: StepTelemetry | None = None
-        self.action_space = gym.spaces.Discrete(len(DISCRETE_ACTIONS))
+        if self.config.action_mode == "continuous":
+            self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
+        elif self.config.action_mode == "multidiscrete":
+            self.action_space = gym.spaces.MultiDiscrete(np.asarray(multidiscrete_action_nvec(), dtype=np.int64))
+        else:
+            self.action_space = gym.spaces.Discrete(self.sim.action_dim)
         self.observation_space = gym.spaces.Box(low=-1.0, high=1.0, shape=obs.shape, dtype=np.float32)
         self.renderer: PygameRenderer | None = None
 
@@ -49,8 +54,13 @@ class MonzaEnv(gym.Env[np.ndarray, int]):
         self.last_telemetry = None
         return obs.astype(np.float32), info
 
-    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        result = self.sim.step(int(action))
+    def step(self, action: Any) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        if self.config.action_mode == "continuous":
+            result = self.sim.step_continuous(action)
+        elif self.config.action_mode == "multidiscrete":
+            result = self.sim.step_multidiscrete(action)
+        else:
+            result = self.sim.step(int(action))
         self.last_telemetry = result.telemetry
         return (
             result.observation.astype(np.float32),
@@ -64,6 +74,10 @@ class MonzaEnv(gym.Env[np.ndarray, int]):
         if self.renderer is None:
             self.renderer = PygameRenderer(self.sim.track, self.config)
         return self.renderer.render(self.sim, human=self.render_mode == "human")
+
+    def set_reward_scaffold_scale(self, scale: float) -> None:
+        self.config.reward.scaffold_scale = float(np.clip(scale, 0.0, 1.0))
+        self.sim.config.reward.scaffold_scale = self.config.reward.scaffold_scale
 
     def close(self) -> None:
         if self.renderer is not None:

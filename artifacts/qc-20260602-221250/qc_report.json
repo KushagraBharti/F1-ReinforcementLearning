@@ -1,0 +1,132 @@
+{
+  "run_id": "qc-20260602-221250",
+  "seed": 7,
+  "track": {
+    "track_name": "monza",
+    "source_image_size": [
+      1894,
+      956
+    ],
+    "track_length_m": 5793.0,
+    "track_length_px": 4538.56689453125,
+    "meters_per_pixel": 1.2763941287994385,
+    "checkpoint_count": 120,
+    "boundary_segment_count": 1800,
+    "sensor_ray_count": 7,
+    "observation_dim": 18,
+    "action_dim": 9,
+    "initial_valid_lap": true,
+    "checkpoint_lateral_limit_m": 24.0
+  },
+  "lap_validity": {
+    "checkpoint_spacing_m": 48.275,
+    "ordered_checkpoint_count": 120,
+    "finish_requires_all_checkpoints": true,
+    "finish_requires_physical_or_virtual_crossing": true,
+    "huge_progress_jump_invalidates_lap": true,
+    "wide_checkpoint_crossing_invalidates_lap": true,
+    "skip_missed_checkpoint_count": 119,
+    "wide_crossing_missed_checkpoint_count": 1
+  },
+  "physics": {
+    "reference_source": "Fast-F1 2024 Italian Grand Prix Qualifying VER fastest lap",
+    "reference_lap_time_s": 79.662,
+    "reference_max_speed_kph": 348.0,
+    "reference_mean_speed_kph": 259.91445380074884,
+    "reference_lateral_g_p95": 4.0949627805901985,
+    "reference_radius_p05_m": 49.098784984464274,
+    "sim_terminal_speed_kph": 351.1393569510544,
+    "sim_speed_after_5s_full_throttle_kph": 294.00623772525853,
+    "sim_speed_after_8s_full_throttle_kph": 336.05126886895226,
+    "sim_braking_330_to_150_kph_m": 66.7097012672699,
+    "sim_braking_330_to_100_kph_m": 78.35121323190806,
+    "sim_steering_limited_radius_m": 11.079660733830915,
+    "sim_cornering_capacity": [
+      {
+        "speed_kph": 100.0,
+        "max_curvature_rad_per_m": 0.030226572000000004,
+        "min_radius_m": 33.083473706512265,
+        "lateral_g_at_limit": 2.3774691358024693,
+        "available_grip_g": 2.3774691358024693
+      },
+      {
+        "speed_kph": 150.0,
+        "max_curvature_rad_per_m": 0.014687532000000003,
+        "min_radius_m": 68.08495804468714,
+        "lateral_g_at_limit": 2.5993055555555555,
+        "available_grip_g": 2.5993055555555555
+      },
+      {
+        "speed_kph": 200.0,
+        "max_curvature_rad_per_m": 0.009248868,
+        "min_radius_m": 108.12133982234366,
+        "lateral_g_at_limit": 2.9098765432098763,
+        "available_grip_g": 2.9098765432098768
+      },
+      {
+        "speed_kph": 250.0,
+        "max_curvature_rad_per_m": 0.006731543520000001,
+        "min_radius_m": 148.55433928770023,
+        "lateral_g_at_limit": 3.3091820987654326,
+        "available_grip_g": 3.309182098765432
+      },
+      {
+        "speed_kph": 300.0,
+        "max_curvature_rad_per_m": 0.005364108000000001,
+        "min_radius_m": 186.42428526793267,
+        "lateral_g_at_limit": 3.7972222222222225,
+        "available_grip_g": 3.7972222222222225
+      }
+    ]
+  },
+  "telemetry": {
+    "path": "artifacts\\ppo-focus-850-legacy-resume-goal-120k-20260602-195514\\benchmark_40000\\selected_telemetry\\ppo_focus_40000_full_lap-episode-000-steps.jsonl",
+    "steps": 784,
+    "duration_s": 13.066666666666666,
+    "termination_reason": "off_track",
+    "completed_lap": false,
+    "valid_lap": false,
+    "finish_crossed": false,
+    "segment_complete": false,
+    "final_progress_m": 966.3174653338717,
+    "best_progress_m": 966.3174653338717,
+    "checkpoints_passed": 20,
+    "missed_checkpoint_count": 0,
+    "avg_speed_kph": 269.8016147724711,
+    "max_speed_kph": 347.18456096975996,
+    "avg_abs_racing_line_deviation_m": 5.810014478694229,
+    "max_abs_racing_line_deviation_m": 20.6534402057423,
+    "avg_lateral_g": 0.05729356317784726,
+    "max_lateral_g": 3.0656972903515736,
+    "avg_longitudinal_g": 0.7042490956161697,
+    "min_longitudinal_g": -6.202348384758299,
+    "min_ray_distance_m": 0.33711209893226624,
+    "avg_min_ray_distance_m": 12.44866762952689,
+    "reward_total": -58.07529930350908,
+    "reward_totals": {
+      "progress": 77.30539722670981,
+      "finish": 0.0,
+      "collision": -60.0,
+      "off_track": -60.0,
+      "no_progress": 0.0,
+      "lateral": -10.12724642755579,
+      "track_limit": -5.253450102662998,
+      "heading": 0.0,
+      "speed_target": 0.0,
+      "overspeed_action": 0.0,
+      "steering_target": 0.0,
+      "smoothness": 0.0
+    }
+  },
+  "scripted": {
+    "steps": 12868,
+    "elapsed_time_s": 214.46666666666667,
+    "termination_reason": "lap_complete",
+    "completed_lap": true,
+    "valid_lap": true,
+    "finish_crossed": true,
+    "progress_m": 5800.348944943339,
+    "checkpoints_passed": 119,
+    "missed_checkpoint_count": 0
+  }
+}

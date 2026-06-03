@@ -77,7 +77,25 @@ class RewardConfig:
     lateral_penalty_scale: float = 0.025
     track_limit_safe_ray_m: float = 10.0
     track_limit_penalty_scale: float = 0.03
+    heading_deadzone_deg: float = 5.0
+    heading_penalty_scale: float = 0.0
+    speed_target_min_kph: float = 80.0
+    speed_target_max_kph: float = 340.0
+    speed_target_heading_scale: float = 2.5
+    speed_target_deadzone_kph: float = 15.0
+    speed_target_penalty_scale: float = 0.0
+    overspeed_throttle_penalty_scale: float = 0.0
+    overspeed_brake_reward_scale: float = 0.0
+    steering_target_deadzone: float = 0.08
+    steering_target_penalty_scale: float = 0.0
     smoothness_penalty: float = 0.0
+    scaffold_scale: float = 1.0
+    scaffold_brake_reward_scale: float = 0.0
+    scaffold_no_throttle_penalty_scale: float = 0.0
+    scaffold_turn_in_speed_penalty_scale: float = 0.0
+    scaffold_apex_clean_reward_scale: float = 0.0
+    scaffold_exit_alignment_reward_scale: float = 0.0
+    scaffold_exit_speed_reward_scale: float = 0.0
 
     def component_keys(self) -> tuple[str, ...]:
         return (
@@ -88,8 +106,36 @@ class RewardConfig:
             "no_progress",
             "lateral",
             "track_limit",
+            "heading",
+            "speed_target",
+            "overspeed_action",
+            "steering_target",
             "smoothness",
+            "scaffold_brake",
+            "scaffold_no_throttle",
+            "scaffold_turn_in_speed",
+            "scaffold_apex_clean",
+            "scaffold_exit_alignment",
+            "scaffold_exit_speed",
+            "assist_overspeed_gate",
+            "assist_throttle_brake_demand",
+            "assist_no_brake_gate",
+            "assist_virtual_corridor",
         )
+
+
+@dataclass(slots=True)
+class AssistConfig:
+    enabled: bool = False
+    overspeed_turn_in_terminate: bool = False
+    overspeed_turn_in_margin_kph: float = 45.0
+    overspeed_turn_in_penalty: float = -80.0
+    throttle_brake_demand_penalty_scale: float = 0.0
+    no_brake_penalty: float = 0.0
+    no_brake_min_brake: float = 0.05
+    virtual_corridor_m: float = 0.0
+    virtual_corridor_penalty: float = -80.0
+    virtual_corridor_terminate: bool = False
 
 
 @dataclass(slots=True)
@@ -97,13 +143,21 @@ class SimConfig:
     track_path: Path = MONZA_ASSET_DIR / "track_spec.npz"
     car_image: Path = IMAGES_DIR / "ferrari.png"
     max_steps: int = 3600
+    action_mode: str = "discrete"
+    action_set: str = "legacy"
+    continuous_action_scheme: str = "drive_brake"
+    observation_profile: str = "base"
     no_progress_limit_steps: int = 180
     local_projection_window_m: float = 500.0
     checkpoint_lateral_limit_m: float = 24.0
+    launch_guard_progress_m: float = 0.0
+    launch_guard_min_speed_kph: float = 0.0
+    launch_guard_throttle: float = 0.22
     lookahead_m: tuple[float, ...] = (40.0, 90.0, 160.0, 280.0)
     car: CarParams = field(default_factory=CarParams)
     sensors: SensorConfig = field(default_factory=SensorConfig)
     reward: RewardConfig = field(default_factory=RewardConfig)
+    assist: AssistConfig = field(default_factory=AssistConfig)
 
 
 def build_reward_config(overrides: dict[str, float | None] | None = None) -> RewardConfig:
@@ -119,12 +173,91 @@ def build_reward_config(overrides: dict[str, float | None] | None = None) -> Rew
     return replace(reward, **cleaned)
 
 
+def build_assist_config(overrides: dict[str, bool | float | None] | None = None) -> AssistConfig:
+    assist = AssistConfig()
+    if not overrides:
+        return assist
+    valid_keys = set(AssistConfig.__dataclass_fields__)
+    unknown = set(overrides) - valid_keys
+    if unknown:
+        unknown_text = ", ".join(sorted(unknown))
+        raise ValueError(f"Unknown assist override(s): {unknown_text}")
+    cleaned = {key: value for key, value in overrides.items() if value is not None}
+    return replace(assist, **cleaned)
+
+
+SCAFFOLD_REWARD_FIELDS = (
+    "scaffold_scale",
+    "scaffold_brake_reward_scale",
+    "scaffold_no_throttle_penalty_scale",
+    "scaffold_turn_in_speed_penalty_scale",
+    "scaffold_apex_clean_reward_scale",
+    "scaffold_exit_alignment_reward_scale",
+    "scaffold_exit_speed_reward_scale",
+)
+
+
+def scaffold_rewards_enabled(reward: RewardConfig) -> bool:
+    return any(abs(float(getattr(reward, key))) > 1e-12 for key in SCAFFOLD_REWARD_FIELDS if key != "scaffold_scale")
+
+
+def disable_scaffold_rewards(config: SimConfig) -> SimConfig:
+    for key in SCAFFOLD_REWARD_FIELDS:
+        setattr(config.reward, key, 0.0)
+    return config
+
+
+def training_assists_enabled(assist: AssistConfig) -> bool:
+    return bool(
+        assist.enabled
+        or assist.overspeed_turn_in_terminate
+        or abs(assist.throttle_brake_demand_penalty_scale) > 1e-12
+        or abs(assist.no_brake_penalty) > 1e-12
+        or assist.virtual_corridor_m > 0.0
+        or assist.virtual_corridor_terminate
+    )
+
+
+def disable_training_assists(config: SimConfig) -> SimConfig:
+    config.assist = AssistConfig()
+    return config
+
+
 def build_sim_config(
     *,
     max_steps: int = 3600,
+    action_mode: str = "discrete",
+    action_set: str = "legacy",
+    continuous_action_scheme: str = "drive_brake",
+    observation_profile: str = "base",
+    launch_guard_progress_m: float = 0.0,
+    launch_guard_min_speed_kph: float = 0.0,
+    launch_guard_throttle: float = 0.22,
     reward_overrides: dict[str, float | None] | None = None,
+    assist_overrides: dict[str, bool | float | None] | None = None,
 ) -> SimConfig:
-    return SimConfig(max_steps=max_steps, reward=build_reward_config(reward_overrides))
+    if action_mode not in ACTION_MODES:
+        valid = ", ".join(sorted(ACTION_MODES))
+        raise ValueError(f"action_mode must be one of: {valid}.")
+    actions_for_action_set(action_set)
+    if continuous_action_scheme not in CONTINUOUS_ACTION_SCHEMES:
+        valid = ", ".join(sorted(CONTINUOUS_ACTION_SCHEMES))
+        raise ValueError(f"Unknown continuous action scheme {continuous_action_scheme!r}; expected one of: {valid}")
+    if observation_profile not in OBSERVATION_PROFILES:
+        valid = ", ".join(sorted(OBSERVATION_PROFILES))
+        raise ValueError(f"Unknown observation profile {observation_profile!r}; expected one of: {valid}")
+    return SimConfig(
+        max_steps=max_steps,
+        action_mode=action_mode,
+        action_set=action_set,
+        continuous_action_scheme=continuous_action_scheme,
+        observation_profile=observation_profile,
+        launch_guard_progress_m=launch_guard_progress_m,
+        launch_guard_min_speed_kph=launch_guard_min_speed_kph,
+        launch_guard_throttle=launch_guard_throttle,
+        reward=build_reward_config(reward_overrides),
+        assist=build_assist_config(assist_overrides),
+    )
 
 
 @dataclass(slots=True)
@@ -166,7 +299,15 @@ def _stringify_paths(value: Any) -> Any:
     return value
 
 
-DISCRETE_ACTIONS: tuple[tuple[str, float, float, float], ...] = (
+ActionSpec = tuple[str, float, float, float]
+DriveSpec = tuple[str, float, float]
+SteerSpec = tuple[str, float]
+DEFAULT_ACTION_SET = "legacy"
+ACTION_MODES = frozenset({"continuous", "discrete", "multidiscrete"})
+CONTINUOUS_ACTION_SCHEMES = frozenset({"drive_brake", "exclusive_throttle_bias", "throttle_bias"})
+OBSERVATION_PROFILES = frozenset({"base", "brake", "guidance", "racing", "racing_v2"})
+
+LEGACY_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
     ("coast", 0.0, 0.0, 0.0),
     ("throttle", 1.0, 0.0, 0.0),
     ("brake", 0.0, 1.0, 0.0),
@@ -176,6 +317,10 @@ DISCRETE_ACTIONS: tuple[tuple[str, float, float, float], ...] = (
     ("throttle_right", 1.0, 0.0, 1.0),
     ("brake_left", 0.0, 1.0, -1.0),
     ("brake_right", 0.0, 1.0, 1.0),
+)
+
+EXPANDED_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    *LEGACY_DISCRETE_ACTIONS,
     ("half_throttle", 0.5, 0.0, 0.0),
     ("soft_left", 0.0, 0.0, -0.45),
     ("soft_right", 0.0, 0.0, 0.45),
@@ -190,7 +335,79 @@ DISCRETE_ACTIONS: tuple[tuple[str, float, float, float], ...] = (
     ("soft_brake_right", 0.0, 0.35, 0.45),
 )
 
+RACING_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("throttle_left", 1.0, 0.0, -1.0),
+    ("throttle_soft_left", 1.0, 0.0, -0.45),
+    ("throttle", 1.0, 0.0, 0.0),
+    ("throttle_soft_right", 1.0, 0.0, 0.45),
+    ("throttle_right", 1.0, 0.0, 1.0),
+    ("half_throttle_left", 0.5, 0.0, -1.0),
+    ("half_throttle_soft_left", 0.5, 0.0, -0.45),
+    ("half_throttle", 0.5, 0.0, 0.0),
+    ("half_throttle_soft_right", 0.5, 0.0, 0.45),
+    ("half_throttle_right", 0.5, 0.0, 1.0),
+    ("soft_brake_left", 0.0, 0.35, -1.0),
+    ("soft_brake_soft_left", 0.0, 0.35, -0.45),
+    ("soft_brake", 0.0, 0.35, 0.0),
+    ("soft_brake_soft_right", 0.0, 0.35, 0.45),
+    ("soft_brake_right", 0.0, 0.35, 1.0),
+    ("brake_left", 0.0, 1.0, -1.0),
+    ("brake_soft_left", 0.0, 1.0, -0.45),
+    ("brake", 0.0, 1.0, 0.0),
+    ("brake_soft_right", 0.0, 1.0, 0.45),
+    ("brake_right", 0.0, 1.0, 1.0),
+)
 
-def action_to_controls(action_id: int) -> tuple[float, float, float]:
-    _, throttle, brake, steer = DISCRETE_ACTIONS[int(action_id) % len(DISCRETE_ACTIONS)]
+MULTIDISCRETE_DRIVE_LEVELS: tuple[DriveSpec, ...] = (
+    ("brake", 0.0, 1.0),
+    ("soft_brake", 0.0, 0.35),
+    ("maintenance_throttle", 0.22, 0.0),
+    ("half_throttle", 0.5, 0.0),
+    ("throttle", 1.0, 0.0),
+)
+
+MULTIDISCRETE_STEER_LEVELS: tuple[SteerSpec, ...] = (
+    ("left", -1.0),
+    ("soft_left", -0.45),
+    ("straight", 0.0),
+    ("soft_right", 0.45),
+    ("right", 1.0),
+)
+
+ACTION_SETS: dict[str, tuple[ActionSpec, ...]] = {
+    "legacy": LEGACY_DISCRETE_ACTIONS,
+    "expanded": EXPANDED_DISCRETE_ACTIONS,
+    "racing": RACING_DISCRETE_ACTIONS,
+}
+
+DISCRETE_ACTIONS = LEGACY_DISCRETE_ACTIONS
+
+
+def actions_for_action_set(action_set: str) -> tuple[ActionSpec, ...]:
+    try:
+        return ACTION_SETS[action_set]
+    except KeyError as exc:
+        valid = ", ".join(sorted(ACTION_SETS))
+        raise ValueError(f"Unknown action set {action_set!r}; expected one of: {valid}") from exc
+
+
+def action_to_controls(action_id: int, *, action_set: str = DEFAULT_ACTION_SET) -> tuple[float, float, float]:
+    actions = actions_for_action_set(action_set)
+    _, throttle, brake, steer = actions[int(action_id) % len(actions)]
     return throttle, brake, steer
+
+
+def multidiscrete_action_nvec() -> tuple[int, int]:
+    return (len(MULTIDISCRETE_DRIVE_LEVELS), len(MULTIDISCRETE_STEER_LEVELS))
+
+
+def multidiscrete_action_to_controls(action: Any) -> tuple[float, float, float, int]:
+    values = list(action)
+    if len(values) < 2:
+        raise ValueError("MultiDiscrete actions must contain drive and steering indices.")
+    drive_index = int(values[0]) % len(MULTIDISCRETE_DRIVE_LEVELS)
+    steer_index = int(values[1]) % len(MULTIDISCRETE_STEER_LEVELS)
+    _, throttle, brake = MULTIDISCRETE_DRIVE_LEVELS[drive_index]
+    _, steer = MULTIDISCRETE_STEER_LEVELS[steer_index]
+    action_id = drive_index * len(MULTIDISCRETE_STEER_LEVELS) + steer_index
+    return throttle, brake, steer, action_id
