@@ -15,7 +15,7 @@ This plan changes the strategy, not the destination. The agent should pause the 
 
 ## Execution Status - 2026-06-03
 
-This course-correction plan has been executed through the infrastructure and controlled-experiment stages:
+This course-correction plan has been executed through the infrastructure and controlled-experiment stages, but it is not complete in the behavioral sense that matters:
 
 - Step-Back Protocol: complete.
 - Milestone 0 through Milestone 9: complete as implemented, tested, and documented project capabilities.
@@ -33,7 +33,78 @@ Post-status correction:
 - The reason was structural: chicane-skill segment completion was progress-only and could reward overspeed target crossings.
 - Segment completion is now speed-gated with `segment_target_max_speed_kph`, and future Rettifilo/Roggia section training must use that corrected signal.
 
-Therefore this file has served its course-correction purpose, and active work should continue in the original `LearningPlan.md` loop with the stronger eval, QC, curriculum, action-transfer, and observability infrastructure now in place. Do not treat this status note as goal completion.
+Therefore this file has not served its full learning purpose yet. It has produced infrastructure, but the next agent must now use that infrastructure aggressively until the car actually learns the missing Rettifilo braking behavior.
+
+## Mandatory Transcript Context
+
+The transcript files have been copied into `transcripts/` and must be read before the next training decision:
+
+- `transcripts/01-yosh-trackmania-2023.txt`
+- `transcripts/02-yosh-noseboost.txt`
+- `transcripts/03-yosh-a01.txt`
+- `transcripts/04-yosh-a06.txt`
+- `transcripts/05-f1rl-methods-summary.txt`
+- `transcripts/README.md`
+
+The required interpretation is practical, not inspirational:
+
+- Yosh-style progress came from changing the training setup when the agent plateaued.
+- Add missing observations only when telemetry proves they are missing.
+- Use temporary rewards and remove them after the skill appears.
+- Force exploration when the current behavior is lazy and locally rewarded.
+- Spawn from useful states, not just the start line.
+- Segment the problem and preserve elite states.
+- Run many cheap attempts and keep the few that teach something.
+
+## What Is Still Not Done
+
+The following items are not done just because code exists:
+
+- Chicane curriculum has not proven actual braking skill.
+- Scaffold rewards exist, but previous scaffold-heavy runs either barely improved or collapsed.
+- Forced exploration exists, but has not yet produced transferable normal-start behavior.
+- Elite search exists, but current evidence is too small and not focused enough on Rettifilo high-speed braking.
+- Continuous control was retried, but without first proving section success under speed-gated curriculum.
+- Full-lap transfer is unsolved.
+- `racing_v2` observation exists, but one short transfer run still collapsed.
+- Speed-gated segment completion is implemented and validated, but has not yet driven a meaningful PPO experiment.
+
+Do not report any of these as complete unless the artifact proves the behavior, not just the interface.
+
+## Aggressive Push Directive
+
+The next agent should stop being conservative. The right mode now is fast, targeted, and empirical.
+
+Run mini experiments like Yosh:
+
+1. Change one or two things hard.
+2. Run a short experiment.
+3. Read eval/QC/telemetry.
+4. Keep the idea only if the first bad event changes materially.
+5. Save elite states if the car brakes correctly.
+6. Reject and move on quickly if it preserves the same `520m throttle_during_brake_demand` failure.
+
+Allowed and encouraged changes:
+
+- stronger speed-target penalties,
+- stronger overspeed-throttle penalties,
+- lower progress reward in braking zones,
+- hard turn-in overspeed gates during training,
+- no-throttle/full-brake requirements in Rettifilo brake demand,
+- more aggressive speed-gated section targets,
+- different normal-start/state-library mixing ratios,
+- action-set changes,
+- `racing_v2` and future observation additions,
+- continuous `exclusive_throttle_bias` after section success,
+- elite-state search from successful braking attempts.
+
+Promotion remains strict:
+
+- scaffold/assist-disabled,
+- metadata-faithful,
+- normal-start,
+- deterministic PPO benchmark,
+- either a valid lap or a materially different failure signature beyond the current `970.775m` plateau.
 
 ## Step-Back Protocol
 

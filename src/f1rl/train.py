@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import pickle
 import sys
 import time
 from dataclasses import asdict
@@ -75,6 +76,39 @@ def _make_env(
         return env
 
     return factory
+
+
+def _load_vecnormalize_with_reward_fallback(
+    vec_normalize_cls: Any,
+    vec_normalize_path: Path,
+    env: Any,
+    *,
+    normalize_reward: bool,
+    normalize_reward_gamma: float,
+    normalize_reward_clip: float,
+) -> tuple[Any, str]:
+    try:
+        return vec_normalize_cls.load(str(vec_normalize_path), env), "exact"
+    except AssertionError:
+        with vec_normalize_path.open("rb") as file:
+            saved_vec_normalize = pickle.load(file)
+        if getattr(saved_vec_normalize, "norm_obs", True):
+            raise
+        old_shape = getattr(getattr(saved_vec_normalize, "observation_space", None), "shape", None)
+        new_shape = getattr(getattr(env, "observation_space", None), "shape", None)
+        if old_shape == new_shape:
+            raise
+        vec_normalize = vec_normalize_cls(
+            env,
+            norm_obs=False,
+            norm_reward=normalize_reward,
+            clip_reward=normalize_reward_clip,
+            gamma=normalize_reward_gamma,
+        )
+        vec_normalize.ret_rms = saved_vec_normalize.ret_rms
+        vec_normalize.epsilon = getattr(saved_vec_normalize, "epsilon", vec_normalize.epsilon)
+        vec_normalize.old_reward = np.array([])
+        return vec_normalize, f"reward_stats_only_observation_shape_changed:{old_shape}->{new_shape}"
 
 
 def _build_curriculum_config(
@@ -859,10 +893,18 @@ def run_training(
         vec_env_cls=vec_cls,
     )
     env = VecMonitor(env)
+    vec_normalize_load_mode: str | None = None
     if vec_normalize_path is not None:
         if not vec_normalize_path.exists():
             raise FileNotFoundError(f"VecNormalize stats do not exist: {vec_normalize_path}")
-        env = VecNormalize.load(str(vec_normalize_path), env)
+        env, vec_normalize_load_mode = _load_vecnormalize_with_reward_fallback(
+            VecNormalize,
+            vec_normalize_path,
+            env,
+            normalize_reward=normalize_reward,
+            normalize_reward_gamma=normalize_reward_gamma,
+            normalize_reward_clip=normalize_reward_clip,
+        )
         env.training = True
         env.norm_obs = False
         env.norm_reward = normalize_reward
@@ -876,6 +918,7 @@ def run_training(
             clip_reward=normalize_reward_clip,
             gamma=normalize_reward_gamma,
         )
+        vec_normalize_load_mode = "fresh"
     ppo_hyperparams = {
         "n_steps": n_steps,
         "batch_size": batch_size,
@@ -1031,6 +1074,7 @@ def run_training(
         ),
         "transfer_weight_report": transfer_weight_report,
         "vec_normalize_path": str(vec_normalize_path) if vec_normalize_path is not None else None,
+        "vec_normalize_load_mode": vec_normalize_load_mode,
         "normalize_reward": normalize_reward,
         "normalize_reward_gamma": normalize_reward_gamma,
         "normalize_reward_clip": normalize_reward_clip,

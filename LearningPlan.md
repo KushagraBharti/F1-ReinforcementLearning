@@ -39,6 +39,55 @@ Status as of 2026-06-03:
 - Current trusted failure signature is late/no braking in `rettifilo_chicane`: `throttle_during_brake_demand` around `520.8m` at about `334kph`, then collision/off-track around `966-971m`.
 - Continue this learning plan with the upgraded metadata-faithful eval, QC, racing observations, state-library curriculum, scaffold controls, training assists, and action-head transfer. Do not claim completion until PPO produces a valid normal-start lap with `lap_time <= 80.0s`.
 
+Important correction:
+
+- Do not treat `fine-tuned learning plan.md` as behavior-complete.
+- It is only infrastructure-complete.
+- The learning system still has not learned the required braking behavior.
+- The next goal agent must read every file under `transcripts/` before choosing the next experiment.
+- The next phase should follow the Yosh-style method from those transcripts: many targeted attempts, aggressive environment/reward changes, quick rejection of failed ideas, saved elite states, and honest scaffold-free promotion.
+
+## Aggressive Mini-Experiment Mode
+
+The project is past the point where another cautious single PPO run is a good use of time. The next agent should stop trying to design one perfect experiment. It should run a sequence of small, fast experiments that attack the Rettifilo failure from multiple angles.
+
+Operating rule:
+
+- Prefer five focused experiments where four fail and one teaches something over one over-planned experiment that preserves the same `970m` failure.
+- Keep experiments short enough to reject quickly.
+- Change reward scales, assist settings, segment gates, curriculum starts, action sets, observation profiles, and elite-state selection aggressively.
+- Keep exact commands, artifacts, and rejection reasons in `Documentation.md`.
+- Never promote scaffolded/assisted training results directly. Promotion still requires honest metadata-faithful normal-start eval with scaffold rewards and training assists disabled.
+
+Immediate experiment backlog:
+
+1. Speed-gated Rettifilo micro-curriculum:
+   - use the new `segment_target_max_speed_kph` gates;
+   - require low-enough speed at approach, turn-in, apex, and exit;
+   - do not count target distance alone as segment success.
+2. Hard forced-exploration run:
+   - terminate or heavily penalize full throttle in Rettifilo brake demand;
+   - make the old behavior fail immediately in training;
+   - benchmark final candidates without assists.
+3. Reward scale sweep:
+   - test much stronger section-speed and overspeed-action penalties;
+   - test lower progress reward inside braking zones;
+   - test larger collision/overspeed-at-turn-in penalties;
+   - reject if normal-start launch collapses.
+4. Policy diagnostic at `520m`:
+   - inspect action probabilities/logits at the first bad event;
+   - verify whether the policy sees `racing_v2` brake-zone features but still strongly chooses throttle.
+5. Rettifilo elite-state search:
+   - generate elite states from successful braking attempts, not merely scripted/Roggia samples;
+   - keep states only if they brake before turn-in and meet speed gates.
+6. Section-first transfer:
+   - solve Rettifilo from state-library starts before returning to normal starts;
+   - then mix normal starts back in gradually.
+7. Continuous-control retry only after section success:
+   - use `exclusive_throttle_bias`;
+   - do not allow simultaneous throttle/brake;
+   - compare against the racing discrete action set.
+
 ## Success Criterion
 
 There is exactly one success criterion:
@@ -77,7 +126,8 @@ These milestones guide the next experiment, but they are not completion criteria
 This is intended to be a long goal-mode run. The `8` hour number is a persistence expectation, not a success criterion.
 
 - Expect to run for hours and hours, with `8+` hours as the rough planning reference unless the strict success criterion is reached earlier.
-- Prefer continuous serious PPO work over short isolated checks.
+- In the current Rettifilo plateau phase, prefer many short targeted PPO/search experiments before any long run.
+- Launch longer PPO only after a mini experiment changes the failure signature or produces a clear section skill.
 - A single failed run is not a stopping condition.
 - Partial improvements are not a stopping condition.
 - A plateau is not a stopping condition until multiple follow-up experiments have tested the likely failure mode.

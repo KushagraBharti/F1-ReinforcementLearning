@@ -7,7 +7,9 @@ import pytest
 import torch
 
 from f1rl import policy_io, train
+from f1rl.config import SimConfig
 from f1rl.curriculum import CurriculumConfig, CurriculumStage
+from f1rl.env import MonzaEnv
 from f1rl.train import _full_lap_selection_score, _segment_eval_curriculum_config
 
 
@@ -127,6 +129,42 @@ def test_ppo_smoke_can_save_reward_normalization_stats(tmp_path: Path, monkeypat
     assert metadata["normalize_reward"] is True
     assert metadata["final_vecnormalize"] is not None
     assert (root / "vecnormalize.pkl").exists()
+
+
+@pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
+def test_vecnormalize_reward_fallback_allows_observation_expansion(tmp_path: Path) -> None:
+    from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+    old_env = DummyVecEnv([lambda: MonzaEnv(SimConfig(max_steps=20, observation_profile="racing"))])
+    old_stats = VecNormalize(old_env, norm_obs=False, norm_reward=True)
+    old_stats.ret_rms.mean = 3.0
+    old_stats.ret_rms.var = 4.0
+    old_stats.ret_rms.count = 5.0
+    stats_path = tmp_path / "vecnormalize.pkl"
+    old_stats.save(str(stats_path))
+    old_stats.close()
+
+    new_env = DummyVecEnv([lambda: MonzaEnv(SimConfig(max_steps=20, observation_profile="racing_v2"))])
+    loaded, mode = train._load_vecnormalize_with_reward_fallback(
+        VecNormalize,
+        stats_path,
+        new_env,
+        normalize_reward=True,
+        normalize_reward_gamma=0.997,
+        normalize_reward_clip=7.0,
+    )
+    try:
+        assert mode.startswith("reward_stats_only_observation_shape_changed")
+        assert loaded.observation_space.shape == new_env.observation_space.shape
+        assert loaded.norm_obs is False
+        assert loaded.norm_reward is True
+        assert loaded.gamma == pytest.approx(0.997)
+        assert loaded.clip_reward == pytest.approx(7.0)
+        assert loaded.ret_rms.mean == pytest.approx(3.0)
+        assert loaded.ret_rms.var == pytest.approx(4.0)
+        assert loaded.ret_rms.count == pytest.approx(5.0)
+    finally:
+        loaded.close()
 
 
 @pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")

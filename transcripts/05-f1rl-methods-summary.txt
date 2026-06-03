@@ -1,0 +1,362 @@
+What Yosh actually did
+
+People watch these videos and think:
+
+"Wow, RL discovered amazing driving."
+
+But that's not really the story.
+
+The real story is:
+
+RL got stuck.
+
+Then Yosh changed observations, rewards, curricula, training setup, or search procedure.
+
+Then RL started working again.
+
+That pattern repeats in every video.
+
+Method 1: Curriculum spawning everywhere
+
+This is probably the most relevant thing for your project.
+
+On the long Trackmania map he says:
+
+The AI regularly spawns anywhere on the map during training. This prevents it from focusing too much on the first turns.
+
+This is a huge deal.
+
+Your Monza PPO spent months repeatedly failing in the first kilometer.
+
+Yosh's response would be:
+
+Don't force the AI to replay the first kilometer every episode.
+
+Instead:
+
+spawn at 0m
+spawn at 500m
+spawn at 1000m
+spawn at 2000m
+spawn at 3000m
+
+and learn the whole track simultaneously.
+
+That is exactly how he got progress on long maps.
+
+Method 2: Add observations whenever failure reveals missing information
+
+Yosh repeatedly discovers:
+
+AI fails →
+AI probably can't see something →
+add observation.
+
+Examples:
+
+Track shape
+
+He added:
+
+future corner information
+upcoming path geometry
+
+when the AI needed anticipation.
+
+Car orientation
+
+He added:
+
+full car orientation
+wheel contact states
+wheel sliding states
+
+because the AI was exploiting road-edge physics.
+
+This is extremely important for Monza.
+
+The question I'd ask:
+
+Does your PPO actually know enough about the upcoming track?
+
+Because most of your failures look like:
+
+full throttle
+late realization
+panic steering
+
+which often means:
+
+insufficient anticipation.
+
+Method 3: Temporary reward shaping
+
+This is one of the smartest things he does.
+
+Example:
+
+He wants drifting.
+
+He adds drift reward.
+
+AI exploits it.
+
+He fixes exploit.
+
+AI learns drift.
+
+Then:
+
+he removes the drift reward
+
+Once the skill exists.
+
+Continue training without the bonus. Now that it discovered how to drift, the AI shouldn't forget it.
+
+This is subtle.
+
+He doesn't permanently bake drift reward into the objective.
+
+He uses it as a scaffold.
+
+Your Monza project has mostly used permanent shaping.
+
+Yosh's approach is:
+
+induce skill
+remove scaffold
+optimize actual objective again
+Method 4: Force exploration by changing the environment
+
+This is everywhere.
+
+A06 example:
+
+AI won't use ramp cuts.
+
+So he adds walls.
+
+The safe line becomes impossible.
+
+Now AI must discover ramp cuts.
+
+This is huge.
+
+Your PPO repeatedly discovers:
+
+full throttle until crash
+
+What would Yosh do?
+
+Probably not:
+
+add another tiny penalty
+
+Instead:
+
+construct training situations where full throttle fails immediately.
+
+Method 5: Reference-state curriculum
+
+This is probably the most important thing you are not doing enough.
+
+A06:
+
+He saves flip positions.
+
+Then repeatedly spawns training from them.
+
+During training, the AI will regularly practice driving from one of these flip positions.
+
+That is almost exactly what your focused-window curriculum became.
+
+But Yosh uses:
+
+successful states
+
+not merely
+
+arbitrary distance windows
+
+That's a crucial distinction.
+
+Method 6: Reward engineering around risk
+
+The noseboost video is incredibly relevant.
+
+He discovers:
+
+AI refuses the high-risk strategy.
+
+Why?
+
+Because average reward is safer.
+
+So he changes reward scale:
+
+low-risk behavior becomes mediocre
+high-risk success becomes hugely valuable
+
+Immediately behavior changes.
+
+This sounds very similar to your Monza situation.
+
+Your PPO may be optimizing:
+
+survive and collect easy progress
+
+instead of
+
+discover aggressive braking/corner-entry strategies.
+
+Method 7: Explicit exploit hunting
+
+He constantly watches telemetry.
+
+Examples:
+
+drifting exploit
+noseboost exploit
+upside-down sliding exploit
+reward farming exploit
+
+Every time:
+
+observe weird behavior
+understand it
+redesign objective
+
+He treats exploit discovery as normal.
+
+Method 8: Multi-stage objectives
+
+This is extremely important.
+
+For noseboost:
+
+Stage 1:
+
+reward speed
+
+Stage 2:
+
+learn noseboost
+
+Stage 3:
+
+reward navigation
+
+Stage 4:
+
+reward track completion
+
+He doesn't try to solve everything simultaneously.
+
+Your Monza project is often trying to solve:
+
+launch
+racing line
+braking
+cornering
+lap completion
+
+with one objective.
+
+Yosh repeatedly decomposes.
+
+Method 9: Segmented search
+
+This is the closest thing to evolutionary search.
+
+A01 TAS challenge:
+
+He divides track into segments.
+
+For each segment:
+
+run many attempts
+keep best
+continue from best state
+
+This is not standard PPO.
+
+This is much closer to:
+
+beam search
+evolutionary selection
+elite retention
+
+than classical RL.
+
+This is highly relevant.
+
+Method 10: Bruteforce / evolutionary search
+
+The biggest discovery in the world-record videos was not PPO.
+
+It was:
+
+search
+
+He repeatedly uses:
+
+thousands of variations
+random perturbations
+keep best outcome
+continue from best
+
+That is essentially evolutionary optimization.
+
+What I would steal for Monza
+
+In order of importance:
+
+1. Continuous controls
+
+You already started this.
+
+Yosh repeatedly benefits from precise control.
+
+2. Successful-state curriculum
+
+Not:
+
+train around 900m
+
+Instead:
+
+train from saved successful corner-entry states.
+
+3. Multi-stage rewards
+
+Train:
+
+corner entry
+braking
+apex
+corner exit
+
+independently.
+
+4. Population search
+
+Not on policy weights.
+
+On:
+
+reward coefficients
+curriculum schedules
+observation choices
+5. Segment elite search
+
+This is the biggest one.
+
+Your current best is ~970m.
+
+I would seriously consider:
+
+save elite states every 100m–200m
+repeatedly optimize from them
+build a library of successful corner exits
+
+That is much closer to how Yosh ultimately breaks records than pure PPO.
