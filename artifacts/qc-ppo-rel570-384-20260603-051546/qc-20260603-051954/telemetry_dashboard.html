@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>F1RL Telemetry QC</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7f8; color: #182026; }
+    h1, h2, h3 { margin-bottom: 8px; }
+    pre { background: #101418; color: #dbe5ea; padding: 16px; overflow: auto; }
+    svg { display: block; max-width: 100%; margin-bottom: 18px; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 24px; background: white; }
+    th, td { border: 1px solid #d9e1e5; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 13px; }
+    th { background: #eaf0f3; }
+  </style>
+</head>
+<body>
+  <h1>F1RL Telemetry QC</h1>
+  <p>Source: <code>artifacts\ppo-rel570-1024-20260603-051546\eval\selected_telemetry\ppo_curriculum_segment_train_00000384-episode-000-steps.jsonl</code></p>
+  <h2>Summary</h2>
+  <pre>{
+  &quot;path&quot;: &quot;artifacts\\ppo-rel570-1024-20260603-051546\\eval\\selected_telemetry\\ppo_curriculum_segment_train_00000384-episode-000-steps.jsonl&quot;,
+  &quot;steps&quot;: 77,
+  &quot;duration_s&quot;: 1.2833333333333332,
+  &quot;termination_reason&quot;: &quot;segment_complete&quot;,
+  &quot;completed_lap&quot;: false,
+  &quot;valid_lap&quot;: false,
+  &quot;finish_crossed&quot;: false,
+  &quot;segment_complete&quot;: true,
+  &quot;final_progress_m&quot;: 650.2388683842727,
+  &quot;best_progress_m&quot;: 650.2388683842727,
+  &quot;checkpoints_passed&quot;: 13,
+  &quot;missed_checkpoint_count&quot;: 0,
+  &quot;avg_speed_kph&quot;: 173.65426729037588,
+  &quot;max_speed_kph&quot;: 188.24145843255428,
+  &quot;avg_abs_racing_line_deviation_m&quot;: 0.18254372287107368,
+  &quot;max_abs_racing_line_deviation_m&quot;: 0.3733862375311503,
+  &quot;avg_lateral_g&quot;: 0.0,
+  &quot;max_lateral_g&quot;: 0.0,
+  &quot;avg_longitudinal_g&quot;: -0.6222680607211575,
+  &quot;min_longitudinal_g&quot;: -0.7254302182186467,
+  &quot;min_ray_distance_m&quot;: 17.53350067138672,
+  &quot;avg_min_ray_distance_m&quot;: 18.397112784447607,
+  &quot;reward_total&quot;: 4873.991924830726,
+  &quot;reward_totals&quot;: {
+    &quot;progress&quot;: 0.06190898209977813,
+    &quot;finish&quot;: 280.0,
+    &quot;collision&quot;: 0.0,
+    &quot;off_track&quot;: 0.0,
+    &quot;no_progress&quot;: 0.0,
+    &quot;lateral&quot;: 0.0,
+    &quot;track_limit&quot;: 0.0,
+    &quot;heading&quot;: 0.0,
+    &quot;speed_target&quot;: -22.320257909247374,
+    &quot;overspeed_action&quot;: 0.0,
+    &quot;steering_target&quot;: 0.0,
+    &quot;smoothness&quot;: 0.0,
+    &quot;scaffold_brake&quot;: 0.0,
+    &quot;scaffold_no_throttle&quot;: 0.0,
+    &quot;scaffold_turn_in_speed&quot;: 0.0,
+    &quot;scaffold_apex_clean&quot;: 0.0,
+    &quot;scaffold_exit_alignment&quot;: 0.0,
+    &quot;scaffold_exit_speed&quot;: 0.0,
+    &quot;scaffold_release&quot;: 4616.312182739973,
+    &quot;scaffold_overbrake&quot;: 0.0,
+    &quot;assist_overspeed_gate&quot;: 0.0,
+    &quot;assist_throttle_brake_demand&quot;: 0.0,
+    &quot;assist_no_brake_gate&quot;: 0.0,
+    &quot;assist_overbrake_gate&quot;: 0.0,
+    &quot;assist_virtual_corridor&quot;: 0.0,
+    &quot;assist_brake_zone_progress_suppression&quot;: -0.06190898209977813
+  },
+  &quot;section_summaries&quot;: [
+    {
+      &quot;section&quot;: &quot;start_finish_straight&quot;,
+      &quot;start_m&quot;: 0.0,
+      &quot;end_m&quot;: 450.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 340.0
+    },
+    {
+      &quot;section&quot;: &quot;rettifilo_chicane&quot;,
+      &quot;start_m&quot;: 450.0,
+      &quot;end_m&quot;: 1150.0,
+      &quot;rows&quot;: 77,
+      &quot;target_speed_kph&quot;: 115.0,
+      &quot;entry_progress_m&quot;: 589.2014170727923,
+      &quot;exit_progress_m&quot;: 650.2388683842727,
+      &quot;entry_speed_kph&quot;: 188.24145843255428,
+      &quot;exit_speed_kph&quot;: 160.46588915738133,
+      &quot;min_speed_kph&quot;: 160.46588915738133,
+      &quot;max_speed_kph&quot;: 188.24145843255428,
+      &quot;avg_speed_kph&quot;: 173.65426729037588,
+      &quot;brake_start_progress_m&quot;: null,
+      &quot;throttle_reapplication_progress_m&quot;: null,
+      &quot;avg_throttle&quot;: 0.0,
+      &quot;avg_brake&quot;: 0.0,
+      &quot;action_histogram&quot;: {
+        &quot;coast&quot;: 77
+      },
+      &quot;control_histogram&quot;: {
+        &quot;coast_straight&quot;: 77
+      },
+      &quot;max_speed_surplus_kph&quot;: 73.24145843255428,
+      &quot;min_ray_distance_m&quot;: 17.53350067138672,
+      &quot;avg_abs_lateral_error_m&quot;: 0.18254372287107368,
+      &quot;max_abs_lateral_error_m&quot;: 0.3733862375311503,
+      &quot;avg_abs_heading_error_deg&quot;: 0.5409530207179731,
+      &quot;max_abs_heading_error_deg&quot;: 0.6846624045879747,
+      &quot;reward_totals&quot;: {
+        &quot;progress&quot;: 0.06190898209977813,
+        &quot;finish&quot;: 280.0,
+        &quot;collision&quot;: 0.0,
+        &quot;off_track&quot;: 0.0,
+        &quot;no_progress&quot;: 0.0,
+        &quot;lateral&quot;: 0.0,
+        &quot;track_limit&quot;: 0.0,
+        &quot;heading&quot;: 0.0,
+        &quot;speed_target&quot;: -22.320257909247374,
+        &quot;overspeed_action&quot;: 0.0,
+        &quot;steering_target&quot;: 0.0,
+        &quot;smoothness&quot;: 0.0,
+        &quot;scaffold_brake&quot;: 0.0,
+        &quot;scaffold_no_throttle&quot;: 0.0,
+        &quot;scaffold_turn_in_speed&quot;: 0.0,
+        &quot;scaffold_apex_clean&quot;: 0.0,
+        &quot;scaffold_exit_alignment&quot;: 0.0,
+        &quot;scaffold_exit_speed&quot;: 0.0,
+        &quot;scaffold_release&quot;: 4616.312182739973,
+        &quot;scaffold_overbrake&quot;: 0.0,
+        &quot;assist_overspeed_gate&quot;: 0.0,
+        &quot;assist_throttle_brake_demand&quot;: 0.0,
+        &quot;assist_no_brake_gate&quot;: 0.0,
+        &quot;assist_overbrake_gate&quot;: 0.0,
+        &quot;assist_virtual_corridor&quot;: 0.0,
+        &quot;assist_brake_zone_progress_suppression&quot;: -0.06190898209977813
+      },
+      &quot;termination_reason&quot;: &quot;segment_complete&quot;
+    },
+    {
+      &quot;section&quot;: &quot;curva_grande_roggia_run&quot;,
+      &quot;start_m&quot;: 1150.0,
+      &quot;end_m&quot;: 1850.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 315.0
+    },
+    {
+      &quot;section&quot;: &quot;roggia_chicane&quot;,
+      &quot;start_m&quot;: 1850.0,
+      &quot;end_m&quot;: 2500.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 135.0
+    },
+    {
+      &quot;section&quot;: &quot;lesmo_1&quot;,
+      &quot;start_m&quot;: 2500.0,
+      &quot;end_m&quot;: 3150.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 185.0
+    },
+    {
+      &quot;section&quot;: &quot;lesmo_2_serraglio&quot;,
+      &quot;start_m&quot;: 3150.0,
+      &quot;end_m&quot;: 3850.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 195.0
+    },
+    {
+      &quot;section&quot;: &quot;ascari_approach&quot;,
+      &quot;start_m&quot;: 3850.0,
+      &quot;end_m&quot;: 4450.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 320.0
+    },
+    {
+      &quot;section&quot;: &quot;ascari_chicane&quot;,
+      &quot;start_m&quot;: 4450.0,
+      &quot;end_m&quot;: 5150.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 165.0
+    },
+    {
+      &quot;section&quot;: &quot;parabolica_finish&quot;,
+      &quot;start_m&quot;: 5150.0,
+      &quot;end_m&quot;: 5793.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 205.0
+    }
+  ],
+  &quot;failure_report&quot;: {
+    &quot;failed_section&quot;: &quot;rettifilo_chicane&quot;,
+    &quot;first_bad_event&quot;: null,
+    &quot;terminal_event&quot;: {
+      &quot;kind&quot;: &quot;segment_complete&quot;,
+      &quot;reason&quot;: &quot;episode ended with segment_complete&quot;,
+      &quot;section&quot;: &quot;rettifilo_chicane&quot;,
+      &quot;progress_m&quot;: 650.2388683842727,
+      &quot;lap_progress_m&quot;: 650.2388683842727,
+      &quot;speed_kph&quot;: 160.46588915738133,
+      &quot;target_speed_kph&quot;: 115.0,
+      &quot;speed_surplus_kph&quot;: 45.465889157381326,
+      &quot;throttle&quot;: 0.0,
+      &quot;brake&quot;: 0.0,
+      &quot;steering&quot;: 0.0,
+      &quot;lateral_error_m&quot;: 0.3584234345795423,
+      &quot;heading_error_deg&quot;: -0.1437029379511718,
+      &quot;min_ray_distance_m&quot;: 18.224815368652344,
+      &quot;action&quot;: &quot;coast&quot;,
+      &quot;control&quot;: &quot;coast_straight&quot;,
+      &quot;step_index&quot;: 77,
+      &quot;sim_time_s&quot;: 1.2833333333333332
+    },
+    &quot;action_histogram_before_failure&quot;: {
+      &quot;coast&quot;: 77
+    },
+    &quot;control_histogram_before_failure&quot;: {
+      &quot;coast_straight&quot;: 77
+    }
+  }
+}</pre>
+  <h2>Failure Table</h2>
+  <table><thead><tr><th>Failed section</th><th>First bad event</th><th>Bad progress m</th><th>Bad speed kph</th><th>Reason</th><th>Terminal</th><th>Terminal progress m</th></tr></thead><tbody><tr><td>rettifilo_chicane</td><td></td><td></td><td></td><td></td><td>segment_complete</td><td>650.24</td></tr></tbody></table>
+  <h2>Section Summary</h2>
+  <table><thead><tr><th>Section</th><th>Rows</th><th>Entry kph</th><th>Min kph</th><th>Exit kph</th><th>Max surplus</th><th>Brake start m</th><th>Avg throttle</th><th>Avg brake</th><th>Min ray m</th><th>Termination</th></tr></thead><tbody><tr><td>rettifilo_chicane</td><td>77</td><td>188.24</td><td>160.47</td><td>160.47</td><td>73.24</td><td></td><td>0.00</td><td>0.00</td><td>17.53</td><td>segment_complete</td></tr></tbody></table>
+  <h2>Charts</h2>
+  <h3>Speed kph</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,0.0 10.0,2.8 20.0,5.5 30.0,8.2 40.0,10.9 50.0,13.7 60.0,16.4 70.0,19.0 80.0,21.7 90.0,24.4 100.0,27.0 110.0,29.7 120.0,32.3 130.0,34.9 140.0,37.5 150.0,40.1 160.0,42.7 170.0,45.3 180.0,47.8 190.0,50.4 200.0,52.9 210.0,55.4 220.0,58.0 230.0,60.5 240.0,63.0 250.0,65.5 260.0,67.9 270.0,70.4 280.0,72.9 290.0,75.3 300.0,77.7 310.0,80.2 320.0,82.6 330.0,85.0 340.0,87.4 350.0,89.8 360.0,92.2 370.0,94.5 380.0,96.9 390.0,99.2 400.0,101.6 410.0,103.9 420.0,106.2 430.0,108.5 440.0,110.8 450.0,113.1 460.0,115.4 470.0,117.7 480.0,120.0 490.0,122.2 500.0,124.5 510.0,126.7 520.0,128.9 530.0,131.2 540.0,133.4 550.0,135.6 560.0,137.8 570.0,140.0 580.0,142.1 590.0,144.3 600.0,146.5 610.0,148.6 620.0,150.8 630.0,152.9 640.0,155.1 650.0,157.2 660.0,159.3 670.0,161.4 680.0,163.5 690.0,165.6 700.0,167.7 710.0,169.7 720.0,171.8 730.0,173.9 740.0,175.9 750.0,178.0 760.0,180.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 160.47 max 188.24</text></svg>
+<h3>Progress m</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,180.0 10.0,177.4 20.0,174.9 30.0,172.3 40.0,169.8 50.0,167.2 60.0,164.7 70.0,162.2 80.0,159.6 90.0,157.1 100.0,154.6 110.0,152.1 120.0,149.6 130.0,147.1 140.0,144.6 150.0,142.1 160.0,139.6 170.0,137.2 180.0,134.7 190.0,132.2 200.0,129.8 210.0,127.3 220.0,124.9 230.0,122.4 240.0,120.0 250.0,117.6 260.0,115.1 270.0,112.7 280.0,110.3 290.0,107.9 300.0,105.5 310.0,103.1 320.0,100.7 330.0,98.3 340.0,95.9 350.0,93.5 360.0,91.2 370.0,88.8 380.0,86.4 390.0,84.1 400.0,81.7 410.0,79.4 420.0,77.0 430.0,74.7 440.0,72.3 450.0,70.0 460.0,67.7 470.0,65.3 480.0,63.0 490.0,60.7 500.0,58.4 510.0,56.1 520.0,53.8 530.0,51.5 540.0,49.2 550.0,46.9 560.0,44.7 570.0,42.4 580.0,40.1 590.0,37.9 600.0,35.6 610.0,33.3 620.0,31.1 630.0,28.8 640.0,26.6 650.0,24.4 660.0,22.1 670.0,19.9 680.0,17.6 690.0,15.4 700.0,13.2 710.0,11.0 720.0,8.8 730.0,6.6 740.0,4.4 750.0,2.2 760.0,0.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 589.20 max 650.24</text></svg>
+<h3>Reward per step</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,180.0 10.0,179.5 20.0,179.4 30.0,179.4 40.0,179.4 50.0,179.4 60.0,179.4 70.0,179.4 80.0,179.2 90.0,178.2 100.0,177.3 110.0,176.4 120.0,175.4 130.0,174.5 140.0,173.6 150.0,172.7 160.0,171.8 170.0,170.8 180.0,169.9 190.0,169.0 200.0,168.1 210.0,167.3 220.0,166.4 230.0,165.5 240.0,164.6 250.0,163.7 260.0,162.8 270.0,162.0 280.0,161.1 290.0,160.2 300.0,159.4 310.0,158.5 320.0,157.7 330.0,156.8 340.0,156.0 350.0,155.1 360.0,154.3 370.0,153.4 380.0,152.6 390.0,151.8 400.0,151.0 410.0,150.1 420.0,149.3 430.0,148.5 440.0,147.7 450.0,146.9 460.0,146.1 470.0,145.3 480.0,144.5 490.0,143.7 500.0,142.9 510.0,142.1 520.0,141.3 530.0,140.5 540.0,139.7 550.0,138.9 560.0,138.2 570.0,137.4 580.0,139.0 590.0,137.9 600.0,136.8 610.0,135.6 620.0,134.5 630.0,133.4 640.0,132.3 650.0,131.3 660.0,130.6 670.0,129.8 680.0,129.1 690.0,128.3 700.0,127.6 710.0,126.9 720.0,126.1 730.0,125.4 740.0,124.7 750.0,124.0 760.0,0.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min -1.33 max 407.58</text></svg>
+<h3>Abs racing-line deviation m</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,110.0 10.0,109.1 20.0,108.2 30.0,107.3 40.0,106.4 50.0,105.5 60.0,104.6 70.0,103.8 80.0,102.8 90.0,102.0 100.0,101.1 110.0,101.6 120.0,106.5 130.0,111.4 140.0,116.3 150.0,121.2 160.0,126.2 170.0,131.0 180.0,135.9 190.0,140.8 200.0,145.7 210.0,150.5 220.0,155.3 230.0,160.2 240.0,165.0 250.0,169.8 260.0,174.6 270.0,179.4 280.0,180.0 290.0,175.2 300.0,170.5 310.0,165.8 320.0,161.0 330.0,156.3 340.0,151.6 350.0,146.9 360.0,142.2 370.0,137.5 380.0,132.8 390.0,128.2 400.0,123.5 410.0,118.9 420.0,114.2 430.0,109.6 440.0,105.0 450.0,100.4 460.0,95.8 470.0,91.2 480.0,86.6 490.0,82.0 500.0,77.5 510.0,72.9 520.0,68.4 530.0,63.9 540.0,59.3 550.0,54.8 560.0,50.3 570.0,45.8 580.0,41.4 590.0,36.8 600.0,32.4 610.0,27.9 620.0,23.4 630.0,19.0 640.0,14.6 650.0,10.2 660.0,5.8 670.0,1.4 680.0,0.0 690.0,1.0 700.0,1.9 710.0,2.7 720.0,3.7 730.0,4.6 740.0,5.5 750.0,6.4 760.0,7.3'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 0.00 max 0.37</text></svg>
+<h3>Minimum ray distance m</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,48.0 10.0,50.8 20.0,53.5 30.0,56.3 40.0,59.0 50.0,61.7 60.0,64.4 70.0,67.2 80.0,69.9 90.0,72.6 100.0,75.3 110.0,77.9 120.0,79.1 130.0,77.2 140.0,75.2 150.0,73.3 160.0,71.3 170.0,69.4 180.0,67.5 190.0,65.5 200.0,60.0 210.0,49.4 220.0,38.8 230.0,28.2 240.0,17.6 250.0,7.1 260.0,0.0 270.0,14.1 280.0,28.2 290.0,42.3 300.0,56.3 310.0,70.3 320.0,84.3 330.0,98.2 340.0,112.1 350.0,126.0 360.0,139.9 370.0,153.7 380.0,167.5 390.0,180.0 400.0,177.4 410.0,174.8 420.0,172.2 430.0,169.6 440.0,167.0 450.0,164.4 460.0,161.8 470.0,159.2 480.0,156.6 490.0,154.1 500.0,151.5 510.0,149.0 520.0,146.4 530.0,143.9 540.0,141.3 550.0,138.8 560.0,136.2 570.0,133.7 580.0,131.2 590.0,128.7 600.0,126.2 610.0,123.7 620.0,121.2 630.0,118.7 640.0,116.2 650.0,113.7 660.0,111.2 670.0,108.7 680.0,106.3 690.0,103.8 700.0,101.3 710.0,98.9 720.0,96.4 730.0,98.3 740.0,104.3 750.0,110.4 760.0,116.4'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 17.53 max 19.49</text></svg>
+</body>
+</html>

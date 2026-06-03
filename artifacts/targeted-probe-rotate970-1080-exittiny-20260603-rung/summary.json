@@ -1,0 +1,234 @@
+{
+  "created_at": "2026-06-03T10:42:43-0500",
+  "state_library": "artifacts\\state-library-rettifilo-rotate980-from-delayedleft-20260603\\state_library.json",
+  "checkpoint": "artifacts\\ppo-rotate848-980-delayedleft-512-20260603-rung-20260603-102514\\best_model.zip",
+  "action_set": "exit_tiny",
+  "target_progress_m": 1080.0,
+  "snapshot_count": 3,
+  "schedule_count": 20,
+  "attempt_count": 60,
+  "completion_count": 0,
+  "completion_rate": 0.0,
+  "top_attempts": [
+    {
+      "attempt": 44,
+      "snapshot_id": "telemetry:117:975.383",
+      "start_progress_m": 975.3833042432142,
+      "schedule": "constant_soft_brake",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 260
+        }
+      ],
+      "score": -5946.6244042667495,
+      "best_progress_m": 987.5684231738147,
+      "final_progress_m": 987.5684231738147,
+      "remaining_m": 92.43157682618528,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 149.1479658217409,
+      "final_lateral_error_m": 12.034761020886435,
+      "final_heading_error_deg": -32.135628432239876,
+      "steps": 20,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-000-constant_soft_brake.jsonl"
+    },
+    {
+      "attempt": 56,
+      "snapshot_id": "telemetry:117:975.383",
+      "start_progress_m": 975.3833042432142,
+      "schedule": "soft24_micro_right",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 24
+        },
+        {
+          "action": "maintenance_micro_right",
+          "steps": 260
+        }
+      ],
+      "score": -5946.6244042667495,
+      "best_progress_m": 987.5684231738147,
+      "final_progress_m": 987.5684231738147,
+      "remaining_m": 92.43157682618528,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 149.1479658217409,
+      "final_lateral_error_m": 12.034761020886435,
+      "final_heading_error_deg": -32.135628432239876,
+      "steps": 20,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-001-soft24_micro_right.jsonl"
+    },
+    {
+      "attempt": 57,
+      "snapshot_id": "telemetry:117:975.383",
+      "start_progress_m": 975.3833042432142,
+      "schedule": "soft48_micro_right",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 48
+        },
+        {
+          "action": "maintenance_micro_right",
+          "steps": 260
+        }
+      ],
+      "score": -5946.6244042667495,
+      "best_progress_m": 987.5684231738147,
+      "final_progress_m": 987.5684231738147,
+      "remaining_m": 92.43157682618528,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 149.1479658217409,
+      "final_lateral_error_m": 12.034761020886435,
+      "final_heading_error_deg": -32.135628432239876,
+      "steps": 20,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-002-soft48_micro_right.jsonl"
+    },
+    {
+      "attempt": 24,
+      "snapshot_id": "telemetry:113:972.842",
+      "start_progress_m": 972.8419540116055,
+      "schedule": "constant_soft_brake",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 260
+        }
+      ],
+      "score": -5955.132589501993,
+      "best_progress_m": 987.2267159521635,
+      "final_progress_m": 987.2267159521635,
+      "remaining_m": 92.77328404783646,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": false,
+      "off_track": true,
+      "final_speed_kph": 146.56519154082116,
+      "final_lateral_error_m": 12.046272689354964,
+      "final_heading_error_deg": -32.82223404199525,
+      "steps": 24,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-003-constant_soft_brake.jsonl"
+    },
+    {
+      "attempt": 36,
+      "snapshot_id": "telemetry:113:972.842",
+      "start_progress_m": 972.8419540116055,
+      "schedule": "soft24_micro_right",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 24
+        },
+        {
+          "action": "maintenance_micro_right",
+          "steps": 260
+        }
+      ],
+      "score": -5955.132589501993,
+      "best_progress_m": 987.2267159521635,
+      "final_progress_m": 987.2267159521635,
+      "remaining_m": 92.77328404783646,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": false,
+      "off_track": true,
+      "final_speed_kph": 146.56519154082116,
+      "final_lateral_error_m": 12.046272689354964,
+      "final_heading_error_deg": -32.82223404199525,
+      "steps": 24,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-004-soft24_micro_right.jsonl"
+    },
+    {
+      "attempt": 37,
+      "snapshot_id": "telemetry:113:972.842",
+      "start_progress_m": 972.8419540116055,
+      "schedule": "soft48_micro_right",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 48
+        },
+        {
+          "action": "maintenance_micro_right",
+          "steps": 260
+        }
+      ],
+      "score": -5955.132589501993,
+      "best_progress_m": 987.2267159521635,
+      "final_progress_m": 987.2267159521635,
+      "remaining_m": 92.77328404783646,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": false,
+      "off_track": true,
+      "final_speed_kph": 146.56519154082116,
+      "final_lateral_error_m": 12.046272689354964,
+      "final_heading_error_deg": -32.82223404199525,
+      "steps": 24,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-005-soft48_micro_right.jsonl"
+    },
+    {
+      "attempt": 42,
+      "snapshot_id": "telemetry:117:975.383",
+      "start_progress_m": 975.3833042432142,
+      "schedule": "constant_trail_right",
+      "phases": [
+        {
+          "action": "trail_brake_tiny_right",
+          "steps": 260
+        }
+      ],
+      "score": -5955.228080330647,
+      "best_progress_m": 987.0211462547991,
+      "final_progress_m": 987.0211462547991,
+      "remaining_m": 92.97885374520092,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": false,
+      "off_track": true,
+      "final_speed_kph": 153.52537908371517,
+      "final_lateral_error_m": 11.9344730498824,
+      "final_heading_error_deg": -33.770994144142534,
+      "steps": 19,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-006-constant_trail_right.jsonl"
+    },
+    {
+      "attempt": 53,
+      "snapshot_id": "telemetry:117:975.383",
+      "start_progress_m": 975.3833042432142,
+      "schedule": "trail_right24_tiny_right",
+      "phases": [
+        {
+          "action": "trail_brake_tiny_right",
+          "steps": 24
+        },
+        {
+          "action": "maintenance_tiny_right",
+          "steps": 260
+        }
+      ],
+      "score": -5955.228080330647,
+      "best_progress_m": 987.0211462547991,
+      "final_progress_m": 987.0211462547991,
+      "remaining_m": 92.97885374520092,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": false,
+      "off_track": true,
+      "final_speed_kph": 153.52537908371517,
+      "final_lateral_error_m": 11.9344730498824,
+      "final_heading_error_deg": -33.770994144142534,
+      "steps": 19,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate970-1080-exittiny-20260603-rung\\selected_telemetry\\rank-007-trail_right24_tiny_right.jsonl"
+    }
+  ]
+}

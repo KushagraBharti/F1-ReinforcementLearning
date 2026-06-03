@@ -1,10 +1,21 @@
 import numpy as np
 
 from f1rl.config import (
+    BRAKE_COAST_DISCRETE_ACTIONS,
+    BRAKE_RELEASE_DISCRETE_ACTIONS,
+    BRAKE_STRAIGHT_DISCRETE_ACTIONS,
+    DELAYED_LEFT_DISCRETE_ACTIONS,
+    DELAYED_TURN_DISCRETE_ACTIONS,
     DISCRETE_ACTIONS,
+    EXIT_TINY_DISCRETE_ACTIONS,
     EXPANDED_DISCRETE_ACTIONS,
     LEGACY_DISCRETE_ACTIONS,
     RACING_DISCRETE_ACTIONS,
+    RELEASE_BRAKE_DISCRETE_ACTIONS,
+    STABILIZE_RIGHT_DISCRETE_ACTIONS,
+    STRAIGHT_DISCRETE_ACTIONS,
+    TURNIN_MICRO_DISCRETE_ACTIONS,
+    TURNIN_POWER_DISCRETE_ACTIONS,
     AssistConfig,
     RewardConfig,
     SimConfig,
@@ -43,13 +54,65 @@ def test_discrete_action_table_preserves_original_ids_and_adds_soft_controls() -
     assert ("soft_brake_right", 0.0, 0.35, 0.45) in EXPANDED_DISCRETE_ACTIONS
     assert ("coast", 0.0, 0.0, 0.0) not in RACING_DISCRETE_ACTIONS
     assert ("left", 0.0, 0.0, -1.0) not in RACING_DISCRETE_ACTIONS
+    assert ("brake_left", 0.0, 1.0, -1.0) not in BRAKE_STRAIGHT_DISCRETE_ACTIONS
+    assert STRAIGHT_DISCRETE_ACTIONS == (
+        ("coast", 0.0, 0.0, 0.0),
+        ("throttle", 1.0, 0.0, 0.0),
+        ("brake", 0.0, 1.0, 0.0),
+    )
+    assert BRAKE_COAST_DISCRETE_ACTIONS == (
+        ("brake", 0.0, 1.0, 0.0),
+        ("coast", 0.0, 0.0, 0.0),
+    )
+    assert BRAKE_RELEASE_DISCRETE_ACTIONS == (
+        ("brake", 0.0, 1.0, 0.0),
+        ("trail_brake", 0.0, 0.35, 0.0),
+        ("coast", 0.0, 0.0, 0.0),
+    )
+    assert RELEASE_BRAKE_DISCRETE_ACTIONS == (
+        ("coast", 0.0, 0.0, 0.0),
+        ("trail_brake", 0.0, 0.35, 0.0),
+        ("brake", 0.0, 1.0, 0.0),
+    )
+    assert all(action[3] == 0.0 for action in STRAIGHT_DISCRETE_ACTIONS)
+    assert action_to_controls(2, action_set="brake_straight") == (0.0, 1.0, 0.0)
+    assert action_to_controls(2, action_set="straight") == (0.0, 1.0, 0.0)
+    assert action_to_controls(0, action_set="brake_coast") == (0.0, 1.0, 0.0)
+    assert action_to_controls(1, action_set="brake_coast") == (0.0, 0.0, 0.0)
+    assert action_to_controls(1, action_set="brake_release") == (0.0, 0.35, 0.0)
+    assert action_to_controls(0, action_set="release_brake") == (0.0, 0.0, 0.0)
+    assert action_to_controls(0, action_set="turnin_power") == (0.22, 0.0, 0.0)
+    assert action_to_controls(4, action_set="turnin_power") == (0.5, 0.0, -0.45)
+    assert action_to_controls(0, action_set="turnin_micro") == (0.22, 0.0, 0.0)
+    assert action_to_controls(4, action_set="turnin_micro") == (0.5, 0.0, -0.15)
+    assert action_to_controls(1, action_set="delayed_turn") == (0.22, 0.0, -0.12)
+    assert action_to_controls(7, action_set="delayed_turn") == (0.0, 0.25, 0.0)
+    assert action_to_controls(1, action_set="delayed_left") == (0.22, 0.0, -0.12)
+    assert all(action[3] <= 0.0 for action in DELAYED_LEFT_DISCRETE_ACTIONS)
+    assert action_to_controls(0, action_set="stabilize_right") == (0.22, 0.0, 0.0)
+    assert action_to_controls(2, action_set="stabilize_right") == (0.22, 0.0, 0.12)
+    assert all(action[3] >= 0.0 for action in STABILIZE_RIGHT_DISCRETE_ACTIONS)
+    assert action_to_controls(0, action_set="exit_tiny") == (0.22, 0.0, -0.06)
+    assert action_to_controls(8, action_set="exit_tiny") == (0.0, 0.25, 0.0)
+    assert all(action[3] != 0.0 or action[2] > 0.0 for action in EXIT_TINY_DISCRETE_ACTIONS)
     assert action_to_controls(14, action_set="expanded") == (0.5, 0.0, -0.45)
 
 
 def test_sim_action_set_controls_action_dimension() -> None:
     assert MonzaSim(SimConfig(action_set="legacy")).action_dim == 9
+    assert MonzaSim(SimConfig(action_set="brake_coast")).action_dim == 2
+    assert MonzaSim(SimConfig(action_set="brake_release")).action_dim == 3
+    assert MonzaSim(SimConfig(action_set="release_brake")).action_dim == 3
+    assert MonzaSim(SimConfig(action_set="brake_straight")).action_dim == 5
+    assert MonzaSim(SimConfig(action_set="delayed_left")).action_dim == len(DELAYED_LEFT_DISCRETE_ACTIONS)
+    assert MonzaSim(SimConfig(action_set="delayed_turn")).action_dim == len(DELAYED_TURN_DISCRETE_ACTIONS)
+    assert MonzaSim(SimConfig(action_set="stabilize_right")).action_dim == len(STABILIZE_RIGHT_DISCRETE_ACTIONS)
+    assert MonzaSim(SimConfig(action_set="straight")).action_dim == 3
     assert MonzaSim(SimConfig(action_set="expanded")).action_dim == 21
+    assert MonzaSim(SimConfig(action_set="exit_tiny")).action_dim == len(EXIT_TINY_DISCRETE_ACTIONS)
     assert MonzaSim(SimConfig(action_set="racing")).action_dim == len(RACING_DISCRETE_ACTIONS)
+    assert MonzaSim(SimConfig(action_set="turnin_micro")).action_dim == len(TURNIN_MICRO_DISCRETE_ACTIONS)
+    assert MonzaSim(SimConfig(action_set="turnin_power")).action_dim == len(TURNIN_POWER_DISCRETE_ACTIONS)
     assert MonzaSim(SimConfig(action_mode="continuous")).action_dim == 2
     assert MonzaSim(SimConfig(action_mode="multidiscrete")).action_dim == 25
     assert multidiscrete_action_nvec() == (5, 5)
@@ -99,6 +162,41 @@ def test_racing_v2_observation_profile_values_are_bounded() -> None:
         assert np.all(result.observation <= 1.0)
         if result.terminated or result.truncated:
             break
+
+
+def test_racing_release_observation_profile_values_are_bounded() -> None:
+    sim = MonzaSim(SimConfig(max_steps=20, observation_profile="racing_release"))
+    obs, _ = sim.reset(seed=1)
+    assert obs.shape == (sim.observation_dim,)
+    assert np.all(obs >= -1.0)
+    assert np.all(obs <= 1.0)
+    assert sim.observation_dim == MonzaSim(SimConfig(max_steps=20, observation_profile="racing")).observation_dim + 4
+
+
+def test_racing_release_observation_marks_release_band() -> None:
+    config = SimConfig(
+        max_steps=20,
+        observation_profile="racing_release",
+        reward=RewardConfig(
+            scaffold_release_min_speed_kph=135.0,
+            scaffold_release_max_speed_kph=185.0,
+        ),
+    )
+    fast = MonzaSim(config)
+    fast.reset(seed=1, options={"start_progress_m": 530.0, "start_speed_kph": 260.0})
+    fast_threshold, fast_surplus, fast_deficit, fast_in_band = fast._release_observation_features()
+
+    release = MonzaSim(config)
+    release.reset(seed=1, options={"start_progress_m": 600.0, "start_speed_kph": 170.0})
+    release_threshold, release_surplus, release_deficit, release_in_band = release._release_observation_features()
+
+    assert fast_threshold == release_threshold
+    assert fast_surplus > 0.0
+    assert fast_deficit < 0.0
+    assert fast_in_band < 0.0
+    assert release_surplus < 0.0
+    assert release_deficit < 0.0
+    assert release_in_band > 0.0
 
 
 def test_racing_v2_observation_profile_marks_rettifilo_brake_zone() -> None:
@@ -157,6 +255,11 @@ def test_scaffold_reward_components_are_zero_by_default() -> None:
     assert components["scaffold_apex_clean"] == 0.0
     assert components["scaffold_exit_alignment"] == 0.0
     assert components["scaffold_exit_speed"] == 0.0
+    assert components["scaffold_release"] == 0.0
+    assert components["scaffold_overbrake"] == 0.0
+    assert components["scaffold_brake_curve"] == 0.0
+    assert components["scaffold_corridor_center"] == 0.0
+    assert components["scaffold_segment_speed"] == 0.0
 
 
 def test_scaffold_rewards_credit_braking_and_penalize_throttle_in_brake_zone() -> None:
@@ -181,6 +284,176 @@ def test_scaffold_rewards_credit_braking_and_penalize_throttle_in_brake_zone() -
     assert throttle_result.telemetry.reward_components["scaffold_no_throttle"] < 0.0
 
 
+def test_release_scaffold_stops_brake_credit_inside_release_window() -> None:
+    config = SimConfig(
+        max_steps=20,
+        reward=RewardConfig(
+            scaffold_brake_reward_scale=1.0,
+            scaffold_release_reward_scale=1.0,
+            scaffold_release_min_speed_kph=135.0,
+            scaffold_release_max_speed_kph=210.0,
+        ),
+    )
+    too_fast = MonzaSim(config)
+    too_fast.reset(seed=1, options={"start_progress_m": 520.0, "start_speed_kph": 260.0})
+    too_fast_result = too_fast.step_controls(throttle=0.0, brake=1.0, steer=0.0)
+
+    release_speed = MonzaSim(config)
+    release_speed.reset(seed=1, options={"start_progress_m": 600.0, "start_speed_kph": 170.0})
+    release_speed_result = release_speed.step_controls(throttle=0.0, brake=1.0, steer=0.0)
+
+    assert too_fast_result.telemetry.reward_components["scaffold_brake"] > 0.0
+    assert release_speed_result.telemetry.reward_components["scaffold_brake"] == 0.0
+
+
+def test_scaffold_rewards_release_and_penalize_overbraking_in_brake_zone() -> None:
+    config = SimConfig(
+        max_steps=20,
+        reward=RewardConfig(
+            scaffold_release_reward_scale=1.0,
+            scaffold_overbrake_penalty_scale=1.0,
+            scaffold_release_min_speed_kph=135.0,
+            scaffold_release_max_speed_kph=210.0,
+        ),
+    )
+    release = MonzaSim(config)
+    release.reset(seed=1, options={"start_progress_m": 600.0, "start_speed_kph": 170.0})
+    release_result = release.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+
+    overbrake = MonzaSim(config)
+    overbrake.reset(seed=1, options={"start_progress_m": 620.0, "start_speed_kph": 90.0})
+    overbrake_result = overbrake.step_controls(throttle=0.0, brake=1.0, steer=0.0)
+
+    assert release_result.telemetry.reward_components["scaffold_release"] > 0.0
+    assert release_result.telemetry.reward_components["scaffold_overbrake"] == 0.0
+    assert overbrake_result.telemetry.reward_components["scaffold_release"] == 0.0
+    assert overbrake_result.telemetry.reward_components["scaffold_overbrake"] < 0.0
+
+
+def test_brake_curve_scaffold_penalizes_speed_profile_deviation() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            reward=RewardConfig(
+                scaffold_brake_curve_penalty_scale=100.0,
+                scaffold_brake_curve_start_speed_kph=335.0,
+                scaffold_brake_curve_deadzone_kph=5.0,
+            ),
+        )
+    )
+
+    near_curve = sim._scaffold_reward_components(
+        progress_m=650.0,
+        speed_kph=192.0,
+        throttle=0.0,
+        brake=0.0,
+        lateral_error_m=0.5,
+        heading_error_deg=0.0,
+        min_ray_m=50.0,
+        collided=False,
+        off_track=False,
+    )
+    too_slow = sim._scaffold_reward_components(
+        progress_m=650.0,
+        speed_kph=135.0,
+        throttle=0.0,
+        brake=0.0,
+        lateral_error_m=0.5,
+        heading_error_deg=0.0,
+        min_ray_m=50.0,
+        collided=False,
+        off_track=False,
+    )
+    too_fast = sim._scaffold_reward_components(
+        progress_m=650.0,
+        speed_kph=260.0,
+        throttle=0.0,
+        brake=0.0,
+        lateral_error_m=0.5,
+        heading_error_deg=0.0,
+        min_ray_m=50.0,
+        collided=False,
+        off_track=False,
+    )
+
+    assert near_curve["scaffold_brake_curve"] == 0.0
+    assert too_slow["scaffold_brake_curve"] < 0.0
+    assert too_fast["scaffold_brake_curve"] < 0.0
+
+
+def test_segment_speed_scaffold_penalizes_target_band_miss_near_segment_target() -> None:
+    config = SimConfig(
+        max_steps=20,
+        reward=RewardConfig(scaffold_segment_speed_penalty_scale=100.0),
+    )
+    too_slow = MonzaSim(config)
+    too_slow.reset(
+        seed=1,
+        options={
+            "start_progress_m": 900.0,
+            "start_speed_kph": 80.0,
+            "segment_length_m": 30.0,
+            "segment_target_min_speed_kph": 105.0,
+            "segment_target_max_speed_kph": 165.0,
+        },
+    )
+    too_slow_result = too_slow.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+
+    in_band = MonzaSim(config)
+    in_band.reset(
+        seed=1,
+        options={
+            "start_progress_m": 900.0,
+            "start_speed_kph": 130.0,
+            "segment_length_m": 30.0,
+            "segment_target_min_speed_kph": 105.0,
+            "segment_target_max_speed_kph": 165.0,
+        },
+    )
+    in_band_result = in_band.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+
+    assert too_slow_result.telemetry.reward_components["scaffold_segment_speed"] < 0.0
+    assert in_band_result.telemetry.reward_components["scaffold_segment_speed"] == 0.0
+
+
+def test_corridor_center_scaffold_penalizes_exit_lateral_drift() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            reward=RewardConfig(
+                scaffold_corridor_center_penalty_scale=100.0,
+                scaffold_corridor_center_deadzone_m=2.0,
+            ),
+        )
+    )
+
+    centered = sim._scaffold_reward_components(
+        progress_m=800.0,
+        speed_kph=120.0,
+        throttle=0.0,
+        brake=0.0,
+        lateral_error_m=1.0,
+        heading_error_deg=0.0,
+        min_ray_m=50.0,
+        collided=False,
+        off_track=False,
+    )
+    drifting = sim._scaffold_reward_components(
+        progress_m=800.0,
+        speed_kph=120.0,
+        throttle=0.0,
+        brake=0.0,
+        lateral_error_m=12.0,
+        heading_error_deg=0.0,
+        min_ray_m=50.0,
+        collided=False,
+        off_track=False,
+    )
+
+    assert centered["scaffold_corridor_center"] == 0.0
+    assert drifting["scaffold_corridor_center"] < 0.0
+
+
 def test_assist_components_are_zero_by_default() -> None:
     sim = MonzaSim(SimConfig(max_steps=20))
     sim.reset(seed=1, options={"start_progress_m": 520.0, "start_speed_kph": 260.0})
@@ -189,7 +462,11 @@ def test_assist_components_are_zero_by_default() -> None:
     assert components["assist_overspeed_gate"] == 0.0
     assert components["assist_throttle_brake_demand"] == 0.0
     assert components["assist_no_brake_gate"] == 0.0
+    assert components["assist_overbrake_gate"] == 0.0
+    assert components["assist_steering_gate"] == 0.0
+    assert components["assist_forbidden_steering_gate"] == 0.0
     assert components["assist_virtual_corridor"] == 0.0
+    assert components["assist_brake_zone_progress_suppression"] == 0.0
 
 
 def test_assist_penalizes_throttle_and_no_brake_in_brake_zone() -> None:
@@ -209,6 +486,156 @@ def test_assist_penalizes_throttle_and_no_brake_in_brake_zone() -> None:
     components = result.telemetry.reward_components
     assert components["assist_throttle_brake_demand"] < 0.0
     assert components["assist_no_brake_gate"] == -5.0
+
+
+def test_assist_can_terminate_throttle_in_brake_demand() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            assist=AssistConfig(
+                enabled=True,
+                throttle_brake_demand_penalty_scale=10.0,
+                throttle_brake_demand_terminate=True,
+                throttle_brake_demand_min_throttle=0.5,
+            ),
+        )
+    )
+    sim.reset(seed=1, options={"start_progress_m": 530.0, "start_speed_kph": 300.0})
+    result = sim.step_controls(throttle=1.0, brake=0.0, steer=0.0)
+    assert result.terminated is True
+    assert result.telemetry.termination_reason == "assist_throttle_brake_demand"
+    assert result.telemetry.reward_components["assist_throttle_brake_demand"] < 0.0
+
+
+def test_assist_no_brake_gate_can_require_brake_above_configured_speed() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            assist=AssistConfig(
+                enabled=True,
+                no_brake_penalty=-44.0,
+                no_brake_min_brake=0.5,
+                no_brake_min_speed_kph=185.0,
+                no_brake_terminate=True,
+            ),
+        )
+    )
+    sim.reset(seed=1, options={"start_progress_m": 530.0, "start_speed_kph": 260.0})
+    result = sim.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+    assert result.terminated is True
+    assert result.telemetry.termination_reason == "assist_no_brake_gate"
+    assert result.telemetry.reward_components["assist_no_brake_gate"] == -44.0
+
+
+def test_assist_no_brake_gate_allows_release_below_configured_speed() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            assist=AssistConfig(
+                enabled=True,
+                no_brake_penalty=-44.0,
+                no_brake_min_brake=0.5,
+                no_brake_min_speed_kph=185.0,
+                no_brake_terminate=True,
+            ),
+        )
+    )
+    sim.reset(seed=1, options={"start_progress_m": 600.0, "start_speed_kph": 170.0})
+    result = sim.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+    assert result.terminated is False
+    assert result.telemetry.reward_components["assist_no_brake_gate"] == 0.0
+
+
+def test_assist_steering_gate_can_require_signed_steer_in_window() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            assist=AssistConfig(
+                enabled=True,
+                steering_gate_penalty=-33.0,
+                steering_gate_terminate=True,
+                steering_gate_start_m=850.0,
+                steering_gate_end_m=930.0,
+                steering_gate_min_abs_steer=0.05,
+                steering_gate_required_sign=-1.0,
+                steering_gate_min_speed_kph=80.0,
+            ),
+        )
+    )
+    sim.reset(seed=1, options={"start_progress_m": 880.0, "start_speed_kph": 160.0})
+    result = sim.step_controls(throttle=0.22, brake=0.0, steer=0.0)
+    assert result.terminated is True
+    assert result.telemetry.termination_reason == "assist_steering_gate"
+    assert result.telemetry.reward_components["assist_steering_gate"] == -33.0
+
+    sim.reset(seed=1, options={"start_progress_m": 880.0, "start_speed_kph": 160.0})
+    allowed = sim.step_controls(throttle=0.22, brake=0.0, steer=-0.06)
+    assert allowed.terminated is False
+    assert allowed.telemetry.reward_components["assist_steering_gate"] == 0.0
+
+
+def test_assist_forbidden_steering_gate_can_block_signed_steer_in_window() -> None:
+    config = SimConfig(
+        max_steps=20,
+        assist=AssistConfig(
+            enabled=True,
+            forbidden_steering_gate_penalty=-44.0,
+            forbidden_steering_gate_terminate=True,
+            forbidden_steering_gate_start_m=900.0,
+            forbidden_steering_gate_end_m=930.0,
+            forbidden_steering_gate_min_abs_steer=0.05,
+            forbidden_steering_gate_sign=-1.0,
+            forbidden_steering_gate_min_speed_kph=80.0,
+        ),
+    )
+    sim = MonzaSim(config)
+    sim.reset(seed=1, options={"start_progress_m": 910.0, "start_speed_kph": 150.0})
+    result = sim.step_controls(throttle=0.2, brake=0.0, steer=-0.12)
+    assert result.terminated is True
+    assert result.telemetry.termination_reason == "assist_forbidden_steering_gate"
+    assert result.telemetry.reward_components["assist_forbidden_steering_gate"] == -44.0
+
+    allowed = MonzaSim(config)
+    allowed.reset(seed=1, options={"start_progress_m": 910.0, "start_speed_kph": 150.0})
+    allowed_result = allowed.step_controls(throttle=0.2, brake=0.0, steer=0.0)
+    assert allowed_result.telemetry.reward_components["assist_forbidden_steering_gate"] == 0.0
+
+
+def test_assist_can_suppress_brake_zone_progress_reward() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            assist=AssistConfig(
+                enabled=True,
+                brake_zone_progress_multiplier=0.0,
+            ),
+        )
+    )
+    sim.reset(seed=1, options={"start_progress_m": 530.0, "start_speed_kph": 300.0})
+    result = sim.step_controls(throttle=0.0, brake=1.0, steer=0.0)
+    components = result.telemetry.reward_components
+    assert components["progress"] > 0.0
+    assert np.isclose(components["assist_brake_zone_progress_suppression"], -components["progress"])
+
+
+def test_assist_overbrake_gate_can_terminate() -> None:
+    sim = MonzaSim(
+        SimConfig(
+            max_steps=20,
+            assist=AssistConfig(
+                enabled=True,
+                overbrake_penalty=-33.0,
+                overbrake_terminate=True,
+                overbrake_max_speed_kph=135.0,
+                overbrake_min_brake=0.5,
+            ),
+        )
+    )
+    sim.reset(seed=1, options={"start_progress_m": 620.0, "start_speed_kph": 90.0})
+    result = sim.step_controls(throttle=0.0, brake=1.0, steer=0.0)
+    assert result.terminated is True
+    assert result.telemetry.termination_reason == "assist_overbrake_gate"
+    assert result.telemetry.reward_components["assist_overbrake_gate"] == -33.0
 
 
 def test_assist_overspeed_turn_in_gate_can_terminate() -> None:
@@ -317,6 +744,16 @@ def test_discrete_action_name_uses_configured_action_set() -> None:
     assert result.telemetry.action_name == "throttle"
     assert result.telemetry.throttle == 1.0
     assert result.telemetry.brake == 0.0
+
+
+def test_reset_can_skip_observation_collection_for_fast_state_probes() -> None:
+    sim = MonzaSim(SimConfig(observation_profile="racing_release"))
+
+    obs, info = sim.reset(seed=1, options={"collect_observation": False})
+
+    assert obs.shape == (sim.observation_dim,)
+    assert obs.sum() == 0.0
+    assert info["termination_reason"] == "active"
 
 
 def test_launch_guard_remaps_brake_only_start_when_enabled() -> None:

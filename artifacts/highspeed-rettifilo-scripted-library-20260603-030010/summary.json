@@ -1,0 +1,61 @@
+{
+  "state_library": "artifacts\\highspeed-rettifilo-scripted-library-20260603-030010\\state_library.json",
+  "snapshot_count": 91,
+  "attempts": [
+    {
+      "attempt": 0,
+      "start_progress_m": 480.0,
+      "start_speed_kph": 330.0,
+      "final_progress_m": 1220.2906539610651,
+      "final_speed_kph": 102.03327147978126,
+      "termination_reason": "segment_complete",
+      "segment_complete": true,
+      "steps": 1538,
+      "telemetry": "artifacts\\highspeed-rettifilo-scripted-library-20260603-030010\\selected_telemetry\\scripted-highspeed-rettifilo-attempt-000-steps.jsonl"
+    },
+    {
+      "attempt": 1,
+      "start_progress_m": 500.0,
+      "start_speed_kph": 330.0,
+      "final_progress_m": 1220.2423907597176,
+      "final_speed_kph": 102.02193323543291,
+      "termination_reason": "segment_complete",
+      "segment_complete": true,
+      "steps": 1498,
+      "telemetry": "artifacts\\highspeed-rettifilo-scripted-library-20260603-030010\\selected_telemetry\\scripted-highspeed-rettifilo-attempt-001-steps.jsonl"
+    },
+    {
+      "attempt": 2,
+      "start_progress_m": 520.0,
+      "start_speed_kph": 330.0,
+      "final_progress_m": 1220.292992242075,
+      "final_speed_kph": 102.0338133643351,
+      "termination_reason": "segment_complete",
+      "segment_complete": true,
+      "steps": 1458,
+      "telemetry": "artifacts\\highspeed-rettifilo-scripted-library-20260603-030010\\selected_telemetry\\scripted-highspeed-rettifilo-attempt-002-steps.jsonl"
+    },
+    {
+      "attempt": 3,
+      "start_progress_m": 540.0,
+      "start_speed_kph": 330.0,
+      "final_progress_m": 1220.2878480238517,
+      "final_speed_kph": 102.03073472526886,
+      "termination_reason": "segment_complete",
+      "segment_complete": true,
+      "steps": 1417,
+      "telemetry": "artifacts\\highspeed-rettifilo-scripted-library-20260603-030010\\selected_telemetry\\scripted-highspeed-rettifilo-attempt-003-steps.jsonl"
+    },
+    {
+      "attempt": 4,
+      "start_progress_m": 560.0,
+      "start_speed_kph": 330.0,
+      "final_progress_m": 1220.2894050757163,
+      "final_speed_kph": 102.03112738307564,
+      "termination_reason": "segment_complete",
+      "segment_complete": true,
+      "steps": 1377,
+      "telemetry": "artifacts\\highspeed-rettifilo-scripted-library-20260603-030010\\selected_telemetry\\scripted-highspeed-rettifilo-attempt-004-steps.jsonl"
+    }
+  ]
+}

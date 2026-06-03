@@ -1,3 +1,5 @@
+import pytest
+
 from f1rl.config import SimConfig
 from f1rl.curriculum import CurriculumConfig, CurriculumSampler, CurriculumStage
 from f1rl.env import MonzaEnv
@@ -160,6 +162,38 @@ def test_training_curriculum_config_can_build_focus_stage() -> None:
     assert config.normal_start_probability == 0.25
 
 
+def test_training_curriculum_focus_stage_can_target_progress_and_speed_gate() -> None:
+    config = _build_curriculum_config(
+        mode="segments",
+        stage_count=None,
+        stage_start_index=0,
+        promotion_resets=10,
+        normal_start_probability=0.0,
+        segment_fail_on_speed_gate_miss=True,
+        segment_require_release=True,
+        segment_release_max_brake=0.12,
+        focus_start_progress_m=520.0,
+        focus_window_m=80.0,
+        focus_segment_length_m=500.0,
+        focus_target_progress_m=720.0,
+        focus_target_max_speed_kph=190.0,
+        focus_min_speed_kph=310.0,
+        focus_max_speed_kph=340.0,
+    )
+    sampler = CurriculumSampler(config, checkpoint_count=12)
+    options = sampler.sample_options(seed=3)
+
+    assert config.stages[0].target_progress_m == 720.0
+    assert config.stages[0].target_max_speed_kph == 190.0
+    assert 480.0 <= options["start_progress_m"] <= 560.0
+    assert options["segment_length_m"] == 720.0 - options["start_progress_m"]
+    assert options["segment_target_max_speed_kph"] == 190.0
+    assert options["segment_fail_on_speed_gate_miss"] is True
+    assert options["segment_require_release"] is True
+    assert options["segment_release_max_brake"] == 0.12
+    assert 310.0 <= options["start_speed_kph"] <= 340.0
+
+
 def test_training_curriculum_config_can_build_state_library_stage(tmp_path) -> None:
     sim = MonzaSim(SimConfig(max_steps=20))
     sim.reset(seed=1)
@@ -173,13 +207,26 @@ def test_training_curriculum_config_can_build_state_library_stage(tmp_path) -> N
         normal_start_probability=0.0,
         state_library_path=library_path,
         state_library_segment_length_m=321.0,
+        state_library_target_progress_m=650.0,
+        state_library_target_max_speed_kph=185.0,
+        curriculum_target_min_speed_kph=105.0,
+        curriculum_target_max_lateral_error_m=3.5,
+        curriculum_target_max_heading_error_deg=12.0,
+        curriculum_target_max_abs_yaw_rate_rps=0.08,
+        curriculum_target_max_abs_steering=0.02,
     )
     sampler = CurriculumSampler(config, checkpoint_count=12)
     options = sampler.sample_options(seed=5)
     assert config.start_mode == "state_library"
     assert config.state_library_path == library_path
     assert options["curriculum_stage"] == "state-library"
-    assert options["segment_length_m"] == 321.0
+    assert options["segment_length_m"] == pytest.approx(650.0 - snapshot.monotonic_progress_m)
+    assert options["segment_target_min_speed_kph"] == 105.0
+    assert options["segment_target_max_speed_kph"] == 185.0
+    assert options["segment_target_max_lateral_error_m"] == 3.5
+    assert options["segment_target_max_heading_error_deg"] == 12.0
+    assert options["segment_target_max_abs_yaw_rate_rps"] == 0.08
+    assert options["segment_target_max_abs_steering"] == 0.02
     assert "state_snapshot" in options
     assert "start_speed_kph" not in options
 
@@ -344,6 +391,50 @@ def test_sim_segment_completion_respects_target_max_speed() -> None:
     assert blocked_result.telemetry.segment_complete is False
     assert blocked_result.telemetry.termination_reason != "segment_complete"
 
+    strict = MonzaSim(SimConfig(max_steps=20))
+    strict.reset(
+        seed=2,
+        options={
+            "start_progress_m": 100.0,
+            "start_speed_kph": 220.0,
+            "segment_length_m": 1.0,
+            "segment_target_max_speed_kph": 80.0,
+            "segment_fail_on_speed_gate_miss": True,
+            "curriculum_stage": "strict-speed-gated",
+        },
+    )
+    strict_result = None
+    for _ in range(5):
+        strict_result = strict.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+        if strict_result.truncated:
+            break
+    assert strict_result is not None
+    assert strict_result.telemetry.segment_complete is False
+    assert strict_result.telemetry.termination_reason == "segment_speed_gate_failed"
+    assert strict_result.info["segment_fail_on_speed_gate_miss"] is True
+
+    min_speed_strict = MonzaSim(SimConfig(max_steps=20))
+    min_speed_strict.reset(
+        seed=2,
+        options={
+            "start_progress_m": 100.0,
+            "start_speed_kph": 20.0,
+            "segment_length_m": 1.0,
+            "segment_target_min_speed_kph": 80.0,
+            "segment_fail_on_speed_gate_miss": True,
+            "curriculum_stage": "strict-min-speed-gated",
+        },
+    )
+    min_speed_result = None
+    for _ in range(20):
+        min_speed_result = min_speed_strict.step_controls(throttle=0.0, brake=0.0, steer=0.0)
+        if min_speed_result.truncated:
+            break
+    assert min_speed_result is not None
+    assert min_speed_result.telemetry.segment_complete is False
+    assert min_speed_result.telemetry.termination_reason == "segment_min_speed_gate_failed"
+    assert min_speed_result.info["segment_target_min_speed_kph"] == 80.0
+
     allowed = MonzaSim(SimConfig(max_steps=20))
     allowed.reset(
         seed=2,
@@ -363,3 +454,132 @@ def test_sim_segment_completion_respects_target_max_speed() -> None:
     assert allowed_result is not None
     assert allowed_result.telemetry.segment_complete is True
     assert allowed_result.telemetry.termination_reason == "segment_complete"
+
+
+def test_sim_segment_completion_can_require_target_line_quality() -> None:
+    lateral_gated = MonzaSim(SimConfig(max_steps=80))
+    lateral_gated.reset(
+        seed=2,
+        options={
+            "start_progress_m": 100.0,
+            "start_speed_kph": 80.0,
+            "segment_length_m": 15.0,
+            "segment_target_max_lateral_error_m": 0.05,
+            "segment_fail_on_speed_gate_miss": True,
+            "curriculum_stage": "strict-lateral-gated",
+        },
+    )
+    lateral_result = None
+    for _ in range(80):
+        lateral_result = lateral_gated.step_controls(throttle=0.2, brake=0.0, steer=1.0)
+        if lateral_result.truncated:
+            break
+    assert lateral_result is not None
+    assert lateral_result.telemetry.segment_complete is False
+    assert lateral_result.telemetry.termination_reason == "segment_lateral_gate_failed"
+    assert lateral_result.info["segment_target_max_lateral_error_m"] == 0.05
+
+    heading_gated = MonzaSim(SimConfig(max_steps=40))
+    heading_gated.reset(
+        seed=2,
+        options={
+            "start_progress_m": 100.0,
+            "start_speed_kph": 80.0,
+            "segment_length_m": 2.0,
+            "segment_target_max_heading_error_deg": 0.01,
+            "segment_fail_on_speed_gate_miss": True,
+            "curriculum_stage": "strict-heading-gated",
+        },
+    )
+    heading_result = None
+    for _ in range(40):
+        heading_result = heading_gated.step_controls(throttle=0.2, brake=0.0, steer=1.0)
+        if heading_result.truncated:
+            break
+    assert heading_result is not None
+    assert heading_result.telemetry.segment_complete is False
+    assert heading_result.telemetry.termination_reason == "segment_heading_gate_failed"
+    assert heading_result.info["segment_target_max_heading_error_deg"] == 0.01
+
+    yaw_gated = MonzaSim(SimConfig(max_steps=20))
+    yaw_gated.reset(
+        seed=2,
+        options={
+            "start_progress_m": 930.0,
+            "start_speed_kph": 260.0,
+            "segment_length_m": 1.0,
+            "segment_target_max_abs_yaw_rate_rps": 0.001,
+            "segment_fail_on_speed_gate_miss": True,
+            "curriculum_stage": "strict-yaw-gated",
+        },
+    )
+    yaw_result = None
+    for _ in range(10):
+        yaw_result = yaw_gated.step_controls(throttle=0.0, brake=0.0, steer=-1.0)
+        if yaw_result.truncated:
+            break
+    assert yaw_result is not None
+    assert yaw_result.telemetry.segment_complete is False
+    assert yaw_result.telemetry.termination_reason == "segment_yaw_rate_gate_failed"
+    assert yaw_result.info["segment_target_max_abs_yaw_rate_rps"] == 0.001
+
+    steering_gated = MonzaSim(SimConfig(max_steps=20))
+    steering_gated.reset(
+        seed=2,
+        options={
+            "start_progress_m": 930.0,
+            "start_speed_kph": 260.0,
+            "segment_length_m": 1.0,
+            "segment_target_max_abs_yaw_rate_rps": 99.0,
+            "segment_target_max_abs_steering": 0.001,
+            "segment_fail_on_speed_gate_miss": True,
+            "curriculum_stage": "strict-steering-gated",
+        },
+    )
+    steering_result = None
+    for _ in range(10):
+        steering_result = steering_gated.step_controls(throttle=0.0, brake=0.0, steer=-1.0)
+        if steering_result.truncated:
+            break
+    assert steering_result is not None
+    assert steering_result.telemetry.segment_complete is False
+    assert steering_result.telemetry.termination_reason == "segment_steering_gate_failed"
+    assert steering_result.info["segment_target_max_abs_steering"] == 0.001
+
+
+def test_sim_segment_completion_can_require_release_before_target() -> None:
+    options = {
+        "start_progress_m": 520.0,
+        "start_speed_kph": 335.0,
+        "segment_length_m": 130.0,
+        "segment_target_max_speed_kph": 185.0,
+        "segment_fail_on_speed_gate_miss": True,
+        "segment_require_release": True,
+        "segment_release_max_brake": 0.1,
+    }
+    trail_only = MonzaSim(SimConfig(max_steps=260, action_set="brake_release"))
+    trail_only.reset(seed=3, options=options)
+    trail_result = None
+    for _ in range(260):
+        trail_result = trail_only.step(1)
+        if trail_result.truncated or trail_result.terminated:
+            break
+
+    assert trail_result is not None
+    assert trail_result.telemetry.segment_complete is False
+    assert trail_result.telemetry.termination_reason == "segment_release_gate_failed"
+    assert trail_result.info["segment_release_observed"] is False
+
+    released = MonzaSim(SimConfig(max_steps=260, action_set="brake_release"))
+    released.reset(seed=3, options=options)
+    released_result = None
+    for _ in range(260):
+        action = 1 if released.state.speed_mps * 3.6 > 185.0 else 2
+        released_result = released.step(action)
+        if released_result.truncated or released_result.terminated:
+            break
+
+    assert released_result is not None
+    assert released_result.telemetry.segment_complete is True
+    assert released_result.telemetry.termination_reason == "segment_complete"
+    assert released_result.info["segment_release_observed"] is True

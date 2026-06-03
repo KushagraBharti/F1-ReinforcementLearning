@@ -1,0 +1,710 @@
+{
+  "run_id": "action-search-preexit650-1220-delayedturn-20260603-rung",
+  "state_library": "artifacts\\state-library-rettifilo-preexit-650_900-from930-20260603-continue\\state_library.json",
+  "checkpoint_config": {
+    "checkpoint_path": "artifacts\\ppo-rettifilo1220-expanded-transfer-1024-20260603-071315\\checkpoints\\initial_model.zip",
+    "run_root": "artifacts\\ppo-rettifilo1220-expanded-transfer-1024-20260603-071315",
+    "metadata_path": "artifacts\\ppo-rettifilo1220-expanded-transfer-1024-20260603-071315\\run_metadata.json",
+    "metadata_loaded": true,
+    "metadata_mode": "require",
+    "config_source": "run_metadata",
+    "vecnormalize_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-rettifilo1220-expanded-transfer-1024-20260603-071315\\vecnormalize.pkl",
+    "sim_config": {
+      "track_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\assets\\tracks\\monza\\track_spec.npz",
+      "car_image": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\imgs\\ferrari.png",
+      "max_steps": 720,
+      "action_mode": "discrete",
+      "action_set": "expanded",
+      "continuous_action_scheme": "drive_brake",
+      "observation_profile": "racing_release",
+      "no_progress_limit_steps": 180,
+      "local_projection_window_m": 500.0,
+      "checkpoint_lateral_limit_m": 24.0,
+      "launch_guard_progress_m": 0.0,
+      "launch_guard_min_speed_kph": 0.0,
+      "launch_guard_throttle": 0.22,
+      "lookahead_m": [
+        40.0,
+        90.0,
+        160.0,
+        280.0
+      ],
+      "car": {
+        "mass": 798.0,
+        "wheelbase_m": 3.6,
+        "max_steer_deg": 18.0,
+        "steer_response": 6.0,
+        "engine_accel_mps2": 24.5,
+        "brake_accel_mps2": 38.0,
+        "drag_coefficient": 0.0025,
+        "rolling_resistance_mps2": 0.25,
+        "grip_g": 2.2,
+        "aero_grip_per_mps2": 0.00023,
+        "max_grip_g": 4.2,
+        "max_drive_g": 2.45,
+        "max_brake_g": 4.6,
+        "steering_speed_sensitivity": 0.0008,
+        "max_speed_mps": 110.0,
+        "dt": 0.016666666666666666
+      },
+      "sensors": {
+        "count": 7,
+        "spread_deg": 120.0,
+        "forward_bias": 1.6,
+        "range_m": 1300.0
+      },
+      "reward": {
+        "progress_scale": 0.06,
+        "finish_bonus": 700.0,
+        "collision_penalty": -700.0,
+        "off_track_penalty": -500.0,
+        "no_progress_penalty": -350.0,
+        "lateral_deadzone_m": 4.0,
+        "lateral_penalty_scale": 0.12,
+        "track_limit_safe_ray_m": 10.0,
+        "track_limit_penalty_scale": 0.03,
+        "heading_deadzone_deg": 5.0,
+        "heading_penalty_scale": 0.6,
+        "speed_target_min_kph": 80.0,
+        "speed_target_max_kph": 340.0,
+        "speed_target_heading_scale": 2.5,
+        "speed_target_deadzone_kph": 8.0,
+        "speed_target_penalty_scale": 0.6,
+        "overspeed_throttle_penalty_scale": 0.0,
+        "overspeed_brake_reward_scale": 0.0,
+        "steering_target_deadzone": 0.08,
+        "steering_target_penalty_scale": 3.0,
+        "smoothness_penalty": 0.02,
+        "scaffold_scale": 1.0,
+        "scaffold_brake_reward_scale": 40.0,
+        "scaffold_no_throttle_penalty_scale": 90.0,
+        "scaffold_turn_in_speed_penalty_scale": 800.0,
+        "scaffold_apex_clean_reward_scale": 180.0,
+        "scaffold_exit_alignment_reward_scale": 180.0,
+        "scaffold_exit_speed_reward_scale": 220.0,
+        "scaffold_release_reward_scale": 520.0,
+        "scaffold_overbrake_penalty_scale": 6500.0,
+        "scaffold_release_min_speed_kph": 155.0,
+        "scaffold_release_max_speed_kph": 185.0,
+        "scaffold_brake_curve_penalty_scale": 700.0,
+        "scaffold_brake_curve_start_speed_kph": 335.0,
+        "scaffold_brake_curve_deadzone_kph": 8.0
+      },
+      "assist": {
+        "enabled": true,
+        "overspeed_turn_in_terminate": true,
+        "overspeed_turn_in_margin_kph": 55.0,
+        "overspeed_turn_in_penalty": -300.0,
+        "throttle_brake_demand_penalty_scale": 200.0,
+        "throttle_brake_demand_terminate": true,
+        "throttle_brake_demand_min_throttle": 0.75,
+        "no_brake_penalty": -1500.0,
+        "no_brake_min_brake": 0.3,
+        "no_brake_min_speed_kph": 185.0,
+        "no_brake_terminate": false,
+        "overbrake_penalty": -1200.0,
+        "overbrake_terminate": false,
+        "overbrake_max_speed_kph": 185.0,
+        "overbrake_min_brake": 0.3,
+        "virtual_corridor_m": 14.0,
+        "virtual_corridor_penalty": -300.0,
+        "virtual_corridor_terminate": true,
+        "brake_zone_progress_multiplier": 0.0
+      }
+    }
+  },
+  "elite_state_library": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\elite_state_library.json",
+  "target_progress_m": 1220.0,
+  "target_max_speed_kph": 225.0,
+  "snapshot_count": 1,
+  "schedule_count": 120,
+  "attempt_count": 120,
+  "completion_count": 0,
+  "completion_rate": 0.0,
+  "best_attempt": {
+    "attempt": 1,
+    "seed": 4901,
+    "score": -380.3066807053562,
+    "schedule": "half_throttlex720",
+    "schedule_phases": [
+      {
+        "action": "half_throttle",
+        "steps": 720
+      }
+    ],
+    "start_snapshot_id": "telemetry:145:650.440",
+    "start_progress_m": 650.4401401506232,
+    "start_speed_kph": 164.42450633093767,
+    "best_progress_m": 685.7040443697509,
+    "final_progress_m": 685.7040443697509,
+    "remaining_m": 534.2959556302491,
+    "segment_complete": false,
+    "termination_reason": "assist_overspeed_gate",
+    "collided": false,
+    "off_track": false,
+    "final_speed_kph": 180.94287736816398,
+    "final_lateral_error_m": 0.55419654618035,
+    "final_heading_error_deg": -0.02117237231323942,
+    "steps": 44,
+    "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-000-attempt-00001-steps.jsonl"
+  },
+  "top_attempts": [
+    {
+      "attempt": 1,
+      "seed": 4901,
+      "score": -380.3066807053562,
+      "schedule": "half_throttlex720",
+      "schedule_phases": [
+        {
+          "action": "half_throttle",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 685.7040443697509,
+      "final_progress_m": 685.7040443697509,
+      "remaining_m": 534.2959556302491,
+      "segment_complete": false,
+      "termination_reason": "assist_overspeed_gate",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 180.94287736816398,
+      "final_lateral_error_m": 0.55419654618035,
+      "final_heading_error_deg": -0.02117237231323942,
+      "steps": 44,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-000-attempt-00001-steps.jsonl"
+    },
+    {
+      "attempt": 29,
+      "seed": 4929,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx6__half_throttle_soft_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 6
+        },
+        {
+          "action": "half_throttle_soft_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-001-attempt-00029-steps.jsonl"
+    },
+    {
+      "attempt": 30,
+      "seed": 4930,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx6__throttle_soft_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 6
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-002-attempt-00030-steps.jsonl"
+    },
+    {
+      "attempt": 31,
+      "seed": 4931,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx6__half_throttle_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 6
+        },
+        {
+          "action": "half_throttle_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-003-attempt-00031-steps.jsonl"
+    },
+    {
+      "attempt": 32,
+      "seed": 4932,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx6__throttle_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 6
+        },
+        {
+          "action": "throttle_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-004-attempt-00032-steps.jsonl"
+    },
+    {
+      "attempt": 33,
+      "seed": 4933,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx6__half_throttlex720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 6
+        },
+        {
+          "action": "half_throttle",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-005-attempt-00033-steps.jsonl"
+    },
+    {
+      "attempt": 34,
+      "seed": 4934,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx6__throttlex720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 6
+        },
+        {
+          "action": "throttle",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-006-attempt-00034-steps.jsonl"
+    },
+    {
+      "attempt": 49,
+      "seed": 4949,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx12__half_throttle_soft_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 12
+        },
+        {
+          "action": "half_throttle_soft_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-007-attempt-00049-steps.jsonl"
+    },
+    {
+      "attempt": 50,
+      "seed": 4950,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx12__throttle_soft_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 12
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-008-attempt-00050-steps.jsonl"
+    },
+    {
+      "attempt": 51,
+      "seed": 4951,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx12__half_throttle_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 12
+        },
+        {
+          "action": "half_throttle_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-009-attempt-00051-steps.jsonl"
+    },
+    {
+      "attempt": 52,
+      "seed": 4952,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx12__throttle_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 12
+        },
+        {
+          "action": "throttle_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-010-attempt-00052-steps.jsonl"
+    },
+    {
+      "attempt": 53,
+      "seed": 4953,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx12__half_throttlex720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 12
+        },
+        {
+          "action": "half_throttle",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-011-attempt-00053-steps.jsonl"
+    },
+    {
+      "attempt": 54,
+      "seed": 4954,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx12__throttlex720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 12
+        },
+        {
+          "action": "throttle",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-012-attempt-00054-steps.jsonl"
+    },
+    {
+      "attempt": 69,
+      "seed": 4969,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx24__half_throttle_soft_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 24
+        },
+        {
+          "action": "half_throttle_soft_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-013-attempt-00069-steps.jsonl"
+    },
+    {
+      "attempt": 70,
+      "seed": 4970,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx24__throttle_soft_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 24
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-014-attempt-00070-steps.jsonl"
+    },
+    {
+      "attempt": 71,
+      "seed": 4971,
+      "score": -415.34783633924485,
+      "schedule": "coastx60__throttle_soft_leftx24__half_throttle_leftx720",
+      "schedule_phases": [
+        {
+          "action": "coast",
+          "steps": 60
+        },
+        {
+          "action": "throttle_soft_left",
+          "steps": 24
+        },
+        {
+          "action": "half_throttle_left",
+          "steps": 720
+        }
+      ],
+      "start_snapshot_id": "telemetry:145:650.440",
+      "start_progress_m": 650.4401401506232,
+      "start_speed_kph": 164.42450633093767,
+      "best_progress_m": 694.1920576593241,
+      "final_progress_m": 694.1920576593241,
+      "remaining_m": 525.8079423406759,
+      "segment_complete": false,
+      "termination_reason": "assist_throttle_brake_demand",
+      "collided": false,
+      "off_track": false,
+      "final_speed_kph": 147.43106396013897,
+      "final_lateral_error_m": 0.682515755523454,
+      "final_heading_error_deg": 2.078914535056016,
+      "steps": 61,
+      "selected_telemetry": "artifacts\\action-search-preexit650-1220-delayedturn-20260603-rung\\selected_telemetry\\action-rank-015-attempt-00071-steps.jsonl"
+    }
+  ],
+  "termination_reasons": {
+    "assist_virtual_corridor": 57,
+    "assist_overspeed_gate": 7,
+    "assist_throttle_brake_demand": 56
+  }
+}

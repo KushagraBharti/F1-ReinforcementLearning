@@ -59,7 +59,19 @@ class MonzaSim:
         self.checkpoints_passed = 0
         self.missed_checkpoint_count = 0
         self.segment_target_progress_m: float | None = None
+        self.segment_target_min_speed_kph: float | None = None
         self.segment_target_max_speed_kph: float | None = None
+        self.segment_target_max_lateral_error_m: float | None = None
+        self.segment_target_max_heading_error_deg: float | None = None
+        self.segment_target_max_abs_yaw_rate_rps: float | None = None
+        self.segment_target_max_abs_steering: float | None = None
+        self.segment_fail_on_speed_gate_miss = False
+        self.segment_require_release = False
+        self.segment_release_observed = False
+        self.segment_release_max_brake = 0.1
+        self.segment_release_max_throttle = 0.1
+        self.segment_release_min_speed_kph = 135.0
+        self.segment_release_max_speed_kph = 210.0
         self.segment_complete = False
         self.curriculum_stage: str | None = None
         self.state = initial_car_state(self.track.start_pose)
@@ -72,11 +84,16 @@ class MonzaSim:
 
     @property
     def observation_dim(self) -> int:
-        brake_features = 3 if self.config.observation_profile in {"brake", "guidance", "racing", "racing_v2"} else 0
-        guidance_features = 2 if self.config.observation_profile in {"guidance", "racing", "racing_v2"} else 0
+        brake_profiles = {"brake", "guidance", "racing", "racing_release", "racing_v2"}
+        guidance_profiles = {"guidance", "racing", "racing_release", "racing_v2"}
+        racing_profiles = {"racing", "racing_release", "racing_v2"}
+        brake_features = 3 if self.config.observation_profile in brake_profiles else 0
+        guidance_features = 2 if self.config.observation_profile in guidance_profiles else 0
         racing_features = 0
-        if self.config.observation_profile in {"racing", "racing_v2"}:
+        if self.config.observation_profile in racing_profiles:
             racing_features = 1 + 2 + len(self.config.lookahead_m) + 1
+        if self.config.observation_profile == "racing_release":
+            racing_features += 4
         if self.config.observation_profile == "racing_v2":
             racing_features += 4
         return (
@@ -113,7 +130,23 @@ class MonzaSim:
         self.segment_complete = False
         self.curriculum_stage = options.get("curriculum_stage")
         self.segment_target_progress_m = None
+        self.segment_target_min_speed_kph = None
         self.segment_target_max_speed_kph = None
+        self.segment_target_max_lateral_error_m = None
+        self.segment_target_max_heading_error_deg = None
+        self.segment_target_max_abs_yaw_rate_rps = None
+        self.segment_target_max_abs_steering = None
+        self.segment_fail_on_speed_gate_miss = bool(options.get("segment_fail_on_speed_gate_miss", False))
+        self.segment_require_release = bool(options.get("segment_require_release", False))
+        self.segment_release_observed = False
+        self.segment_release_max_brake = float(options.get("segment_release_max_brake", 0.1))
+        self.segment_release_max_throttle = float(options.get("segment_release_max_throttle", 0.1))
+        self.segment_release_min_speed_kph = float(
+            options.get("segment_release_min_speed_kph", self.config.reward.scaffold_release_min_speed_kph)
+        )
+        self.segment_release_max_speed_kph = float(
+            options.get("segment_release_max_speed_kph", self.config.reward.scaffold_release_max_speed_kph)
+        )
         self.last_telemetry = None
         if "state_snapshot" in options:
             self._restore_snapshot(options["state_snapshot"], rng=rng, options=options)
@@ -129,10 +162,28 @@ class MonzaSim:
         segment_length_m = options.get("segment_length_m")
         if segment_length_m is not None:
             self.segment_target_progress_m = self.episode_start_progress_m + max(float(segment_length_m), 1.0)
+            target_min_speed_kph = options.get("segment_target_min_speed_kph")
+            if target_min_speed_kph is not None:
+                self.segment_target_min_speed_kph = float(target_min_speed_kph)
             target_max_speed_kph = options.get("segment_target_max_speed_kph")
             if target_max_speed_kph is not None:
                 self.segment_target_max_speed_kph = float(target_max_speed_kph)
-        obs = self.observation()
+            target_max_lateral_error_m = options.get("segment_target_max_lateral_error_m")
+            if target_max_lateral_error_m is not None:
+                self.segment_target_max_lateral_error_m = float(target_max_lateral_error_m)
+            target_max_heading_error_deg = options.get("segment_target_max_heading_error_deg")
+            if target_max_heading_error_deg is not None:
+                self.segment_target_max_heading_error_deg = float(target_max_heading_error_deg)
+            target_max_abs_yaw_rate_rps = options.get("segment_target_max_abs_yaw_rate_rps")
+            if target_max_abs_yaw_rate_rps is not None:
+                self.segment_target_max_abs_yaw_rate_rps = float(target_max_abs_yaw_rate_rps)
+            target_max_abs_steering = options.get("segment_target_max_abs_steering")
+            if target_max_abs_steering is not None:
+                self.segment_target_max_abs_steering = float(target_max_abs_steering)
+        if bool(options.get("collect_observation", True)):
+            obs = self.observation()
+        else:
+            obs = np.zeros(self.observation_dim, dtype=np.float32)
         return obs, self.info(0.0, {key: 0.0 for key in REWARD_COMPONENT_KEYS}, False, False)
 
     def _restore_snapshot(self, value: object, *, rng: np.random.Generator, options: dict) -> None:
@@ -170,10 +221,15 @@ class MonzaSim:
         self.checkpoints_passed = int(snapshot.checkpoints_passed)
         self.missed_checkpoint_count = int(snapshot.missed_checkpoint_count)
         self.valid_lap = bool(snapshot.valid_lap)
-        self.finish_crossed = bool(snapshot.finish_crossed)
-        self.completed_lap = bool(snapshot.completed_lap)
-        self.segment_complete = bool(snapshot.segment_complete)
+        self.finish_crossed = False
+        self.completed_lap = False
+        self.segment_complete = False
+        self.segment_target_min_speed_kph = None
         self.segment_target_max_speed_kph = None
+        self.segment_target_max_lateral_error_m = None
+        self.segment_target_max_heading_error_deg = None
+        self.segment_target_max_abs_yaw_rate_rps = None
+        self.segment_target_max_abs_steering = None
         if self.curriculum_stage is None:
             self.curriculum_stage = snapshot.curriculum_stage
 
@@ -440,6 +496,28 @@ class MonzaSim:
             float(phase),
         ]
 
+    def _release_observation_features(self) -> list[float]:
+        speed_kph = self.state.speed_mps * 3.6
+        max_speed_kph = max(self.config.car.max_speed_mps * 3.6, 1e-6)
+        release_min_kph = min(
+            self.config.reward.scaffold_release_min_speed_kph,
+            self.config.reward.scaffold_release_max_speed_kph,
+        )
+        release_max_kph = max(
+            self.config.reward.scaffold_release_min_speed_kph,
+            self.config.reward.scaffold_release_max_speed_kph,
+        )
+        threshold_norm = np.clip(release_max_kph / max_speed_kph, 0.0, 1.0) * 2.0 - 1.0
+        surplus_norm = np.clip((speed_kph - release_max_kph) / 200.0, -1.0, 1.0)
+        deficit_norm = np.clip((release_min_kph - speed_kph) / 120.0, -1.0, 1.0)
+        in_band = 1.0 if release_min_kph <= speed_kph <= release_max_kph else -1.0
+        return [
+            float(threshold_norm),
+            float(surplus_norm),
+            float(deficit_norm),
+            float(in_band),
+        ]
+
     def _scaffold_reward_components(
         self,
         *,
@@ -447,6 +525,7 @@ class MonzaSim:
         speed_kph: float,
         throttle: float,
         brake: float,
+        lateral_error_m: float,
         heading_error_deg: float,
         min_ray_m: float,
         collided: bool,
@@ -461,15 +540,45 @@ class MonzaSim:
             return {}
         lap_progress_m = progress_m % self.track.length_m
         target_speed_kph = section.target_speed_kph
-        speed_surplus_kph = max(0.0, speed_kph - target_speed_kph)
-        speed_surplus_ratio = speed_surplus_kph / 100.0
         components: dict[str, float] = {}
         in_brake_zone = section.brake_start_m <= lap_progress_m <= section.turn_in_m
+        release_min_kph = min(reward.scaffold_release_min_speed_kph, reward.scaffold_release_max_speed_kph)
+        release_max_kph = max(reward.scaffold_release_min_speed_kph, reward.scaffold_release_max_speed_kph)
+        brake_reward_target_kph = target_speed_kph
+        if reward.scaffold_release_reward_scale > 0.0 or reward.scaffold_overbrake_penalty_scale > 0.0:
+            brake_reward_target_kph = max(brake_reward_target_kph, release_max_kph)
+        speed_surplus_kph = max(0.0, speed_kph - brake_reward_target_kph)
+        speed_surplus_ratio = speed_surplus_kph / 100.0
         if in_brake_zone and speed_surplus_kph > self.config.reward.speed_target_deadzone_kph:
             components["scaffold_brake"] = scale * reward.scaffold_brake_reward_scale * speed_surplus_ratio * brake
             components["scaffold_no_throttle"] = (
                 -scale * reward.scaffold_no_throttle_penalty_scale * speed_surplus_ratio * throttle
             )
+        if in_brake_zone:
+            release_width_kph = max(release_max_kph - release_min_kph, 1.0)
+            release_center_kph = 0.5 * (release_min_kph + release_max_kph)
+            release_score = max(0.0, 1.0 - abs(speed_kph - release_center_kph) / (0.5 * release_width_kph))
+            release_control = max(0.0, 1.0 - brake) * max(0.0, 1.0 - throttle)
+            components["scaffold_release"] = (
+                scale * reward.scaffold_release_reward_scale * release_score * release_control
+            )
+            if speed_kph < release_min_kph:
+                overbrake_ratio = (release_min_kph - speed_kph) / 100.0
+                components["scaffold_overbrake"] = (
+                    -scale * reward.scaffold_overbrake_penalty_scale * overbrake_ratio * brake
+                )
+            if reward.scaffold_brake_curve_penalty_scale > 0.0:
+                span_m = max(section.turn_in_m - section.brake_start_m, 1.0)
+                phase = float(np.clip((lap_progress_m - section.brake_start_m) / span_m, 0.0, 1.0))
+                curve_start_kph = max(reward.scaffold_brake_curve_start_speed_kph, target_speed_kph)
+                curve_target_kph = curve_start_kph + (target_speed_kph - curve_start_kph) * phase
+                curve_error_kph = max(
+                    0.0,
+                    abs(speed_kph - curve_target_kph) - reward.scaffold_brake_curve_deadzone_kph,
+                )
+                components["scaffold_brake_curve"] = (
+                    -scale * reward.scaffold_brake_curve_penalty_scale * curve_error_kph / 100.0
+                )
         turn_in_distance_m = abs(lap_progress_m - section.turn_in_m)
         if turn_in_distance_m <= 35.0:
             speed_error_kph = max(0.0, abs(speed_kph - target_speed_kph) - 12.0)
@@ -479,6 +588,13 @@ class MonzaSim:
         if section.exit_m is not None and section.turn_in_m <= lap_progress_m <= section.exit_m:
             clean_ratio = 0.0 if collided or off_track else max(0.0, min(min_ray_m / 20.0, 1.0))
             components["scaffold_apex_clean"] = scale * reward.scaffold_apex_clean_reward_scale * clean_ratio
+            corridor_excess_m = max(
+                0.0,
+                abs(lateral_error_m) - reward.scaffold_corridor_center_deadzone_m,
+            )
+            components["scaffold_corridor_center"] = (
+                -scale * reward.scaffold_corridor_center_penalty_scale * (corridor_excess_m / 10.0) ** 2
+            )
         if section.exit_m is not None and abs(lap_progress_m - section.exit_m) <= 60.0:
             alignment_ratio = max(0.0, 1.0 - abs(heading_error_deg) / 35.0)
             useful_exit_speed_kph = max(target_speed_kph + 35.0, 120.0)
@@ -487,16 +603,43 @@ class MonzaSim:
                 scale * reward.scaffold_exit_alignment_reward_scale * alignment_ratio
             )
             components["scaffold_exit_speed"] = scale * reward.scaffold_exit_speed_reward_scale * speed_ratio
+        if (
+            self.segment_target_progress_m is not None
+            and reward.scaffold_segment_speed_penalty_scale > 0.0
+            and (
+                self.segment_target_min_speed_kph is not None
+                or self.segment_target_max_speed_kph is not None
+            )
+        ):
+            remaining_m = self.segment_target_progress_m - progress_m
+            if -5.0 <= remaining_m <= 120.0:
+                low_error_kph = (
+                    max(0.0, self.segment_target_min_speed_kph - speed_kph)
+                    if self.segment_target_min_speed_kph is not None
+                    else 0.0
+                )
+                high_error_kph = (
+                    max(0.0, speed_kph - self.segment_target_max_speed_kph)
+                    if self.segment_target_max_speed_kph is not None
+                    else 0.0
+                )
+                components["scaffold_segment_speed"] = (
+                    -scale
+                    * reward.scaffold_segment_speed_penalty_scale
+                    * ((low_error_kph + high_error_kph) / 100.0) ** 2
+                )
         return components
 
     def _assist_reward_components(
         self,
         *,
         progress_m: float,
+        progress_reward: float,
         lateral_error_m: float,
         speed_kph: float,
         throttle: float,
         brake: float,
+        steer: float,
     ) -> tuple[dict[str, float], str | None]:
         assist = self.config.assist
         if not assist.enabled:
@@ -512,16 +655,60 @@ class MonzaSim:
         termination_reason: str | None = None
         in_brake_zone = section.brake_start_m <= lap_progress_m <= section.turn_in_m
         if in_brake_zone and speed_surplus_kph > self.config.reward.speed_target_deadzone_kph:
+            if abs(assist.brake_zone_progress_multiplier - 1.0) > 1e-12:
+                components["assist_brake_zone_progress_suppression"] = (
+                    progress_reward * (assist.brake_zone_progress_multiplier - 1.0)
+                )
             components["assist_throttle_brake_demand"] = (
                 -assist.throttle_brake_demand_penalty_scale * speed_surplus_ratio * throttle
             )
-            if brake < assist.no_brake_min_brake:
+            if assist.throttle_brake_demand_terminate and throttle >= assist.throttle_brake_demand_min_throttle:
+                termination_reason = "assist_throttle_brake_demand"
+            if speed_kph >= assist.no_brake_min_speed_kph and brake < assist.no_brake_min_brake:
                 components["assist_no_brake_gate"] = assist.no_brake_penalty
+                if assist.no_brake_terminate and termination_reason is None:
+                    termination_reason = "assist_no_brake_gate"
+        if in_brake_zone and speed_kph < assist.overbrake_max_speed_kph and brake >= assist.overbrake_min_brake:
+            components["assist_overbrake_gate"] = assist.overbrake_penalty * brake
+            if assist.overbrake_terminate and termination_reason is None:
+                termination_reason = "assist_overbrake_gate"
         near_turn_in = abs(lap_progress_m - section.turn_in_m) <= 35.0
         if near_turn_in and speed_kph > target_speed_kph + assist.overspeed_turn_in_margin_kph:
             components["assist_overspeed_gate"] = assist.overspeed_turn_in_penalty
             if assist.overspeed_turn_in_terminate:
                 termination_reason = "assist_overspeed_gate"
+        if (
+            assist.steering_gate_end_m > assist.steering_gate_start_m
+            and assist.steering_gate_start_m <= lap_progress_m <= assist.steering_gate_end_m
+            and speed_kph >= assist.steering_gate_min_speed_kph
+        ):
+            min_abs_steer = max(0.0, assist.steering_gate_min_abs_steer)
+            if assist.steering_gate_required_sign < -0.5:
+                steering_gate_violation = steer > -min_abs_steer
+            elif assist.steering_gate_required_sign > 0.5:
+                steering_gate_violation = steer < min_abs_steer
+            else:
+                steering_gate_violation = abs(steer) < min_abs_steer
+            if steering_gate_violation:
+                components["assist_steering_gate"] = assist.steering_gate_penalty
+                if assist.steering_gate_terminate and termination_reason is None:
+                    termination_reason = "assist_steering_gate"
+        if (
+            assist.forbidden_steering_gate_end_m > assist.forbidden_steering_gate_start_m
+            and assist.forbidden_steering_gate_start_m <= lap_progress_m <= assist.forbidden_steering_gate_end_m
+            and speed_kph >= assist.forbidden_steering_gate_min_speed_kph
+        ):
+            min_abs_steer = max(0.0, assist.forbidden_steering_gate_min_abs_steer)
+            if assist.forbidden_steering_gate_sign < -0.5:
+                forbidden_steering_violation = steer < -min_abs_steer
+            elif assist.forbidden_steering_gate_sign > 0.5:
+                forbidden_steering_violation = steer > min_abs_steer
+            else:
+                forbidden_steering_violation = abs(steer) > min_abs_steer
+            if forbidden_steering_violation:
+                components["assist_forbidden_steering_gate"] = assist.forbidden_steering_gate_penalty
+                if assist.forbidden_steering_gate_terminate and termination_reason is None:
+                    termination_reason = "assist_forbidden_steering_gate"
         if assist.virtual_corridor_m > 0.0 and abs(lateral_error_m) > assist.virtual_corridor_m:
             components["assist_virtual_corridor"] = assist.virtual_corridor_penalty
             if assist.virtual_corridor_terminate and termination_reason is None:
@@ -536,12 +723,14 @@ class MonzaSim:
         brake_features: list[float] = []
         guidance_features: list[float] = []
         racing_features: list[float] = []
-        if self.config.observation_profile in {"brake", "guidance", "racing", "racing_v2"}:
+        if self.config.observation_profile in {"brake", "guidance", "racing", "racing_release", "racing_v2"}:
             brake_features = self._brake_observation_features(self._target_speed_kph(lookahead_errors))
-        if self.config.observation_profile in {"guidance", "racing", "racing_v2"}:
+        if self.config.observation_profile in {"guidance", "racing", "racing_release", "racing_v2"}:
             guidance_features = self._guidance_observation_features(self._target_steer())
-        if self.config.observation_profile in {"racing", "racing_v2"}:
+        if self.config.observation_profile in {"racing", "racing_release", "racing_v2"}:
             racing_features = self._racing_observation_features(signed_lateral_error_m, lookahead_errors)
+        if self.config.observation_profile == "racing_release":
+            racing_features = [*racing_features, *self._release_observation_features()]
         if self.config.observation_profile == "racing_v2":
             racing_features = [*racing_features, *self._section_brake_observation_features()]
         obs = np.asarray(
@@ -713,6 +902,7 @@ class MonzaSim:
                 speed_kph=self.state.speed_mps * 3.6,
                 throttle=throttle,
                 brake=brake,
+                lateral_error_m=lateral_error_m,
                 heading_error_deg=heading_error_deg,
                 min_ray_m=min_ray_m,
                 collided=collided,
@@ -721,29 +911,96 @@ class MonzaSim:
         )
         assist_components, assist_termination_reason = self._assist_reward_components(
             progress_m=self.state.monotonic_progress_m,
+            progress_reward=components["progress"],
             lateral_error_m=lateral_error_m,
             speed_kph=self.state.speed_mps * 3.6,
             throttle=throttle,
             brake=brake,
+            steer=steer,
         )
         components.update(assist_components)
         if assist_termination_reason is not None:
             self.terminated = True
             self.termination_reason = assist_termination_reason
 
-        if (
-            not self.terminated
-            and self.segment_target_progress_m is not None
-            and self.state.monotonic_progress_m >= self.segment_target_progress_m
-            and (
-                self.segment_target_max_speed_kph is None
-                or self.state.speed_mps * 3.6 <= self.segment_target_max_speed_kph
+        speed_kph_after = self.state.speed_mps * 3.6
+        if self.segment_require_release and not self.segment_release_observed:
+            release_min_kph = min(self.segment_release_min_speed_kph, self.segment_release_max_speed_kph)
+            release_max_kph = max(self.segment_release_min_speed_kph, self.segment_release_max_speed_kph)
+            if (
+                release_min_kph <= speed_kph_after <= release_max_kph
+                and brake <= self.segment_release_max_brake
+                and throttle <= self.segment_release_max_throttle
+            ):
+                self.segment_release_observed = True
+
+        if not self.terminated and self.segment_target_progress_m is not None:
+            target_crossed = (
+                old_progress_m < self.segment_target_progress_m <= self.state.monotonic_progress_m
             )
-        ):
-            self.segment_complete = True
-            components["finish"] = self.config.reward.finish_bonus
-            self.truncated = True
-            self.termination_reason = "segment_complete"
+            target_reached = self.state.monotonic_progress_m >= self.segment_target_progress_m
+            speed_gate_ok = (
+                (
+                    self.segment_target_min_speed_kph is None
+                    or speed_kph_after >= self.segment_target_min_speed_kph
+                )
+                and (
+                    self.segment_target_max_speed_kph is None
+                    or speed_kph_after <= self.segment_target_max_speed_kph
+                )
+            )
+            lateral_gate_ok = (
+                self.segment_target_max_lateral_error_m is None
+                or abs(lateral_error_m) <= self.segment_target_max_lateral_error_m
+            )
+            heading_gate_ok = (
+                self.segment_target_max_heading_error_deg is None
+                or heading_error_deg <= self.segment_target_max_heading_error_deg
+            )
+            yaw_rate_gate_ok = (
+                self.segment_target_max_abs_yaw_rate_rps is None
+                or abs(self.state.yaw_rate_rps) <= self.segment_target_max_abs_yaw_rate_rps
+            )
+            steering_gate_ok = (
+                self.segment_target_max_abs_steering is None
+                or abs(self.state.steering) <= self.segment_target_max_abs_steering
+            )
+            release_gate_ok = not self.segment_require_release or self.segment_release_observed
+            if (
+                target_reached
+                and speed_gate_ok
+                and lateral_gate_ok
+                and heading_gate_ok
+                and yaw_rate_gate_ok
+                and steering_gate_ok
+                and release_gate_ok
+            ):
+                self.segment_complete = True
+                components["finish"] = self.config.reward.finish_bonus
+                self.truncated = True
+                self.termination_reason = "segment_complete"
+            elif target_crossed and speed_gate_ok and self.segment_require_release and not self.segment_release_observed:
+                self.truncated = True
+                self.termination_reason = "segment_release_gate_failed"
+            elif target_crossed and self.segment_fail_on_speed_gate_miss:
+                if self.segment_target_min_speed_kph is not None and speed_kph_after < self.segment_target_min_speed_kph:
+                    self.truncated = True
+                    self.termination_reason = "segment_min_speed_gate_failed"
+                elif self.segment_target_max_speed_kph is not None and speed_kph_after > self.segment_target_max_speed_kph:
+                    self.truncated = True
+                    self.termination_reason = "segment_speed_gate_failed"
+                elif self.segment_target_max_lateral_error_m is not None and not lateral_gate_ok:
+                    self.truncated = True
+                    self.termination_reason = "segment_lateral_gate_failed"
+                elif self.segment_target_max_heading_error_deg is not None and not heading_gate_ok:
+                    self.truncated = True
+                    self.termination_reason = "segment_heading_gate_failed"
+                elif self.segment_target_max_abs_yaw_rate_rps is not None and not yaw_rate_gate_ok:
+                    self.truncated = True
+                    self.termination_reason = "segment_yaw_rate_gate_failed"
+                elif self.segment_target_max_abs_steering is not None and not steering_gate_ok:
+                    self.truncated = True
+                    self.termination_reason = "segment_steering_gate_failed"
 
         finish_crossed_this_step = self._crossed_finish(movement, old_progress_m)
         if finish_crossed_this_step:
@@ -864,7 +1121,15 @@ class MonzaSim:
             "segment_complete": bool(self.segment_complete),
             "curriculum_stage": self.curriculum_stage,
             "segment_target_progress_m": self.segment_target_progress_m,
+            "segment_target_min_speed_kph": self.segment_target_min_speed_kph,
             "segment_target_max_speed_kph": self.segment_target_max_speed_kph,
+            "segment_target_max_lateral_error_m": self.segment_target_max_lateral_error_m,
+            "segment_target_max_heading_error_deg": self.segment_target_max_heading_error_deg,
+            "segment_target_max_abs_yaw_rate_rps": self.segment_target_max_abs_yaw_rate_rps,
+            "segment_target_max_abs_steering": self.segment_target_max_abs_steering,
+            "segment_fail_on_speed_gate_miss": bool(self.segment_fail_on_speed_gate_miss),
+            "segment_require_release": bool(self.segment_require_release),
+            "segment_release_observed": bool(self.segment_release_observed),
             "raw_progress_m": float(self.state.raw_progress_m),
             "monotonic_progress_m": float(self.state.monotonic_progress_m),
             "reward": float(reward),

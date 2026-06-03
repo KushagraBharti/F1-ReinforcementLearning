@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>F1RL Telemetry QC</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7f8; color: #182026; }
+    h1, h2, h3 { margin-bottom: 8px; }
+    pre { background: #101418; color: #dbe5ea; padding: 16px; overflow: auto; }
+    svg { display: block; max-width: 100%; margin-bottom: 18px; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 24px; background: white; }
+    th, td { border: 1px solid #d9e1e5; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 13px; }
+    th { background: #eaf0f3; }
+  </style>
+</head>
+<body>
+  <h1>F1RL Telemetry QC</h1>
+  <p>Source: <code>artifacts\ppo-scratch-legacy-rettifilo-brake-anti-escape-micro-goal-8k-20260603-034805\eval\selected_telemetry\ppo_curriculum_segment_train_00002000-episode-000-steps.jsonl</code></p>
+  <h2>Summary</h2>
+  <pre>{
+  &quot;path&quot;: &quot;artifacts\\ppo-scratch-legacy-rettifilo-brake-anti-escape-micro-goal-8k-20260603-034805\\eval\\selected_telemetry\\ppo_curriculum_segment_train_00002000-episode-000-steps.jsonl&quot;,
+  &quot;steps&quot;: 59,
+  &quot;duration_s&quot;: 0.9833333333333333,
+  &quot;termination_reason&quot;: &quot;assist_virtual_corridor&quot;,
+  &quot;completed_lap&quot;: false,
+  &quot;valid_lap&quot;: false,
+  &quot;finish_crossed&quot;: false,
+  &quot;segment_complete&quot;: false,
+  &quot;final_progress_m&quot;: 595.6826459618476,
+  &quot;best_progress_m&quot;: 595.6826459618476,
+  &quot;checkpoints_passed&quot;: 12,
+  &quot;missed_checkpoint_count&quot;: 0,
+  &quot;avg_speed_kph&quot;: 294.06913612734894,
+  &quot;max_speed_kph&quot;: 330.41449701071207,
+  &quot;avg_abs_racing_line_deviation_m&quot;: 3.725865601104534,
+  &quot;max_abs_racing_line_deviation_m&quot;: 12.409955961006744,
+  &quot;avg_lateral_g&quot;: 3.6177993283516976,
+  &quot;max_lateral_g&quot;: 4.122706347925951,
+  &quot;avg_longitudinal_g&quot;: -1.9244232420548337,
+  &quot;min_longitudinal_g&quot;: -5.967016566128764,
+  &quot;min_ray_distance_m&quot;: 4.166598320007324,
+  &quot;avg_min_ray_distance_m&quot;: 14.30066173359499,
+  &quot;reward_total&quot;: 1865.9106827027124,
+  &quot;reward_totals&quot;: {
+    &quot;progress&quot;: 0.0,
+    &quot;finish&quot;: 0.0,
+    &quot;collision&quot;: 0.0,
+    &quot;off_track&quot;: 0.0,
+    &quot;no_progress&quot;: 0.0,
+    &quot;lateral&quot;: -0.8942276100990042,
+    &quot;track_limit&quot;: -0.9821583475746767,
+    &quot;heading&quot;: -3.857126332613771,
+    &quot;speed_target&quot;: 0.0,
+    &quot;overspeed_action&quot;: 0.0,
+    &quot;steering_target&quot;: -78.28871190757576,
+    &quot;smoothness&quot;: 0.0,
+    &quot;scaffold_brake&quot;: 2069.9329069005757,
+    &quot;scaffold_no_throttle&quot;: 0.0,
+    &quot;scaffold_turn_in_speed&quot;: 0.0,
+    &quot;scaffold_apex_clean&quot;: 0.0,
+    &quot;scaffold_exit_alignment&quot;: 0.0,
+    &quot;scaffold_exit_speed&quot;: 0.0,
+    &quot;assist_overspeed_gate&quot;: 0.0,
+    &quot;assist_throttle_brake_demand&quot;: 0.0,
+    &quot;assist_no_brake_gate&quot;: 0.0,
+    &quot;assist_virtual_corridor&quot;: -120.0,
+    &quot;assist_brake_zone_progress_suppression&quot;: 0.0
+  },
+  &quot;section_summaries&quot;: [
+    {
+      &quot;section&quot;: &quot;start_finish_straight&quot;,
+      &quot;start_m&quot;: 0.0,
+      &quot;end_m&quot;: 450.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 340.0
+    },
+    {
+      &quot;section&quot;: &quot;rettifilo_chicane&quot;,
+      &quot;start_m&quot;: 450.0,
+      &quot;end_m&quot;: 1150.0,
+      &quot;rows&quot;: 59,
+      &quot;target_speed_kph&quot;: 115.0,
+      &quot;entry_progress_m&quot;: 518.554519087551,
+      &quot;exit_progress_m&quot;: 595.6826459618476,
+      &quot;entry_speed_kph&quot;: 330.41449701071207,
+      &quot;exit_speed_kph&quot;: 266.5208806345187,
+      &quot;min_speed_kph&quot;: 266.5208806345187,
+      &quot;max_speed_kph&quot;: 330.41449701071207,
+      &quot;avg_speed_kph&quot;: 294.06913612734894,
+      &quot;brake_start_progress_m&quot;: 518.554519087551,
+      &quot;throttle_reapplication_progress_m&quot;: null,
+      &quot;avg_throttle&quot;: 0.0,
+      &quot;avg_brake&quot;: 1.0,
+      &quot;action_histogram&quot;: {
+        &quot;brake_left&quot;: 57,
+        &quot;brake_right&quot;: 2
+      },
+      &quot;control_histogram&quot;: {
+        &quot;brake_left&quot;: 57,
+        &quot;brake_right&quot;: 2
+      },
+      &quot;max_speed_surplus_kph&quot;: 215.41449701071207,
+      &quot;min_ray_distance_m&quot;: 4.166598320007324,
+      &quot;avg_abs_lateral_error_m&quot;: 3.725865601104534,
+      &quot;max_abs_lateral_error_m&quot;: 12.409955961006744,
+      &quot;avg_abs_heading_error_deg&quot;: 9.898293051354583,
+      &quot;max_abs_heading_error_deg&quot;: 22.128876487824858,
+      &quot;reward_totals&quot;: {
+        &quot;progress&quot;: 0.0,
+        &quot;finish&quot;: 0.0,
+        &quot;collision&quot;: 0.0,
+        &quot;off_track&quot;: 0.0,
+        &quot;no_progress&quot;: 0.0,
+        &quot;lateral&quot;: -0.8942276100990042,
+        &quot;track_limit&quot;: -0.9821583475746767,
+        &quot;heading&quot;: -3.857126332613771,
+        &quot;speed_target&quot;: 0.0,
+        &quot;overspeed_action&quot;: 0.0,
+        &quot;steering_target&quot;: -78.28871190757576,
+        &quot;smoothness&quot;: 0.0,
+        &quot;scaffold_brake&quot;: 2069.9329069005757,
+        &quot;scaffold_no_throttle&quot;: 0.0,
+        &quot;scaffold_turn_in_speed&quot;: 0.0,
+        &quot;scaffold_apex_clean&quot;: 0.0,
+        &quot;scaffold_exit_alignment&quot;: 0.0,
+        &quot;scaffold_exit_speed&quot;: 0.0,
+        &quot;assist_overspeed_gate&quot;: 0.0,
+        &quot;assist_throttle_brake_demand&quot;: 0.0,
+        &quot;assist_no_brake_gate&quot;: 0.0,
+        &quot;assist_virtual_corridor&quot;: -120.0,
+        &quot;assist_brake_zone_progress_suppression&quot;: 0.0
+      },
+      &quot;termination_reason&quot;: &quot;assist_virtual_corridor&quot;
+    },
+    {
+      &quot;section&quot;: &quot;curva_grande_roggia_run&quot;,
+      &quot;start_m&quot;: 1150.0,
+      &quot;end_m&quot;: 1850.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 315.0
+    },
+    {
+      &quot;section&quot;: &quot;roggia_chicane&quot;,
+      &quot;start_m&quot;: 1850.0,
+      &quot;end_m&quot;: 2500.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 135.0
+    },
+    {
+      &quot;section&quot;: &quot;lesmo_1&quot;,
+      &quot;start_m&quot;: 2500.0,
+      &quot;end_m&quot;: 3150.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 185.0
+    },
+    {
+      &quot;section&quot;: &quot;lesmo_2_serraglio&quot;,
+      &quot;start_m&quot;: 3150.0,
+      &quot;end_m&quot;: 3850.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 195.0
+    },
+    {
+      &quot;section&quot;: &quot;ascari_approach&quot;,
+      &quot;start_m&quot;: 3850.0,
+      &quot;end_m&quot;: 4450.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 320.0
+    },
+    {
+      &quot;section&quot;: &quot;ascari_chicane&quot;,
+      &quot;start_m&quot;: 4450.0,
+      &quot;end_m&quot;: 5150.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 165.0
+    },
+    {
+      &quot;section&quot;: &quot;parabolica_finish&quot;,
+      &quot;start_m&quot;: 5150.0,
+      &quot;end_m&quot;: 5793.0,
+      &quot;rows&quot;: 0,
+      &quot;target_speed_kph&quot;: 205.0
+    }
+  ],
+  &quot;failure_report&quot;: {
+    &quot;failed_section&quot;: &quot;rettifilo_chicane&quot;,
+    &quot;first_bad_event&quot;: {
+      &quot;kind&quot;: &quot;overspeed_at_braking_zone&quot;,
+      &quot;reason&quot;: &quot;car is far above the section target speed in the braking zone&quot;,
+      &quot;section&quot;: &quot;rettifilo_chicane&quot;,
+      &quot;progress_m&quot;: 520.078052122742,
+      &quot;lap_progress_m&quot;: 520.078052122742,
+      &quot;speed_kph&quot;: 329.15091205891986,
+      &quot;target_speed_kph&quot;: 115.0,
+      &quot;speed_surplus_kph&quot;: 214.15091205891986,
+      &quot;throttle&quot;: 0.0,
+      &quot;brake&quot;: 1.0,
+      &quot;steering&quot;: 1.0,
+      &quot;lateral_error_m&quot;: 0.4514105586387629,
+      &quot;heading_error_deg&quot;: -1.0615216397639884,
+      &quot;min_ray_distance_m&quot;: 17.791667938232422,
+      &quot;action&quot;: &quot;brake_right&quot;,
+      &quot;control&quot;: &quot;brake_right&quot;,
+      &quot;step_index&quot;: 2,
+      &quot;sim_time_s&quot;: 0.03333333333333333
+    },
+    &quot;terminal_event&quot;: {
+      &quot;kind&quot;: &quot;assist_virtual_corridor&quot;,
+      &quot;reason&quot;: &quot;episode ended with assist_virtual_corridor&quot;,
+      &quot;section&quot;: &quot;rettifilo_chicane&quot;,
+      &quot;progress_m&quot;: 595.6826459618476,
+      &quot;lap_progress_m&quot;: 595.6826459618476,
+      &quot;speed_kph&quot;: 266.5208806345187,
+      &quot;target_speed_kph&quot;: 115.0,
+      &quot;speed_surplus_kph&quot;: 151.52088063451868,
+      &quot;throttle&quot;: 0.0,
+      &quot;brake&quot;: 1.0,
+      &quot;steering&quot;: -1.0,
+      &quot;lateral_error_m&quot;: 12.409955961006744,
+      &quot;heading_error_deg&quot;: 22.128876487824858,
+      &quot;min_ray_distance_m&quot;: 4.166598320007324,
+      &quot;action&quot;: &quot;brake_left&quot;,
+      &quot;control&quot;: &quot;brake_left&quot;,
+      &quot;step_index&quot;: 59,
+      &quot;sim_time_s&quot;: 0.9833333333333333
+    },
+    &quot;action_histogram_before_failure&quot;: {
+      &quot;brake_right&quot;: 2
+    },
+    &quot;control_histogram_before_failure&quot;: {
+      &quot;brake_right&quot;: 2
+    }
+  }
+}</pre>
+  <h2>Failure Table</h2>
+  <table><thead><tr><th>Failed section</th><th>First bad event</th><th>Bad progress m</th><th>Bad speed kph</th><th>Reason</th><th>Terminal</th><th>Terminal progress m</th></tr></thead><tbody><tr><td>rettifilo_chicane</td><td>overspeed_at_braking_zone</td><td>520.08</td><td>329.15</td><td>car is far above the section target speed in the braking zone</td><td>assist_virtual_corridor</td><td>595.68</td></tr></tbody></table>
+  <h2>Section Summary</h2>
+  <table><thead><tr><th>Section</th><th>Rows</th><th>Entry kph</th><th>Min kph</th><th>Exit kph</th><th>Max surplus</th><th>Brake start m</th><th>Avg throttle</th><th>Avg brake</th><th>Min ray m</th><th>Termination</th></tr></thead><tbody><tr><td>rettifilo_chicane</td><td>59</td><td>330.41</td><td>266.52</td><td>266.52</td><td>215.41</td><td>518.55</td><td>0.00</td><td>1.00</td><td>4.17</td><td>assist_virtual_corridor</td></tr></tbody></table>
+  <h2>Charts</h2>
+  <h3>Speed kph</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,0.0 13.1,3.6 26.2,11.6 39.3,21.5 52.4,29.3 65.5,32.7 78.6,36.0 91.7,39.3 104.8,42.5 117.9,45.8 131.0,49.0 144.1,52.2 157.2,55.4 170.3,58.5 183.4,61.6 196.6,64.7 209.7,67.8 222.8,70.9 235.9,73.9 249.0,76.9 262.1,79.9 275.2,82.9 288.3,85.9 301.4,88.8 314.5,91.7 327.6,94.6 340.7,97.5 353.8,100.3 366.9,103.2 380.0,106.0 393.1,108.8 406.2,111.5 419.3,114.3 432.4,117.0 445.5,119.8 458.6,122.5 471.7,125.1 484.8,127.8 497.9,130.5 511.0,133.1 524.1,135.7 537.2,138.3 550.3,140.9 563.4,143.5 576.6,146.0 589.7,148.5 602.8,151.0 615.9,153.5 629.0,156.0 642.1,158.5 655.2,160.9 668.3,163.4 681.4,165.8 694.5,168.2 707.6,170.6 720.7,173.0 733.8,175.3 746.9,177.7 760.0,180.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 266.52 max 330.41</text></svg>
+<h3>Progress m</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,180.0 13.1,176.4 26.2,172.9 39.3,169.4 52.4,166.0 65.5,162.5 78.6,159.1 91.7,155.7 104.8,152.3 117.9,148.9 131.0,145.5 144.1,142.1 157.2,138.8 170.3,135.4 183.4,132.1 196.6,128.8 209.7,125.5 222.8,122.2 235.9,118.9 249.0,115.7 262.1,112.4 275.2,109.2 288.3,106.0 301.4,102.8 314.5,99.6 327.6,96.4 340.7,93.2 353.8,90.1 366.9,86.9 380.0,83.8 393.1,80.7 406.2,77.6 419.3,74.6 432.4,71.5 445.5,68.4 458.6,65.4 471.7,62.4 484.8,59.4 497.9,56.4 511.0,53.4 524.1,50.5 537.2,47.6 550.3,44.6 563.4,41.7 576.6,38.8 589.7,35.9 602.8,33.1 615.9,30.2 629.0,27.4 642.1,24.6 655.2,21.8 668.3,19.0 681.4,16.3 694.5,13.5 707.6,10.8 720.7,8.1 733.8,5.4 746.9,2.7 760.0,0.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 518.55 max 595.68</text></svg>
+<h3>Reward per step</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,57.7 13.1,0.0 26.2,0.6 39.3,1.5 52.4,2.3 65.5,2.6 78.6,3.0 91.7,3.3 104.8,3.6 117.9,4.0 131.0,4.3 144.1,4.7 157.2,5.0 170.3,5.3 183.4,5.6 196.6,6.0 209.7,6.3 222.8,6.6 235.9,6.9 249.0,7.2 262.1,7.6 275.2,7.9 288.3,8.2 301.4,8.5 314.5,8.8 327.6,9.1 340.7,9.5 353.8,9.8 366.9,10.1 380.0,10.4 393.1,10.7 406.2,11.0 419.3,11.3 432.4,11.6 445.5,11.9 458.6,12.2 471.7,12.5 484.8,12.8 497.9,13.1 511.0,13.4 524.1,13.6 537.2,13.9 550.3,14.2 563.4,14.4 576.6,14.7 589.7,14.9 602.8,15.2 615.9,15.4 629.0,15.7 642.1,15.9 655.2,16.2 668.3,16.5 681.4,16.7 694.5,17.0 707.6,17.2 720.7,17.5 733.8,17.7 746.9,18.0 760.0,180.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min -91.69 max 41.83</text></svg>
+<h3>Abs racing-line deviation m</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,174.4 13.1,174.0 26.2,173.5 39.3,173.0 52.4,172.6 65.5,172.4 78.6,172.3 91.7,172.4 104.8,172.6 117.9,173.0 131.0,173.5 144.1,174.2 157.2,175.1 170.3,176.1 183.4,177.2 196.6,178.5 209.7,180.0 222.8,179.6 235.9,177.9 249.0,176.0 262.1,173.9 275.2,171.8 288.3,169.4 301.4,167.0 314.5,164.4 327.6,161.6 340.7,158.8 353.8,155.8 366.9,152.6 380.0,149.3 393.1,145.9 406.2,142.4 419.3,138.7 432.4,134.9 445.5,131.0 458.6,126.9 471.7,122.7 484.8,118.4 497.9,113.9 511.0,109.3 524.1,104.7 537.2,99.8 550.3,94.9 563.4,89.8 576.6,84.6 589.7,79.3 602.8,73.9 615.9,68.4 629.0,62.7 642.1,57.0 655.2,51.1 668.3,45.1 681.4,39.0 694.5,32.7 707.6,26.4 720.7,20.0 733.8,13.4 746.9,6.8 760.0,0.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 0.04 max 12.41</text></svg>
+<h3>Minimum ray distance m</h3><svg viewBox='0 0 760 180' width='760' height='180' role='img' aria-label='line chart'><rect x='0' y='0' width='100%' height='100%' fill='#101418'/><polyline fill='none' stroke='#32d296' stroke-width='2' points='0.0,19.3 13.1,21.0 26.2,22.6 39.3,23.7 52.4,24.0 65.5,22.7 78.6,19.2 91.7,15.5 104.8,11.6 117.9,9.0 131.0,7.0 144.1,4.8 157.2,2.5 170.3,0.6 183.4,0.0 196.6,4.1 209.7,8.3 222.8,12.5 235.9,16.8 249.0,19.4 262.1,21.4 275.2,23.6 288.3,25.8 301.4,28.2 314.5,30.7 327.6,33.2 340.7,35.9 353.8,38.6 366.9,41.5 380.0,44.4 393.1,47.4 406.2,50.6 419.3,53.8 432.4,57.0 445.5,60.4 458.6,63.9 471.7,67.4 484.8,71.0 497.9,74.7 511.0,78.5 524.1,82.4 537.2,86.3 550.3,90.3 563.4,94.4 576.6,98.6 589.7,102.9 602.8,107.2 615.9,111.6 629.0,116.7 642.1,123.8 655.2,131.0 668.3,138.2 681.4,145.5 694.5,152.8 707.6,159.7 720.7,164.7 733.8,169.7 746.9,174.8 760.0,180.0'/><text x='8' y='18' fill='#dbe5ea' font-size='13'>min 4.17 max 19.59</text></svg>
+</body>
+</html>

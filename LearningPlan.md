@@ -88,6 +88,63 @@ Immediate experiment backlog:
    - do not allow simultaneous throttle/brake;
    - compare against the racing discrete action set.
 
+## Rettifilo Breakthrough Mode
+
+The current blocker is not subtle:
+
+- At about `520.8m`, the policy is already in Rettifilo brake demand.
+- It is doing about `334kph`.
+- It should be preparing for roughly `115kph`.
+- It still chooses full throttle.
+- The car later collides around `966-971m`.
+
+This must be treated as a failed training objective, not a small tuning issue. The training loop still makes "go far fast and crash" too attractive compared with "brake early and give up short-term progress." The next agent must change that objective aggressively.
+
+Required working style for this phase:
+
+1. Find the shortcoming from telemetry.
+2. Change the metric, reward, assist, curriculum, observation, action space, or reset distribution around that shortcoming.
+3. Run a short targeted experiment.
+4. Read QC, eval rows, selected telemetry, and first-bad-event output.
+5. Keep the change only if it materially changes behavior.
+6. Reject quickly if it keeps the same `520m` full-throttle failure.
+7. Immediately launch the next experiment.
+
+Do not spend hours preserving a policy that is still choosing throttle at the braking gate. Do not celebrate a `+4m` improvement if the first bad event is identical. The milestone is not `970m`; the milestone is braking before Rettifilo turn-in and exiting the section alive.
+
+Aggressive changes are allowed and expected:
+
+- Make full throttle in the Rettifilo brake zone strongly negative.
+- Temporarily terminate overspeed turn-in in section training.
+- Reduce or zero progress reward while inside active brake demand.
+- Increase speed-target and overspeed-action penalties by large factors for section experiments.
+- Increase collision penalty during high-speed braking-zone failures.
+- Require speed-gated segment completion at every Rettifilo gate.
+- Reward braking only when speed surplus is real and the car is before turn-in.
+- Penalize no-brake and throttle-through-brake-demand hard enough that the policy cannot ignore them.
+- Run state-library starts from multiple Rettifilo approach states.
+- Run stochastic/evolutionary/elite short attempts to discover any clean brake/exit state.
+- Save elite states only when they meet speed, heading, lateral, validity, and no-collision criteria.
+
+Guardrails:
+
+- Keep final promotion honest: metadata-faithful normal start, scaffold rewards disabled, training assists disabled.
+- Keep the simulator architecture simple.
+- Do not revive archived complexity.
+- Do not overfit to fake lap success from assisted training.
+- Do not break scripted valid-lap sanity.
+- Do not hide failed experiments; document them and move on.
+
+Minimum experiment cadence:
+
+- A short Rettifilo experiment should have an explicit hypothesis and a rejection condition before launch.
+- If the first trained eval preserves `throttle_during_brake_demand` at about `520m`, stop or shorten the run.
+- If the run collapses before Rettifilo, reject or repair immediately.
+- If the run creates earlier braking, preserve telemetry and make an elite state library from the successful attempts.
+- After every 3-5 mini experiments, summarize what changed and choose the next axis.
+
+The next agent should behave like an experimentalist, not a caretaker. It should push the learning system until the first bad event changes.
+
 ## Success Criterion
 
 There is exactly one success criterion:

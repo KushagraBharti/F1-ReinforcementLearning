@@ -1,0 +1,284 @@
+{
+  "created_at": "2026-06-03T10:47:52-0500",
+  "state_library": "artifacts\\state-library-rettifilo-rotate930-from-delayedleft-20260603\\state_library.json",
+  "assist_mode": "disabled-default-simconfig",
+  "action_set": "turnin_micro",
+  "target_progress_m": 1080.0,
+  "snapshot_count": 3,
+  "schedule_count": 18,
+  "attempt_count": 54,
+  "completion_count": 0,
+  "completion_rate": 0.0,
+  "top_attempts": [
+    {
+      "attempt": 36,
+      "snapshot_id": "telemetry:73:941.306",
+      "start_progress_m": 941.3060731396415,
+      "schedule": "constant_maintenance",
+      "phases": [
+        {
+          "action": "maintenance",
+          "steps": 320
+        }
+      ],
+      "score": -6078.147238821183,
+      "best_progress_m": 983.3072601060903,
+      "final_progress_m": 983.3072601060903,
+      "remaining_m": 96.69273989390967,
+      "segment_complete": false,
+      "termination_reason": "collision",
+      "collided": true,
+      "off_track": false,
+      "final_speed_kph": 162.71683653682555,
+      "final_lateral_error_m": 13.851384348834017,
+      "final_heading_error_deg": -39.69105650949369,
+      "steps": 60,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-000-constant_maintenance.jsonl"
+    },
+    {
+      "attempt": 52,
+      "snapshot_id": "telemetry:73:941.306",
+      "start_progress_m": 941.3060731396415,
+      "schedule": "right24_left",
+      "phases": [
+        {
+          "action": "maintenance_micro_right",
+          "steps": 24
+        },
+        {
+          "action": "maintenance_micro_left",
+          "steps": 320
+        }
+      ],
+      "score": -6088.719359954289,
+      "best_progress_m": 981.7714185275734,
+      "final_progress_m": 981.7714185275734,
+      "remaining_m": 98.22858147242664,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": false,
+      "off_track": true,
+      "final_speed_kph": 162.70598434680545,
+      "final_lateral_error_m": 14.441966902943477,
+      "final_heading_error_deg": -37.33351815969986,
+      "steps": 59,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-001-right24_left.jsonl"
+    },
+    {
+      "attempt": 34,
+      "snapshot_id": "telemetry:66:936.060",
+      "start_progress_m": 936.0602576760324,
+      "schedule": "right24_left",
+      "phases": [
+        {
+          "action": "maintenance_micro_right",
+          "steps": 24
+        },
+        {
+          "action": "maintenance_micro_left",
+          "steps": 320
+        }
+      ],
+      "score": -6107.31603774792,
+      "best_progress_m": 981.2939381956184,
+      "final_progress_m": 981.2939381956184,
+      "remaining_m": 98.70606180438165,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 162.70598434680545,
+      "final_lateral_error_m": 14.950026241217529,
+      "final_heading_error_deg": -37.034226694467094,
+      "steps": 66,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-002-right24_left.jsonl"
+    },
+    {
+      "attempt": 16,
+      "snapshot_id": "telemetry:59:930.815",
+      "start_progress_m": 930.8154426816141,
+      "schedule": "right24_left",
+      "phases": [
+        {
+          "action": "maintenance_micro_right",
+          "steps": 24
+        },
+        {
+          "action": "maintenance_micro_left",
+          "steps": 320
+        }
+      ],
+      "score": -6124.28699613983,
+      "best_progress_m": 980.822891655356,
+      "final_progress_m": 980.822891655356,
+      "remaining_m": 99.17710834464401,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 162.70598434680545,
+      "final_lateral_error_m": 15.425938846639156,
+      "final_heading_error_deg": -36.7349270439132,
+      "steps": 73,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-003-right24_left.jsonl"
+    },
+    {
+      "attempt": 18,
+      "snapshot_id": "telemetry:66:936.060",
+      "start_progress_m": 936.0602576760324,
+      "schedule": "constant_maintenance",
+      "phases": [
+        {
+          "action": "maintenance",
+          "steps": 320
+        }
+      ],
+      "score": -6125.38417005915,
+      "best_progress_m": 982.6541774721377,
+      "final_progress_m": 982.6541774721377,
+      "remaining_m": 97.34582252786231,
+      "segment_complete": false,
+      "termination_reason": "collision",
+      "collided": true,
+      "off_track": false,
+      "final_speed_kph": 162.71683653682555,
+      "final_lateral_error_m": 14.621335666347477,
+      "final_heading_error_deg": -40.89364980189819,
+      "steps": 67,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-004-constant_maintenance.jsonl"
+    },
+    {
+      "attempt": 39,
+      "snapshot_id": "telemetry:73:941.306",
+      "start_progress_m": 941.3060731396415,
+      "schedule": "constant_soft_brake",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 320
+        }
+      ],
+      "score": -6133.580360823053,
+      "best_progress_m": 983.3408615884832,
+      "final_progress_m": 983.3408615884832,
+      "remaining_m": 96.65913841151678,
+      "segment_complete": false,
+      "termination_reason": "collision",
+      "collided": true,
+      "off_track": false,
+      "final_speed_kph": 108.58039036537919,
+      "final_lateral_error_m": 13.879333954386084,
+      "final_heading_error_deg": -39.69105650949369,
+      "steps": 73,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-005-constant_soft_brake.jsonl"
+    },
+    {
+      "attempt": 0,
+      "snapshot_id": "telemetry:59:930.815",
+      "start_progress_m": 930.8154426816141,
+      "schedule": "constant_maintenance",
+      "phases": [
+        {
+          "action": "maintenance",
+          "steps": 320
+        }
+      ],
+      "score": -6152.767673401869,
+      "best_progress_m": 981.3530612227897,
+      "final_progress_m": 981.3530612227897,
+      "remaining_m": 98.64693877721027,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 162.70598434680545,
+      "final_lateral_error_m": 14.955064498147976,
+      "final_heading_error_deg": -42.09641738280305,
+      "steps": 73,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-006-constant_maintenance.jsonl"
+    },
+    {
+      "attempt": 41,
+      "snapshot_id": "telemetry:73:941.306",
+      "start_progress_m": 941.3060731396415,
+      "schedule": "right12_straight",
+      "phases": [
+        {
+          "action": "maintenance_micro_right",
+          "steps": 12
+        },
+        {
+          "action": "maintenance",
+          "steps": 320
+        }
+      ],
+      "score": -6153.491207272549,
+      "best_progress_m": 981.542533874924,
+      "final_progress_m": 981.542533874924,
+      "remaining_m": 98.45746612507605,
+      "segment_complete": false,
+      "termination_reason": "off_track",
+      "collided": true,
+      "off_track": true,
+      "final_speed_kph": 162.70598434680545,
+      "final_lateral_error_m": 14.736844310136803,
+      "final_heading_error_deg": -42.26765045976448,
+      "steps": 59,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-007-right12_straight.jsonl"
+    },
+    {
+      "attempt": 21,
+      "snapshot_id": "telemetry:66:936.060",
+      "start_progress_m": 936.0602576760324,
+      "schedule": "constant_soft_brake",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 320
+        }
+      ],
+      "score": -6174.6097989181035,
+      "best_progress_m": 982.375822993055,
+      "final_progress_m": 982.375822993055,
+      "remaining_m": 97.62417700694505,
+      "segment_complete": false,
+      "termination_reason": "collision",
+      "collided": true,
+      "off_track": false,
+      "final_speed_kph": 102.27511110960789,
+      "final_lateral_error_m": 14.380312466237228,
+      "final_heading_error_deg": -40.89364980189819,
+      "steps": 83,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-008-constant_soft_brake.jsonl"
+    },
+    {
+      "attempt": 49,
+      "snapshot_id": "telemetry:73:941.306",
+      "start_progress_m": 941.3060731396415,
+      "schedule": "soft48_right",
+      "phases": [
+        {
+          "action": "soft_brake",
+          "steps": 48
+        },
+        {
+          "action": "maintenance_micro_right",
+          "steps": 320
+        }
+      ],
+      "score": -6190.043805535146,
+      "best_progress_m": 982.9298629329475,
+      "final_progress_m": 982.9298629329475,
+      "remaining_m": 97.07013706705254,
+      "segment_complete": false,
+      "termination_reason": "collision",
+      "collided": true,
+      "off_track": false,
+      "final_speed_kph": 127.85468703271673,
+      "final_lateral_error_m": 14.35186378232288,
+      "final_heading_error_deg": -44.778881911091915,
+      "steps": 71,
+      "selected_telemetry": "artifacts\\targeted-probe-rotate930-1080-turninmicro-noassist-20260603-rung\\selected_telemetry\\rank-009-soft48_right.jsonl"
+    }
+  ]
+}

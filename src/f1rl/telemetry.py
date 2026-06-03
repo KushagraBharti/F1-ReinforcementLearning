@@ -27,10 +27,19 @@ REWARD_COMPONENT_KEYS = (
     "scaffold_apex_clean",
     "scaffold_exit_alignment",
     "scaffold_exit_speed",
+    "scaffold_release",
+    "scaffold_overbrake",
+    "scaffold_brake_curve",
+    "scaffold_corridor_center",
+    "scaffold_segment_speed",
     "assist_overspeed_gate",
     "assist_throttle_brake_demand",
     "assist_no_brake_gate",
+    "assist_overbrake_gate",
+    "assist_steering_gate",
+    "assist_forbidden_steering_gate",
     "assist_virtual_corridor",
+    "assist_brake_zone_progress_suppression",
 )
 
 

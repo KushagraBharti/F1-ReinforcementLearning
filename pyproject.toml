@@ -44,6 +44,7 @@ f1-benchmark = "f1rl.benchmark:main"
 f1-qc = "f1rl.qc:main"
 f1-state-library = "f1rl.state_library:main"
 f1-elite-search = "f1rl.elite_search:main"
+f1-action-search = "f1rl.action_search:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/f1rl"]

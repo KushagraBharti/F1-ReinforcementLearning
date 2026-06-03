@@ -40,6 +40,51 @@ def test_sim_can_reset_from_state_snapshot_and_continue() -> None:
     assert result.telemetry.curriculum_stage == "library-unit"
 
 
+def test_state_snapshot_reset_clears_terminal_episode_flags() -> None:
+    snapshot = {
+        "id": "terminal-segment",
+        "source": "unit",
+        "step_index": 67,
+        "sim_time_s": 1.1,
+        "x": 1086.0,
+        "y": 885.0,
+        "heading_rad": 3.14,
+        "speed_mps": 44.0,
+        "yaw_rate_rps": 0.0,
+        "steering_rad": 0.0,
+        "raw_progress_m": 600.0,
+        "monotonic_progress_m": 600.0,
+        "checkpoint_index": 10,
+        "next_checkpoint_index": 11,
+        "checkpoints_passed": 10,
+        "missed_checkpoint_count": 0,
+        "lap_index": 0,
+        "valid_lap": True,
+        "finish_crossed": True,
+        "completed_lap": True,
+        "segment_complete": True,
+        "last_throttle": 0.0,
+        "last_brake": 1.0,
+        "last_steer": 0.0,
+        "last_action_id": 2,
+    }
+    sim = MonzaSim(SimConfig(max_steps=80))
+
+    _, info = sim.reset(
+        seed=1,
+        options={
+            "state_snapshot": snapshot,
+            "segment_length_m": 50.0,
+            "curriculum_stage": "fresh-segment",
+        },
+    )
+
+    assert info["termination_reason"] == "active"
+    assert info["segment_complete"] is False
+    assert sim.completed_lap is False
+    assert sim.finish_crossed is False
+
+
 def test_state_library_from_telemetry_file(tmp_path: Path) -> None:
     telemetry_path = tmp_path / "steps.jsonl"
     row = {
@@ -78,6 +123,59 @@ def test_state_library_from_telemetry_file(tmp_path: Path) -> None:
     assert snapshots[0].source_file == str(telemetry_path)
     assert snapshots[0].monotonic_progress_m == 123.0
     assert snapshots[0].last_throttle == 0.5
+
+
+def test_state_library_from_telemetry_filters_progress_and_speed(tmp_path: Path) -> None:
+    telemetry_path = tmp_path / "steps.jsonl"
+    rows = [
+        {
+            "step_index": 1,
+            "sim_time_s": 0.1,
+            "x": 100.0,
+            "y": 200.0,
+            "heading_deg": 0.0,
+            "speed_kph": 220.0,
+            "monotonic_progress_m": 590.0,
+            "raw_progress_m": 590.0,
+        },
+        {
+            "step_index": 2,
+            "sim_time_s": 0.2,
+            "x": 101.0,
+            "y": 200.0,
+            "heading_deg": 0.0,
+            "speed_kph": 160.0,
+            "monotonic_progress_m": 600.3,
+            "raw_progress_m": 600.3,
+        },
+        {
+            "step_index": 3,
+            "sim_time_s": 0.3,
+            "x": 102.0,
+            "y": 200.0,
+            "heading_deg": 0.0,
+            "speed_kph": 80.0,
+            "monotonic_progress_m": 601.0,
+            "raw_progress_m": 601.0,
+        },
+    ]
+    telemetry_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    snapshots = snapshots_from_telemetry(
+        telemetry_path,
+        sample_every_m=0.0,
+        sample_every_steps=1,
+        max_snapshots=0,
+        min_progress_m=600.0,
+        max_progress_m=601.0,
+        min_speed_kph=150.0,
+        max_speed_kph=170.0,
+    )
+
+    assert len(snapshots) == 1
+    assert snapshots[0].step_index == 2
+    assert snapshots[0].monotonic_progress_m == pytest.approx(600.3)
+    assert snapshots[0].speed_mps == pytest.approx(160.0 / 3.6)
 
 
 def test_scripted_state_library_can_be_written_and_loaded(tmp_path: Path) -> None:

@@ -26,6 +26,11 @@ class CurriculumStage:
     start_max_progress_m: float | None = None
     target_progress_m: float | None = None
     target_max_speed_kph: float | None = None
+    target_max_lateral_error_m: float | None = None
+    target_max_heading_error_deg: float | None = None
+    target_min_speed_kph: float | None = None
+    target_max_abs_yaw_rate_rps: float | None = None
+    target_max_abs_steering: float | None = None
 
 
 DEFAULT_SEGMENT_STAGES: tuple[CurriculumStage, ...] = (
@@ -84,6 +89,9 @@ class CurriculumConfig:
     normal_start_probability: float = 0.0
     focus_start_progress_m: float | None = None
     focus_window_m: float = 0.0
+    segment_fail_on_speed_gate_miss: bool = False
+    segment_require_release: bool = False
+    segment_release_max_brake: float = 0.1
     start_mode: str = "random_checkpoint"
     state_library_path: Path | None = None
 
@@ -123,6 +131,8 @@ class CurriculumSampler:
             if half_window_m > 0.0:
                 start_progress_m += float(rng.uniform(-half_window_m, half_window_m))
             start_location: dict[str, Any] = {"start_progress_m": max(start_progress_m, 0.0)}
+            if stage.target_progress_m is not None:
+                segment_length_m = max(float(stage.target_progress_m) - start_location["start_progress_m"], 1.0)
         elif self.config.start_mode == "state_library":
             eligible_snapshots = self._snapshots_for_stage(stage)
             if not eligible_snapshots:
@@ -149,9 +159,47 @@ class CurriculumSampler:
             **({} if speed_kph is None else {"start_speed_kph": speed_kph}),
             "segment_length_m": segment_length_m,
             **(
+                {"segment_fail_on_speed_gate_miss": True}
+                if self.config.segment_fail_on_speed_gate_miss
+                else {}
+            ),
+            **(
+                {
+                    "segment_require_release": True,
+                    "segment_release_max_brake": float(self.config.segment_release_max_brake),
+                }
+                if self.config.segment_require_release
+                else {}
+            ),
+            **(
                 {}
                 if stage.target_max_speed_kph is None
                 else {"segment_target_max_speed_kph": float(stage.target_max_speed_kph)}
+            ),
+            **(
+                {}
+                if stage.target_min_speed_kph is None
+                else {"segment_target_min_speed_kph": float(stage.target_min_speed_kph)}
+            ),
+            **(
+                {}
+                if stage.target_max_lateral_error_m is None
+                else {"segment_target_max_lateral_error_m": float(stage.target_max_lateral_error_m)}
+            ),
+            **(
+                {}
+                if stage.target_max_heading_error_deg is None
+                else {"segment_target_max_heading_error_deg": float(stage.target_max_heading_error_deg)}
+            ),
+            **(
+                {}
+                if stage.target_max_abs_yaw_rate_rps is None
+                else {"segment_target_max_abs_yaw_rate_rps": float(stage.target_max_abs_yaw_rate_rps)}
+            ),
+            **(
+                {}
+                if stage.target_max_abs_steering is None
+                else {"segment_target_max_abs_steering": float(stage.target_max_abs_steering)}
             ),
             "position_noise_m": stage.position_noise_m,
             "heading_noise_deg": stage.heading_noise_deg,
@@ -177,6 +225,9 @@ class CurriculumSampler:
             "normal_start_probability": self.config.normal_start_probability,
             "focus_start_progress_m": self.config.focus_start_progress_m,
             "focus_window_m": self.config.focus_window_m,
+            "segment_fail_on_speed_gate_miss": self.config.segment_fail_on_speed_gate_miss,
+            "segment_require_release": self.config.segment_require_release,
+            "segment_release_max_brake": self.config.segment_release_max_brake,
             "start_mode": self.config.start_mode,
             "state_library_path": str(self.config.state_library_path) if self.config.state_library_path is not None else None,
             "state_library_count": len(self.state_snapshots),

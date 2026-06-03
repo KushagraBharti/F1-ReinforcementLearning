@@ -75,6 +75,8 @@ Do not report any of these as complete unless the artifact proves the behavior, 
 
 The next agent should stop being conservative. The right mode now is fast, targeted, and empirical.
 
+Also read `LearningPlan.md`'s `Rettifilo Breakthrough Mode` section. That section is now the active operating mode for this plateau.
+
 Run mini experiments like Yosh:
 
 1. Change one or two things hard.
@@ -105,6 +107,23 @@ Promotion remains strict:
 - normal-start,
 - deterministic PPO benchmark,
 - either a valid lap or a materially different failure signature beyond the current `970.775m` plateau.
+
+## Anti-Pattern To Stop
+
+The previous loop was too conservative. It often made small reward adjustments, preserved too much of the old policy, ran another PPO continuation, and then accepted tiny distance deltas even though the first bad event stayed the same.
+
+Stop doing that.
+
+The car is not failing because eval is confused anymore. It is failing because the training task still pays too much for short-term progress and not enough for early braking. The next agent should directly attack that:
+
+- If progress reward is overpowering braking, reduce progress reward in brake zones.
+- If speed-target penalty is too weak, increase it substantially in section experiments.
+- If throttle is still selected at `520m`, make throttle in brake demand expensive or terminal during training.
+- If segment success can be gamed by arriving too fast, tighten speed gates.
+- If PPO cannot discover a clean exit, run elite search and save the first good states.
+- If a run collapses, reject it and launch a different axis instead of trying to rationalize it.
+
+The goal is not a neat sequence of cautious experiments. The goal is a working agent. Push hard, measure honestly, and keep whatever changes the behavior.
 
 ## Step-Back Protocol
 

@@ -292,12 +292,20 @@ Key options:
 - `--reward-scaffold-final-scale --reward-scaffold-schedule-timesteps`: linearly reduce scaffold reward strength during training.
 - `--disable-scaffold-rewards` on eval/benchmark: zero training-only scaffold rewards for honest scoring.
 - `--assist-*`: enable explicit training-only gates. Metadata records `training_assists_enabled` and full `assist_config`.
+- `--assist-throttle-brake-demand-terminate`: in assisted training only, terminate when the policy keeps throttle above the configured threshold while overspeed in a brake-demand zone.
+- `--assist-brake-zone-progress-multiplier 0.0`: in assisted training only, cancel progress reward while the car is overspeed inside an active brake zone.
 - `--disable-training-assists` on eval/benchmark: zero training-only gates for honest scoring.
 - `python -m f1rl.elite_search`: run short section attempts and emit `elite_state_library.json` for later curriculum sampling.
 - `--normalize-reward`: enable SB3 `VecNormalize` reward normalization with observation normalization disabled.
 - `--use-sde --sde-sample-freq 16`: use gSDE exploration for continuous control.
 
 Training writes `vecnormalize.pkl` when reward normalization is enabled. Keep that file with the matching checkpoint if continuing normalized training.
+
+When expanding observations with `--initialize-from-checkpoint`, `--vec-normalize-path` is safe only if the saved VecNormalize file did not normalize observations. The trainer records the load mode in `run_metadata.json`:
+
+- `exact`: SB3 loaded the stats with matching spaces.
+- `fresh`: reward normalization started from a new wrapper.
+- `reward_stats_only_observation_shape_changed:OLD->NEW`: observation shape changed, old `norm_obs` was false, and only reward running statistics were carried forward.
 
 Fast-stage discrete continuation:
 
@@ -393,6 +401,26 @@ Promotion rule:
 
 - Promote only if normal-start full-lap eval moves materially beyond `970.775m` or QC shows the first bad Rettifilo behavior has changed from late/no braking at about `520.8m`.
 - Reject immediately if deterministic normal-start eval collapses for two consecutive eval intervals.
+
+Aggressive Rettifilo mini-experiment shape:
+
+```powershell
+uv run --no-sync python -m f1rl.train --timesteps 5000 --seed 1001 --n-envs 8 --max-steps 1500 --device auto --require-gpu --vec-env subproc --initialize-from-checkpoint "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip" --vec-normalize-path "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_vecnormalize.pkl" --action-mode discrete --action-set racing --observation-profile racing_v2 --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --curriculum-promotion-resets 20 --curriculum-normal-start-probability 0.0 --assist-enabled --assist-throttle-brake-demand-terminate --assist-throttle-brake-demand-min-throttle 0.6 --assist-throttle-brake-demand-penalty-scale 20.0 --assist-brake-zone-progress-multiplier 0.0 --assist-no-brake-penalty -20.0 --assist-no-brake-min-brake 0.10 --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 20.0 --assist-overspeed-turn-in-penalty -120.0 --reward-progress-scale 0.02 --reward-collision-penalty -200.0 --reward-off-track-penalty -200.0 --reward-lateral-penalty-scale 0.006 --reward-track-limit-penalty-scale 0.006 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.002 --reward-speed-target-min-kph 70 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 8 --reward-speed-target-penalty-scale 0.008 --reward-overspeed-throttle-penalty-scale 0.05 --reward-overspeed-brake-reward-scale 0.01 --normalize-reward --n-steps 256 --batch-size 256 --n-epochs 2 --learning-rate 0.00003 --gamma 0.995 --ent-coef 0.006 --checkpoint-every 2500 --eval-every 2500 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-aggressive-rettifilo-brakegate-goal-5k
+```
+
+Rejection rule:
+
+- Run QC on selected eval telemetry immediately.
+- Reject if first trained eval still shows `throttle_during_brake_demand` around `520m`.
+- Keep only if the first bad event moves later or changes to a lower-speed/turn-in/apex/exit failure.
+
+High-speed brake-gate focus variant:
+
+Use this when the state-library starts are too slow to represent the real failure.
+
+```powershell
+uv run --no-sync python -m f1rl.train --timesteps 6000 --seed 1002 --n-envs 8 --max-steps 900 --device auto --require-gpu --vec-env subproc --initialize-from-checkpoint "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip" --vec-normalize-path "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_vecnormalize.pkl" --action-mode discrete --action-set racing --observation-profile racing_v2 --curriculum segments --curriculum-focus-start-progress-m 520 --curriculum-focus-window-m 80 --curriculum-focus-target-progress-m 720 --curriculum-focus-target-max-speed-kph 190 --curriculum-focus-min-speed-kph 310 --curriculum-focus-max-speed-kph 340 --curriculum-focus-position-noise-m 0.3 --curriculum-focus-heading-noise-deg 1.0 --curriculum-focus-speed-noise-kph 2.0 --curriculum-promotion-resets 1000000 --curriculum-normal-start-probability 0.0 --assist-enabled --assist-throttle-brake-demand-terminate --assist-throttle-brake-demand-min-throttle 0.6 --assist-throttle-brake-demand-penalty-scale 20.0 --assist-brake-zone-progress-multiplier 0.0 --assist-no-brake-penalty -20.0 --assist-no-brake-min-brake 0.10 --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 20.0 --assist-overspeed-turn-in-penalty -120.0 --reward-progress-scale 0.02 --reward-collision-penalty -200.0 --reward-off-track-penalty -200.0 --reward-lateral-penalty-scale 0.006 --reward-track-limit-penalty-scale 0.006 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.002 --reward-speed-target-min-kph 70 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 8 --reward-speed-target-penalty-scale 0.008 --reward-overspeed-throttle-penalty-scale 0.05 --reward-overspeed-brake-reward-scale 0.01 --normalize-reward --n-steps 256 --batch-size 256 --n-epochs 3 --learning-rate 0.00005 --gamma 0.995 --ent-coef 0.02 --checkpoint-every 2000 --eval-every 2000 --eval-episodes 4 --telemetry selected --telemetry-every 1 --run-name ppo-aggressive-rettifilo-highspeed-focus-goal-6k
+```
 
 ## TensorBoard
 

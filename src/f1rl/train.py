@@ -7,7 +7,7 @@ import json
 import pickle
 import sys
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
@@ -119,9 +119,19 @@ def _build_curriculum_config(
     promotion_resets: int,
     normal_start_probability: float,
     preset: str = "default",
+    segment_fail_on_speed_gate_miss: bool = False,
+    segment_require_release: bool = False,
+    segment_release_max_brake: float = 0.1,
     focus_start_progress_m: float | None = None,
     focus_window_m: float = 0.0,
     focus_segment_length_m: float = 500.0,
+    focus_target_progress_m: float | None = None,
+    focus_target_max_speed_kph: float | None = None,
+    curriculum_target_min_speed_kph: float | None = None,
+    curriculum_target_max_lateral_error_m: float | None = None,
+    curriculum_target_max_heading_error_deg: float | None = None,
+    curriculum_target_max_abs_yaw_rate_rps: float | None = None,
+    curriculum_target_max_abs_steering: float | None = None,
     focus_min_speed_kph: float = 120.0,
     focus_max_speed_kph: float = 220.0,
     focus_position_noise_m: float = 0.5,
@@ -129,6 +139,8 @@ def _build_curriculum_config(
     focus_speed_noise_kph: float = 5.0,
     state_library_path: Path | None = None,
     state_library_segment_length_m: float = 900.0,
+    state_library_target_progress_m: float | None = None,
+    state_library_target_max_speed_kph: float | None = None,
     state_library_position_noise_m: float = 0.0,
     state_library_heading_noise_deg: float = 0.0,
     state_library_speed_noise_kph: float = 0.0,
@@ -151,6 +163,21 @@ def _build_curriculum_config(
                     stage.start_max_progress_m,
                     stage.target_progress_m,
                     stage.target_max_speed_kph,
+                    curriculum_target_max_lateral_error_m
+                    if curriculum_target_max_lateral_error_m is not None
+                    else stage.target_max_lateral_error_m,
+                    curriculum_target_max_heading_error_deg
+                    if curriculum_target_max_heading_error_deg is not None
+                    else stage.target_max_heading_error_deg,
+                    curriculum_target_min_speed_kph
+                    if curriculum_target_min_speed_kph is not None
+                    else stage.target_min_speed_kph,
+                    curriculum_target_max_abs_yaw_rate_rps
+                    if curriculum_target_max_abs_yaw_rate_rps is not None
+                    else stage.target_max_abs_yaw_rate_rps,
+                    curriculum_target_max_abs_steering
+                    if curriculum_target_max_abs_steering is not None
+                    else stage.target_max_abs_steering,
                 )
                 for stage in chicane_skill_stages(chicane)
             )
@@ -173,6 +200,13 @@ def _build_curriculum_config(
                     state_library_position_noise_m,
                     state_library_heading_noise_deg,
                     state_library_speed_noise_kph,
+                    target_progress_m=state_library_target_progress_m,
+                    target_max_speed_kph=state_library_target_max_speed_kph,
+                    target_max_lateral_error_m=curriculum_target_max_lateral_error_m,
+                    target_max_heading_error_deg=curriculum_target_max_heading_error_deg,
+                    target_min_speed_kph=curriculum_target_min_speed_kph,
+                    target_max_abs_yaw_rate_rps=curriculum_target_max_abs_yaw_rate_rps,
+                    target_max_abs_steering=curriculum_target_max_abs_steering,
                 ),
             )
         return CurriculumConfig(
@@ -180,6 +214,9 @@ def _build_curriculum_config(
             stages=stages,
             promotion_resets=promotion_resets,
             normal_start_probability=normal_start_probability,
+            segment_fail_on_speed_gate_miss=segment_fail_on_speed_gate_miss,
+            segment_require_release=segment_require_release,
+            segment_release_max_brake=segment_release_max_brake,
             start_mode="state_library",
             state_library_path=state_library_path,
         )
@@ -195,6 +232,13 @@ def _build_curriculum_config(
                 focus_position_noise_m,
                 focus_heading_noise_deg,
                 focus_speed_noise_kph,
+                target_progress_m=focus_target_progress_m,
+                target_max_speed_kph=focus_target_max_speed_kph,
+                target_max_lateral_error_m=curriculum_target_max_lateral_error_m,
+                target_max_heading_error_deg=curriculum_target_max_heading_error_deg,
+                target_min_speed_kph=curriculum_target_min_speed_kph,
+                target_max_abs_yaw_rate_rps=curriculum_target_max_abs_yaw_rate_rps,
+                target_max_abs_steering=curriculum_target_max_abs_steering,
             ),
         )
         return CurriculumConfig(
@@ -204,6 +248,9 @@ def _build_curriculum_config(
             normal_start_probability=normal_start_probability,
             focus_start_progress_m=focus_start_progress_m,
             focus_window_m=focus_window_m,
+            segment_fail_on_speed_gate_miss=segment_fail_on_speed_gate_miss,
+            segment_require_release=segment_require_release,
+            segment_release_max_brake=segment_release_max_brake,
             start_mode="focus",
         )
     if preset == "chicane-skill":
@@ -224,11 +271,52 @@ def _build_curriculum_config(
         if stage_count < 1:
             raise ValueError("--curriculum-stage-count must be at least 1.")
         stages = stages[: min(stage_count, len(stages))]
+    if (
+        curriculum_target_min_speed_kph is not None
+        or curriculum_target_max_lateral_error_m is not None
+        or curriculum_target_max_heading_error_deg is not None
+        or curriculum_target_max_abs_yaw_rate_rps is not None
+        or curriculum_target_max_abs_steering is not None
+    ):
+        stages = tuple(
+            replace(
+                stage,
+                target_min_speed_kph=(
+                    curriculum_target_min_speed_kph
+                    if curriculum_target_min_speed_kph is not None
+                    else stage.target_min_speed_kph
+                ),
+                target_max_lateral_error_m=(
+                    curriculum_target_max_lateral_error_m
+                    if curriculum_target_max_lateral_error_m is not None
+                    else stage.target_max_lateral_error_m
+                ),
+                target_max_heading_error_deg=(
+                    curriculum_target_max_heading_error_deg
+                    if curriculum_target_max_heading_error_deg is not None
+                    else stage.target_max_heading_error_deg
+                ),
+                target_max_abs_yaw_rate_rps=(
+                    curriculum_target_max_abs_yaw_rate_rps
+                    if curriculum_target_max_abs_yaw_rate_rps is not None
+                    else stage.target_max_abs_yaw_rate_rps
+                ),
+                target_max_abs_steering=(
+                    curriculum_target_max_abs_steering
+                    if curriculum_target_max_abs_steering is not None
+                    else stage.target_max_abs_steering
+                ),
+            )
+            for stage in stages
+        )
     return CurriculumConfig(
         mode=mode,
         stages=stages,
         promotion_resets=promotion_resets,
         normal_start_probability=normal_start_probability,
+        segment_fail_on_speed_gate_miss=segment_fail_on_speed_gate_miss,
+        segment_require_release=segment_require_release,
+        segment_release_max_brake=segment_release_max_brake,
         start_mode=start_mode,
     )
 
@@ -242,6 +330,9 @@ def _segment_eval_curriculum_config(config: CurriculumConfig) -> CurriculumConfi
         normal_start_probability=0.0,
         focus_start_progress_m=config.focus_start_progress_m,
         focus_window_m=config.focus_window_m,
+        segment_fail_on_speed_gate_miss=config.segment_fail_on_speed_gate_miss,
+        segment_require_release=config.segment_require_release,
+        segment_release_max_brake=config.segment_release_max_brake,
         start_mode=config.start_mode,
         state_library_path=config.state_library_path,
     )
@@ -264,6 +355,39 @@ def _full_lap_selection_score(summary: dict[str, Any]) -> float:
     score += float(summary.get("segment_completion_rate", 0.0))
     score += float(summary.get("mean_segment_progress_delta_m", 0.0)) * 0.001
     return score
+
+
+def _curriculum_selection_score(summary: dict[str, Any]) -> float:
+    """Rank curriculum checkpoints by section transfer before using full-lap progress."""
+    segment_completion_rate = float(summary.get("segment_completion_rate", 0.0))
+    mean_segment_delta = float(summary.get("mean_segment_progress_delta_m", 0.0))
+    mean_segment_progress = float(summary.get("mean_segment_best_progress_m", 0.0))
+    full_lap_completion_rate = float(summary.get("completion_rate", 0.0))
+    full_lap_progress = float(summary.get("mean_best_progress_m", 0.0))
+
+    score = segment_completion_rate * 1_000_000.0
+    score += mean_segment_delta * 1_000.0
+    score += mean_segment_progress
+    score += full_lap_completion_rate * 100.0
+    score += full_lap_progress * 0.001
+    return score
+
+
+def _checkpoint_selection_score(
+    summary: dict[str, Any],
+    *,
+    curriculum_enabled: bool,
+    has_segment_eval: bool,
+) -> tuple[float, str]:
+    if curriculum_enabled and has_segment_eval:
+        return (
+            _curriculum_selection_score(summary),
+            "curriculum segment completion, then segment progress delta, then section best progress",
+        )
+    return (
+        _full_lap_selection_score(summary),
+        "valid full-lap completion, then normal-start best progress",
+    )
 
 
 def _reward_overrides_from_args(args: argparse.Namespace) -> dict[str, float | None]:
@@ -296,6 +420,16 @@ def _reward_overrides_from_args(args: argparse.Namespace) -> dict[str, float | N
         "scaffold_apex_clean_reward_scale": args.reward_scaffold_apex_clean_reward_scale,
         "scaffold_exit_alignment_reward_scale": args.reward_scaffold_exit_alignment_reward_scale,
         "scaffold_exit_speed_reward_scale": args.reward_scaffold_exit_speed_reward_scale,
+        "scaffold_release_reward_scale": args.reward_scaffold_release_reward_scale,
+        "scaffold_overbrake_penalty_scale": args.reward_scaffold_overbrake_penalty_scale,
+        "scaffold_release_min_speed_kph": args.reward_scaffold_release_min_speed_kph,
+        "scaffold_release_max_speed_kph": args.reward_scaffold_release_max_speed_kph,
+        "scaffold_brake_curve_penalty_scale": args.reward_scaffold_brake_curve_penalty_scale,
+        "scaffold_brake_curve_start_speed_kph": args.reward_scaffold_brake_curve_start_speed_kph,
+        "scaffold_brake_curve_deadzone_kph": args.reward_scaffold_brake_curve_deadzone_kph,
+        "scaffold_corridor_center_penalty_scale": args.reward_scaffold_corridor_center_penalty_scale,
+        "scaffold_corridor_center_deadzone_m": args.reward_scaffold_corridor_center_deadzone_m,
+        "scaffold_segment_speed_penalty_scale": args.reward_scaffold_segment_speed_penalty_scale,
     }
 
 
@@ -306,11 +440,34 @@ def _assist_overrides_from_args(args: argparse.Namespace) -> dict[str, bool | fl
         "overspeed_turn_in_margin_kph": args.assist_overspeed_turn_in_margin_kph,
         "overspeed_turn_in_penalty": args.assist_overspeed_turn_in_penalty,
         "throttle_brake_demand_penalty_scale": args.assist_throttle_brake_demand_penalty_scale,
+        "throttle_brake_demand_terminate": args.assist_throttle_brake_demand_terminate,
+        "throttle_brake_demand_min_throttle": args.assist_throttle_brake_demand_min_throttle,
         "no_brake_penalty": args.assist_no_brake_penalty,
         "no_brake_min_brake": args.assist_no_brake_min_brake,
+        "no_brake_min_speed_kph": args.assist_no_brake_min_speed_kph,
+        "no_brake_terminate": args.assist_no_brake_terminate,
+        "overbrake_penalty": args.assist_overbrake_penalty,
+        "overbrake_terminate": args.assist_overbrake_terminate,
+        "overbrake_max_speed_kph": args.assist_overbrake_max_speed_kph,
+        "overbrake_min_brake": args.assist_overbrake_min_brake,
+        "steering_gate_penalty": args.assist_steering_gate_penalty,
+        "steering_gate_terminate": args.assist_steering_gate_terminate,
+        "steering_gate_start_m": args.assist_steering_gate_start_m,
+        "steering_gate_end_m": args.assist_steering_gate_end_m,
+        "steering_gate_min_abs_steer": args.assist_steering_gate_min_abs_steer,
+        "steering_gate_required_sign": args.assist_steering_gate_required_sign,
+        "steering_gate_min_speed_kph": args.assist_steering_gate_min_speed_kph,
+        "forbidden_steering_gate_penalty": args.assist_forbidden_steering_gate_penalty,
+        "forbidden_steering_gate_terminate": args.assist_forbidden_steering_gate_terminate,
+        "forbidden_steering_gate_start_m": args.assist_forbidden_steering_gate_start_m,
+        "forbidden_steering_gate_end_m": args.assist_forbidden_steering_gate_end_m,
+        "forbidden_steering_gate_min_abs_steer": args.assist_forbidden_steering_gate_min_abs_steer,
+        "forbidden_steering_gate_sign": args.assist_forbidden_steering_gate_sign,
+        "forbidden_steering_gate_min_speed_kph": args.assist_forbidden_steering_gate_min_speed_kph,
         "virtual_corridor_m": args.assist_virtual_corridor_m,
         "virtual_corridor_penalty": args.assist_virtual_corridor_penalty,
         "virtual_corridor_terminate": args.assist_virtual_corridor_terminate,
+        "brake_zone_progress_multiplier": args.assist_brake_zone_progress_multiplier,
     }
 
 
@@ -399,6 +556,7 @@ def _copy_compatible_policy_weights(
     *,
     source_action_set: str | None = None,
     target_action_set: str = "legacy",
+    new_action_bias_penalty: float = -4.0,
 ) -> list[dict[str, Any]]:
     """Copy matching SB3 MlpPolicy tensors, expanding observation/action heads when needed."""
     target_state = target_model.policy.state_dict()
@@ -409,6 +567,34 @@ def _copy_compatible_policy_weights(
     for key, target_tensor in target_state.items():
         source_tensor = source_state.get(key)
         if source_tensor is None:
+            continue
+        action_head_copy = _copy_discrete_action_head(
+            key=key,
+            target_tensor=target_tensor,
+            source_tensor=source_tensor,
+            source_action_set=resolved_source_action_set,
+            target_action_set=target_action_set,
+            new_action_bias_penalty=new_action_bias_penalty,
+        )
+        if (
+            action_head_copy is not None
+            and resolved_source_action_set is not None
+            and resolved_source_action_set != target_action_set
+            and tuple(source_tensor.shape) == tuple(target_tensor.shape)
+        ):
+            expanded_action_head, row_report = action_head_copy
+            updates[key] = expanded_action_head
+            report.append(
+                {
+                    "key": key,
+                    "mode": "mapped_discrete_action_head",
+                    "source_shape": list(source_tensor.shape),
+                    "target_shape": list(target_tensor.shape),
+                    "source_action_set": resolved_source_action_set,
+                    "target_action_set": target_action_set,
+                    "rows": row_report,
+                }
+            )
             continue
         if tuple(source_tensor.shape) == tuple(target_tensor.shape):
             updates[key] = source_tensor.detach().to(target_tensor.device).clone()
@@ -421,13 +607,6 @@ def _copy_compatible_policy_weights(
                 }
             )
             continue
-        action_head_copy = _copy_discrete_action_head(
-            key=key,
-            target_tensor=target_tensor,
-            source_tensor=source_tensor,
-            source_action_set=resolved_source_action_set,
-            target_action_set=target_action_set,
-        )
         if action_head_copy is not None:
             expanded_action_head, row_report = action_head_copy
             updates[key] = expanded_action_head
@@ -749,9 +928,13 @@ class TrainingEvalCallback:
             "curriculum_segment_episodes": segment_metrics,
             "curriculum_stage_metrics": _curriculum_stage_metrics(segment_metrics) if segment_metrics else {},
         }
-        score = _full_lap_selection_score(summary)
+        score, selection_priority = _checkpoint_selection_score(
+            summary,
+            curriculum_enabled=self.curriculum.enabled,
+            has_segment_eval=bool(segment_metrics),
+        )
         summary["selection_score"] = score
-        summary["selection_priority"] = "valid full-lap completion, then normal-start best progress"
+        summary["selection_priority"] = selection_priority
         with self.eval_metrics_path.open("a", encoding="utf-8") as file:
             file.write(json.dumps(summary) + "\n")
         if self.save_best and score > self.best_score:
@@ -784,9 +967,19 @@ def run_training(
     curriculum_start_stage_index: int = 0,
     curriculum_promotion_resets: int = 300,
     curriculum_normal_start_probability: float = 0.0,
+    curriculum_segment_fail_on_speed_gate_miss: bool = False,
+    curriculum_segment_require_release: bool = False,
+    curriculum_segment_release_max_brake: float = 0.1,
     curriculum_focus_start_progress_m: float | None = None,
     curriculum_focus_window_m: float = 0.0,
     curriculum_focus_segment_length_m: float = 500.0,
+    curriculum_focus_target_progress_m: float | None = None,
+    curriculum_focus_target_max_speed_kph: float | None = None,
+    curriculum_target_min_speed_kph: float | None = None,
+    curriculum_target_max_lateral_error_m: float | None = None,
+    curriculum_target_max_heading_error_deg: float | None = None,
+    curriculum_target_max_abs_yaw_rate_rps: float | None = None,
+    curriculum_target_max_abs_steering: float | None = None,
     curriculum_focus_min_speed_kph: float = 120.0,
     curriculum_focus_max_speed_kph: float = 220.0,
     curriculum_focus_position_noise_m: float = 0.5,
@@ -794,6 +987,8 @@ def run_training(
     curriculum_focus_speed_noise_kph: float = 5.0,
     curriculum_state_library: Path | None = None,
     curriculum_state_library_segment_length_m: float = 900.0,
+    curriculum_state_library_target_progress_m: float | None = None,
+    curriculum_state_library_target_max_speed_kph: float | None = None,
     curriculum_state_library_position_noise_m: float = 0.0,
     curriculum_state_library_heading_noise_deg: float = 0.0,
     curriculum_state_library_speed_noise_kph: float = 0.0,
@@ -803,6 +998,8 @@ def run_training(
     benchmark_throughput: bool = False,
     resume_checkpoint: Path | None = None,
     initialize_from_checkpoint: Path | None = None,
+    initialize_source_action_set: str | None = None,
+    initialize_new_action_bias_penalty: float = -4.0,
     reward_overrides: dict[str, float | None] | None = None,
     action_mode: str = "discrete",
     action_set: str = "legacy",
@@ -857,9 +1054,19 @@ def run_training(
         stage_start_index=curriculum_start_stage_index,
         promotion_resets=curriculum_promotion_resets,
         normal_start_probability=curriculum_normal_start_probability,
+        segment_fail_on_speed_gate_miss=curriculum_segment_fail_on_speed_gate_miss,
+        segment_require_release=curriculum_segment_require_release,
+        segment_release_max_brake=curriculum_segment_release_max_brake,
         focus_start_progress_m=curriculum_focus_start_progress_m,
         focus_window_m=curriculum_focus_window_m,
         focus_segment_length_m=curriculum_focus_segment_length_m,
+        focus_target_progress_m=curriculum_focus_target_progress_m,
+        focus_target_max_speed_kph=curriculum_focus_target_max_speed_kph,
+        curriculum_target_min_speed_kph=curriculum_target_min_speed_kph,
+        curriculum_target_max_lateral_error_m=curriculum_target_max_lateral_error_m,
+        curriculum_target_max_heading_error_deg=curriculum_target_max_heading_error_deg,
+        curriculum_target_max_abs_yaw_rate_rps=curriculum_target_max_abs_yaw_rate_rps,
+        curriculum_target_max_abs_steering=curriculum_target_max_abs_steering,
         focus_min_speed_kph=curriculum_focus_min_speed_kph,
         focus_max_speed_kph=curriculum_focus_max_speed_kph,
         focus_position_noise_m=curriculum_focus_position_noise_m,
@@ -867,6 +1074,8 @@ def run_training(
         focus_speed_noise_kph=curriculum_focus_speed_noise_kph,
         state_library_path=curriculum_state_library,
         state_library_segment_length_m=curriculum_state_library_segment_length_m,
+        state_library_target_progress_m=curriculum_state_library_target_progress_m,
+        state_library_target_max_speed_kph=curriculum_state_library_target_max_speed_kph,
         state_library_position_noise_m=curriculum_state_library_position_noise_m,
         state_library_heading_noise_deg=curriculum_state_library_heading_noise_deg,
         state_library_speed_noise_kph=curriculum_state_library_speed_noise_kph,
@@ -965,7 +1174,9 @@ def run_training(
         transfer_weight_report = _copy_compatible_policy_weights(
             model,
             source_model,
+            source_action_set=initialize_source_action_set,
             target_action_set=action_set,
+            new_action_bias_penalty=initialize_new_action_bias_penalty,
         )
         scratch_initialization = False
         transfer_initialization = True
@@ -1061,8 +1272,19 @@ def run_training(
         "curriculum_stage_count": len(curriculum_config.stages) if curriculum_config.enabled else 0,
         "curriculum_start_stage_index": curriculum_start_stage_index,
         "curriculum_promotion_resets": curriculum_config.promotion_resets,
+        "curriculum_segment_fail_on_speed_gate_miss": curriculum_config.segment_fail_on_speed_gate_miss,
+        "curriculum_segment_require_release": curriculum_config.segment_require_release,
+        "curriculum_segment_release_max_brake": curriculum_config.segment_release_max_brake,
         "curriculum_config": CurriculumSampler(curriculum_config).to_dict(),
         "curriculum_state_library": str(curriculum_state_library) if curriculum_state_library is not None else None,
+        "curriculum_state_library_segment_length_m": curriculum_state_library_segment_length_m,
+        "curriculum_state_library_target_progress_m": curriculum_state_library_target_progress_m,
+        "curriculum_state_library_target_max_speed_kph": curriculum_state_library_target_max_speed_kph,
+        "curriculum_target_min_speed_kph": curriculum_target_min_speed_kph,
+        "curriculum_target_max_lateral_error_m": curriculum_target_max_lateral_error_m,
+        "curriculum_target_max_heading_error_deg": curriculum_target_max_heading_error_deg,
+        "curriculum_target_max_abs_yaw_rate_rps": curriculum_target_max_abs_yaw_rate_rps,
+        "curriculum_target_max_abs_steering": curriculum_target_max_abs_steering,
         "curriculum_chicane": curriculum_chicane,
         "compute_policy": policy,
         "benchmark_throughput": benchmark_throughput,
@@ -1072,6 +1294,8 @@ def run_training(
         "initialize_from_checkpoint": (
             str(initialize_from_checkpoint) if initialize_from_checkpoint is not None else None
         ),
+        "initialize_source_action_set": initialize_source_action_set,
+        "initialize_new_action_bias_penalty": initialize_new_action_bias_penalty,
         "transfer_weight_report": transfer_weight_report,
         "vec_normalize_path": str(vec_normalize_path) if vec_normalize_path is not None else None,
         "vec_normalize_load_mode": vec_normalize_load_mode,
@@ -1174,9 +1398,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--curriculum-start-stage-index", type=int, default=0)
     parser.add_argument("--curriculum-promotion-resets", type=int, default=300)
     parser.add_argument("--curriculum-normal-start-probability", type=float, default=0.0)
+    parser.add_argument("--curriculum-segment-fail-on-speed-gate-miss", action="store_true")
+    parser.add_argument("--curriculum-segment-require-release", action="store_true")
+    parser.add_argument("--curriculum-segment-release-max-brake", type=float, default=0.1)
     parser.add_argument("--curriculum-focus-start-progress-m", type=float)
     parser.add_argument("--curriculum-focus-window-m", type=float, default=0.0)
     parser.add_argument("--curriculum-focus-segment-length-m", type=float, default=500.0)
+    parser.add_argument("--curriculum-focus-target-progress-m", type=float)
+    parser.add_argument("--curriculum-focus-target-max-speed-kph", type=float)
+    parser.add_argument("--curriculum-target-min-speed-kph", type=float)
+    parser.add_argument("--curriculum-target-max-lateral-error-m", type=float)
+    parser.add_argument("--curriculum-target-max-heading-error-deg", type=float)
+    parser.add_argument("--curriculum-target-max-abs-yaw-rate-rps", type=float)
+    parser.add_argument("--curriculum-target-max-abs-steering", type=float)
     parser.add_argument("--curriculum-focus-min-speed-kph", type=float, default=120.0)
     parser.add_argument("--curriculum-focus-max-speed-kph", type=float, default=220.0)
     parser.add_argument("--curriculum-focus-position-noise-m", type=float, default=0.5)
@@ -1184,6 +1418,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--curriculum-focus-speed-noise-kph", type=float, default=5.0)
     parser.add_argument("--curriculum-state-library", type=Path)
     parser.add_argument("--curriculum-state-library-segment-length-m", type=float, default=900.0)
+    parser.add_argument("--curriculum-state-library-target-progress-m", type=float)
+    parser.add_argument("--curriculum-state-library-target-max-speed-kph", type=float)
     parser.add_argument("--curriculum-state-library-position-noise-m", type=float, default=0.0)
     parser.add_argument("--curriculum-state-library-heading-noise-deg", type=float, default=0.0)
     parser.add_argument("--curriculum-state-library-speed-noise-kph", type=float, default=0.0)
@@ -1200,11 +1436,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--assist-overspeed-turn-in-margin-kph", type=float)
     parser.add_argument("--assist-overspeed-turn-in-penalty", type=float)
     parser.add_argument("--assist-throttle-brake-demand-penalty-scale", type=float)
+    parser.add_argument("--assist-throttle-brake-demand-terminate", action="store_true")
+    parser.add_argument("--assist-throttle-brake-demand-min-throttle", type=float)
     parser.add_argument("--assist-no-brake-penalty", type=float)
     parser.add_argument("--assist-no-brake-min-brake", type=float)
+    parser.add_argument("--assist-no-brake-min-speed-kph", type=float)
+    parser.add_argument("--assist-no-brake-terminate", action="store_true")
+    parser.add_argument("--assist-overbrake-penalty", type=float)
+    parser.add_argument("--assist-overbrake-terminate", action="store_true")
+    parser.add_argument("--assist-overbrake-max-speed-kph", type=float)
+    parser.add_argument("--assist-overbrake-min-brake", type=float)
+    parser.add_argument("--assist-steering-gate-penalty", type=float)
+    parser.add_argument("--assist-steering-gate-terminate", action="store_true")
+    parser.add_argument("--assist-steering-gate-start-m", type=float)
+    parser.add_argument("--assist-steering-gate-end-m", type=float)
+    parser.add_argument("--assist-steering-gate-min-abs-steer", type=float)
+    parser.add_argument("--assist-steering-gate-required-sign", type=float)
+    parser.add_argument("--assist-steering-gate-min-speed-kph", type=float)
+    parser.add_argument("--assist-forbidden-steering-gate-penalty", type=float)
+    parser.add_argument("--assist-forbidden-steering-gate-terminate", action="store_true")
+    parser.add_argument("--assist-forbidden-steering-gate-start-m", type=float)
+    parser.add_argument("--assist-forbidden-steering-gate-end-m", type=float)
+    parser.add_argument("--assist-forbidden-steering-gate-min-abs-steer", type=float)
+    parser.add_argument("--assist-forbidden-steering-gate-sign", type=float)
+    parser.add_argument("--assist-forbidden-steering-gate-min-speed-kph", type=float)
     parser.add_argument("--assist-virtual-corridor-m", type=float)
     parser.add_argument("--assist-virtual-corridor-penalty", type=float)
     parser.add_argument("--assist-virtual-corridor-terminate", action="store_true")
+    parser.add_argument("--assist-brake-zone-progress-multiplier", type=float)
     parser.add_argument("--normalize-reward", action="store_true")
     parser.add_argument("--normalize-reward-gamma", type=float, default=0.99)
     parser.add_argument("--normalize-reward-clip", type=float, default=10.0)
@@ -1212,6 +1471,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--benchmark-throughput", action="store_true")
     parser.add_argument("--resume-checkpoint", type=Path)
     parser.add_argument("--initialize-from-checkpoint", type=Path)
+    parser.add_argument("--initialize-source-action-set", choices=sorted(ACTION_SETS))
+    parser.add_argument("--initialize-new-action-bias-penalty", type=float, default=-4.0)
     parser.add_argument("--reward-progress-scale", type=float)
     parser.add_argument("--reward-finish-bonus", type=float)
     parser.add_argument("--reward-collision-penalty", type=float)
@@ -1240,6 +1501,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--reward-scaffold-apex-clean-reward-scale", type=float)
     parser.add_argument("--reward-scaffold-exit-alignment-reward-scale", type=float)
     parser.add_argument("--reward-scaffold-exit-speed-reward-scale", type=float)
+    parser.add_argument("--reward-scaffold-release-reward-scale", type=float)
+    parser.add_argument("--reward-scaffold-overbrake-penalty-scale", type=float)
+    parser.add_argument("--reward-scaffold-release-min-speed-kph", type=float)
+    parser.add_argument("--reward-scaffold-release-max-speed-kph", type=float)
+    parser.add_argument("--reward-scaffold-brake-curve-penalty-scale", type=float)
+    parser.add_argument("--reward-scaffold-brake-curve-start-speed-kph", type=float)
+    parser.add_argument("--reward-scaffold-brake-curve-deadzone-kph", type=float)
+    parser.add_argument("--reward-scaffold-corridor-center-penalty-scale", type=float)
+    parser.add_argument("--reward-scaffold-corridor-center-deadzone-m", type=float)
+    parser.add_argument("--reward-scaffold-segment-speed-penalty-scale", type=float)
     parser.add_argument("--reward-scaffold-final-scale", type=float)
     parser.add_argument("--reward-scaffold-schedule-timesteps", type=int)
     parser.add_argument("--n-steps", type=int, default=128)
@@ -1274,9 +1545,19 @@ def main(argv: list[str] | None = None) -> int:
         curriculum_start_stage_index=args.curriculum_start_stage_index,
         curriculum_promotion_resets=args.curriculum_promotion_resets,
         curriculum_normal_start_probability=args.curriculum_normal_start_probability,
+        curriculum_segment_fail_on_speed_gate_miss=args.curriculum_segment_fail_on_speed_gate_miss,
+        curriculum_segment_require_release=args.curriculum_segment_require_release,
+        curriculum_segment_release_max_brake=args.curriculum_segment_release_max_brake,
         curriculum_focus_start_progress_m=args.curriculum_focus_start_progress_m,
         curriculum_focus_window_m=args.curriculum_focus_window_m,
         curriculum_focus_segment_length_m=args.curriculum_focus_segment_length_m,
+        curriculum_focus_target_progress_m=args.curriculum_focus_target_progress_m,
+        curriculum_focus_target_max_speed_kph=args.curriculum_focus_target_max_speed_kph,
+        curriculum_target_min_speed_kph=args.curriculum_target_min_speed_kph,
+        curriculum_target_max_lateral_error_m=args.curriculum_target_max_lateral_error_m,
+        curriculum_target_max_heading_error_deg=args.curriculum_target_max_heading_error_deg,
+        curriculum_target_max_abs_yaw_rate_rps=args.curriculum_target_max_abs_yaw_rate_rps,
+        curriculum_target_max_abs_steering=args.curriculum_target_max_abs_steering,
         curriculum_focus_min_speed_kph=args.curriculum_focus_min_speed_kph,
         curriculum_focus_max_speed_kph=args.curriculum_focus_max_speed_kph,
         curriculum_focus_position_noise_m=args.curriculum_focus_position_noise_m,
@@ -1284,6 +1565,8 @@ def main(argv: list[str] | None = None) -> int:
         curriculum_focus_speed_noise_kph=args.curriculum_focus_speed_noise_kph,
         curriculum_state_library=args.curriculum_state_library,
         curriculum_state_library_segment_length_m=args.curriculum_state_library_segment_length_m,
+        curriculum_state_library_target_progress_m=args.curriculum_state_library_target_progress_m,
+        curriculum_state_library_target_max_speed_kph=args.curriculum_state_library_target_max_speed_kph,
         curriculum_state_library_position_noise_m=args.curriculum_state_library_position_noise_m,
         curriculum_state_library_heading_noise_deg=args.curriculum_state_library_heading_noise_deg,
         curriculum_state_library_speed_noise_kph=args.curriculum_state_library_speed_noise_kph,
@@ -1293,6 +1576,8 @@ def main(argv: list[str] | None = None) -> int:
         benchmark_throughput=args.benchmark_throughput,
         resume_checkpoint=args.resume_checkpoint,
         initialize_from_checkpoint=args.initialize_from_checkpoint,
+        initialize_source_action_set=args.initialize_source_action_set,
+        initialize_new_action_bias_penalty=args.initialize_new_action_bias_penalty,
         reward_overrides=_reward_overrides_from_args(args),
         action_mode=args.action_mode,
         action_set=args.action_set,

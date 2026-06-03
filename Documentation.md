@@ -2885,3 +2885,704 @@ Results:
   - Strict goal remains unmet: no valid normal-start PPO lap and no `<=80.0s` lap.
   - Best honest candidate remains `970.775m`, `20/120`, collision.
   - The next PPO run must use the speed-gated chicane curriculum so segment success means braking skill, not merely reaching the target distance.
+
+### Racing-v2 VecNormalize Compatibility And Speed-Gated Probe - 2026-06-03
+- Probe failure found:
+  - Command attempted to initialize `observation_profile=racing_v2` from the best `racing` checkpoint while loading `best_vecnormalize.pkl`.
+  - SB3 rejected the old VecNormalize object because the saved observation shape was `(31,)` and `racing_v2` uses `(35,)`.
+  - This was an infrastructure issue, not a PPO behavior result.
+- Implementation fix:
+  - Added `_load_vecnormalize_with_reward_fallback` in `src\f1rl\train.py`.
+  - Exact VecNormalize loads still use SB3's standard path.
+  - If the old VecNormalize file has `norm_obs=False` and only the observation shape changed, training now creates a fresh wrapper for the new env and carries over reward running statistics only.
+  - If the old file used observation normalization, the fallback does not apply because old observation statistics would be invalid for the new shape.
+  - Run metadata now records `vec_normalize_load_mode`, e.g. `exact`, `fresh`, or `reward_stats_only_observation_shape_changed:(31,)->(35,)`.
+- Test added:
+  - `tests\test_policy_train_smoke.py::test_vecnormalize_reward_fallback_allows_observation_expansion`.
+- Validation:
+  - `uv run --no-sync ruff check src/f1rl/train.py tests/test_policy_train_smoke.py` -> passed.
+  - `uv run --no-sync pytest tests/test_policy_train_smoke.py::test_vecnormalize_reward_fallback_allows_observation_expansion -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warnings only.
+- End-to-end speed-gated probe:
+  - Command:
+    ```powershell
+    uv run --no-sync python -m f1rl.train --timesteps 64 --seed 989 --n-envs 2 --max-steps 1500 --device auto --require-gpu --vec-env subproc --initialize-from-checkpoint "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip" --vec-normalize-path "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_vecnormalize.pkl" --action-mode discrete --action-set racing --observation-profile racing_v2 --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 1 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --curriculum-promotion-resets 1000000 --curriculum-normal-start-probability 0.0 --reward-lateral-penalty-scale 0.004 --reward-track-limit-penalty-scale 0.004 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.001 --reward-speed-target-min-kph 80 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 18 --reward-speed-target-penalty-scale 0.001 --reward-overspeed-throttle-penalty-scale 0.003 --reward-overspeed-brake-reward-scale 0.001 --normalize-reward --n-steps 64 --batch-size 64 --n-epochs 1 --learning-rate 0.00001 --gamma 0.997 --ent-coef 0.002 --checkpoint-every 64 --eval-every 64 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-racingv2-speedgated-curriculum-probe-goal-64
+    ```
+  - Artifact: `artifacts\ppo-racingv2-speedgated-curriculum-probe-goal-64-20260603-023012`.
+  - Metadata:
+    - `observation_profile=racing_v2`.
+    - `action_set=racing`.
+    - `vec_normalize_load_mode=reward_stats_only_observation_shape_changed:(31,)->(35,)`.
+    - `transfer_initialization=true`.
+  - Eval rows:
+    - `0`: normal-start `970.775m`, `0` completion rate, segment completion rate `0.0`.
+    - `64`: normal-start `970.775m`, `0` completion rate, segment completion rate `0.0`.
+    - `128`: normal-start `970.775m`, `0` completion rate, segment completion rate `0.0`.
+  - Stage metrics:
+    - `rettifilo-approach-brake`: `2` episodes, segment completion rate `0.0`, mean best progress `968.006m`, termination `off_track`.
+  - Interpretation:
+    - The old policy still reaches the old near-970m crash region.
+    - The corrected speed-gated segment eval no longer counts this as a Rettifilo skill success.
+    - This confirms the next run will train against a more truthful curriculum target.
+
+### Transcript-Driven Aggressive Mode And Brake-Zone Assist Levers - 2026-06-03
+- User course correction:
+  - The active target remains unchanged: a valid normal-start PPO Monza lap near the Fast-F1 reference target.
+  - The current loop was too conservative and was stopped.
+  - The next milestone is not another small distance gain; it is changing the first bad event so the car brakes before Rettifilo turn-in and exits the section alive.
+- Stopped run:
+  - `artifacts\ppo-racingv2-speedgated-rettifilo-goal-30k-20260603-023655`.
+  - It was interrupted during initial evaluation after the user instructed a pause and transcript reread.
+  - It is not used as learning evidence.
+- Required files reread:
+  - `AGENTS.md`
+  - `Prompt.md`
+  - `Plan.md`
+  - `Implement.md`
+  - `LearningPlan.md`
+  - `fine-tuned learning plan.md`
+  - `transcripts\README.md`
+  - `transcripts\01-yosh-trackmania-2023.txt`
+  - `transcripts\02-yosh-noseboost.txt`
+  - `transcripts\03-yosh-a01.txt`
+  - `transcripts\04-yosh-a06.txt`
+  - `transcripts\05-f1rl-methods-summary.txt`
+- Transcript-derived operating rules now active:
+  - Treat the `970m` plateau as a failed training objective, not a runtime shortage.
+  - Make the old easy behavior fail quickly during training.
+  - Run short aggressive experiments with explicit rejection conditions.
+  - Keep section changes only if QC/telemetry show a materially different first bad event.
+  - Preserve elite states only when braking, entry, apex, exit, validity, speed, heading, and lateral criteria are actually met.
+  - Promote only metadata-faithful normal-start PPO evaluations with scaffold rewards and training assists disabled.
+- Implementation:
+  - Added training-only `AssistConfig.throttle_brake_demand_terminate`.
+  - Added `AssistConfig.throttle_brake_demand_min_throttle`.
+  - Added `AssistConfig.brake_zone_progress_multiplier`.
+  - Added reward component `assist_brake_zone_progress_suppression`.
+  - `MonzaSim` can now:
+    - terminate throttle-through-brake-demand immediately during assisted section training;
+    - cancel or scale progress reward while the car is overspeed in an active brake zone.
+  - Trainer CLI flags added:
+    - `--assist-throttle-brake-demand-terminate`
+    - `--assist-throttle-brake-demand-min-throttle`
+    - `--assist-brake-zone-progress-multiplier`
+- Rationale:
+  - The current failure is full throttle at about `520.8m`, `334kph`, where the section target is about `115kph`.
+  - Existing progress reward still made "go far fast and crash" locally attractive.
+  - The new levers directly remove that incentive during training-only Rettifilo experiments.
+- Validation:
+  - `uv run --no-sync ruff check src/f1rl/config.py src/f1rl/sim.py src/f1rl/train.py src/f1rl/telemetry.py tests/test_sim.py` -> passed.
+  - `uv run --no-sync pytest tests/test_sim.py::test_assist_can_terminate_throttle_in_brake_demand tests/test_sim.py::test_assist_can_suppress_brake_zone_progress_reward tests/test_sim.py::test_assist_components_are_zero_by_default -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Next mini-experiment:
+  - A short hard Rettifilo section run from the current best racing-action model.
+  - Use `racing_v2`, racing discrete actions, speed-gated Rettifilo curriculum, progress suppression in brake demand, immediate throttle-through-brake-demand termination, hard no-brake penalty, hard overspeed turn-in termination, and high overspeed-action penalties.
+  - Rejection condition: if the first trained eval still reports `throttle_during_brake_demand` around `520m`, reject quickly.
+
+### Aggressive Rettifilo Brake-Gate Mini-Experiment 1 Rejected - 2026-06-03
+- Hypothesis:
+  - If the old full-throttle behavior is terminal during assisted section training, PPO should discover a braking alternative.
+- Command:
+  ```powershell
+  uv run --no-sync python -m f1rl.train --timesteps 5000 --seed 1001 --n-envs 8 --max-steps 1500 --device auto --require-gpu --vec-env subproc --initialize-from-checkpoint "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip" --vec-normalize-path "artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_vecnormalize.pkl" --action-mode discrete --action-set racing --observation-profile racing_v2 --curriculum segments --curriculum-preset chicane-skill --curriculum-chicane rettifilo --curriculum-stage-count 2 --curriculum-state-library "artifacts\state-library-scripted-full-m4-20260602\state_library.json" --curriculum-promotion-resets 20 --curriculum-normal-start-probability 0.0 --assist-enabled --assist-throttle-brake-demand-terminate --assist-throttle-brake-demand-min-throttle 0.6 --assist-throttle-brake-demand-penalty-scale 20.0 --assist-brake-zone-progress-multiplier 0.0 --assist-no-brake-penalty -20.0 --assist-no-brake-min-brake 0.10 --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 20.0 --assist-overspeed-turn-in-penalty -120.0 --reward-progress-scale 0.02 --reward-collision-penalty -200.0 --reward-off-track-penalty -200.0 --reward-lateral-penalty-scale 0.006 --reward-track-limit-penalty-scale 0.006 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.002 --reward-speed-target-min-kph 70 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 8 --reward-speed-target-penalty-scale 0.008 --reward-overspeed-throttle-penalty-scale 0.05 --reward-overspeed-brake-reward-scale 0.01 --normalize-reward --n-steps 256 --batch-size 256 --n-epochs 2 --learning-rate 0.00003 --gamma 0.995 --ent-coef 0.006 --checkpoint-every 2500 --eval-every 2500 --eval-episodes 2 --telemetry selected --telemetry-every 1 --run-name ppo-aggressive-rettifilo-brakegate-goal-5k
+  ```
+- Artifact:
+  - `artifacts\ppo-aggressive-rettifilo-brakegate-goal-5k-20260603-024536`.
+- Eval progression:
+  - `0`: assisted normal-start best progress `520.81m`; segment completion `0.0`.
+  - `2504`: assisted normal-start best progress `520.91m`; segment completion `0.0`.
+  - `5008`: assisted normal-start best progress `520.93m`; segment completion `0.0`.
+- QC:
+  - Command:
+    ```powershell
+    uv run --no-sync python -m f1rl.qc --telemetry "artifacts\ppo-aggressive-rettifilo-brakegate-goal-5k-20260603-024536\eval\selected_telemetry\ppo_full_lap_train_00005008-episode-000-steps.jsonl" --max-telemetry-files 1
+    ```
+  - Artifact: `artifacts\qc-20260603-024747`.
+  - First bad event: still `throttle_during_brake_demand`.
+  - First bad progress: `520.925m`.
+  - First bad speed: `333.831kph`.
+  - Terminal: `assist_throttle_brake_demand`.
+  - Actions before failure: `176` `throttle`, `4` `brake_right`.
+- Decision:
+  - Rejected by the explicit rejection rule.
+  - The assist successfully made the old behavior fail at the brake gate, but PPO did not discover the alternative.
+- Important diagnosis:
+  - This run used `artifacts\state-library-scripted-full-m4-20260602\state_library.json`.
+  - That library has only one Rettifilo approach snapshot in the `450-560m` range: about `501.4m` at `106.8kph`.
+  - It therefore did not train the actual high-speed failure condition of `~334kph` at the brake gate.
+- Implementation fix for the next experiment:
+  - Added focus-target curriculum fields:
+    - `--curriculum-focus-target-progress-m`
+    - `--curriculum-focus-target-max-speed-kph`
+  - Focus windows can now sample high-speed starts near `520m` and require reaching a fixed target such as `720m` under a speed gate such as `190kph`.
+- Validation after focus-target change:
+  - `uv run --no-sync ruff check src/f1rl/curriculum.py src/f1rl/train.py tests/test_curriculum.py` -> passed.
+  - `uv run --no-sync pytest tests/test_curriculum.py::test_training_curriculum_focus_stage_can_target_progress_and_speed_gate -q` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+- Next hypothesis:
+  - Training must repeatedly start near the real failure state: `480-560m`, `310-340kph`, target `720m`, target max speed `190kph`.
+  - If the policy still chooses throttle at the brake gate after this high-speed focus run, reject again and switch to policy/action-logit intervention or elite action search.
+
+### Active Goal Prompt Reread And Scratch-Curriculum Reset - 2026-06-03
+- Active prompt:
+  - `goal.md` is now the active replacement goal prompt.
+  - The final success criterion is unchanged and strict: scratch/random SB3 PPO on CUDA completes a valid normal-start Monza lap near `<=80.0s`.
+  - Scratch means the PPO weights are random, not initialized from ghost, scripted, imitation, or existing trained PPO checkpoints.
+  - Curriculum is required and is not a loophole: isolate the current blocker, train the missing section skill, prove it with telemetry/QC/replay, then transfer to linked/full-lap training.
+  - Segment-only, assisted, scaffolded, partial-distance, or transferred-policy artifacts do not count as final success.
+- Required files reread before additional training:
+  - `goal.md`
+  - `AGENTS.md`
+  - `Prompt.md`
+  - `Plan.md`
+  - `Implement.md`
+  - `LearningPlan.md`
+  - `fine-tuned learning plan.md`
+  - `Documentation.md` latest audit sections
+  - `transcripts\README.md`
+  - `transcripts\01-yosh-trackmania-2023.txt`
+  - `transcripts\02-yosh-noseboost.txt`
+  - `transcripts\03-yosh-a01.txt`
+  - `transcripts\04-yosh-a06.txt`
+  - `transcripts\05-f1rl-methods-summary.txt`
+- Practical transcript interpretation for the next loop:
+  - Do not keep replaying the first kilometer when the missing behavior is a section skill.
+  - Make the bad local behavior impossible or expensive in focused training.
+  - Use starts near the actual failure state, not only convenient low-speed scripted snapshots.
+  - Reward and gate braking/entry/exit quality directly during section training.
+  - Remove training assists and scaffold rewards before any promotion claim.
+  - Preserve successful states only when speed, braking, heading, lateral error, validity, and no-collision criteria are met.
+- Online research checked before the next run:
+  - Stable-Baselines3 RL tips: custom environments generally need bounded/normalized observations, separate evaluation environments, wrapper-aware eval, multiple runs/seeds, and reward engineering iterations. Source: https://stable-baselines3.readthedocs.io/en/v2.0.0/guide/rl_tips.html
+  - Gymnasium custom environment guidance: action and observation spaces must define the contract, and reset options are the right hook for controlled start distributions. Source: https://gymnasium.farama.org/v1.0.0/introduction/create_custom_env/
+  - PPO paper: PPO alternates environment sampling with multiple minibatch epochs on a clipped/surrogate policy objective, which supports short iterative experiments but does not fix a bad reward/start distribution by itself. Source: https://arxiv.org/abs/1707.06347
+  - Automatic Curriculum Learning survey: curricula shape agent experience by adapting tasks to capability to improve sample efficiency, exploration, generalization, and sparse-reward learning. Source: https://arxiv.org/abs/2003.04664
+  - Self-Paced Deep RL: progressively adapting task distributions toward the target task improves learning speed/stability in curriculum settings. Source: https://arxiv.org/abs/2004.11812
+  - Reverse Curriculum Generation: start-state distributions should focus on intermediate-difficulty states and expand from mastered/near-goal states; this supports using Rettifilo section starts and elite states rather than blind full-lap PPO. Source: https://bair.berkeley.edu/blog/2017/12/20/reverse-curriculum/
+- Local validation before new training:
+  - `uv run --no-sync python -m f1rl.hardware --json` -> CUDA available, `NVIDIA GeForce RTX 4060 Laptop GPU`, Torch `2.10.0+cu128`, CUDA `12.8`.
+  - Local versions: Stable-Baselines3 `2.8.0`, Gymnasium `1.2.3`, Pygame `2.6.1`.
+  - `uv run --no-sync ruff check .` -> passed.
+  - `uv run --no-sync pyright src/f1rl` -> `0` errors, `0` warnings.
+  - `uv run --no-sync pytest -q` -> passed; known SB3 `VecMonitor` warning only.
+
+### Aggressive Rettifilo High-Speed Focus Diagnostic Rejected - 2026-06-03
+- Status:
+  - Diagnostic only, not a promotion candidate, because it initialized from an existing trained PPO checkpoint.
+- Hypothesis:
+  - Starting directly near the real high-speed failure state (`480-560m`, `310-340kph`) would expose the missing braking skill better than low-speed scripted-library starts.
+- Artifact:
+  - `artifacts\ppo-aggressive-rettifilo-highspeed-focus-goal-6k-20260603-025224`
+- Result:
+  - Initial assisted full-lap eval: `520.806m`, termination `assist_throttle_brake_demand`.
+  - Segment evals: `0.0` segment completion throughout.
+  - Final normal-start eval collapsed to about `152.116m`, `3/120`, `off_track`.
+  - Best final segment evidence reached only about `523.467m` from the focus start and terminated by `assist_throttle_brake_demand`.
+- QC:
+  - Artifact: `artifacts\qc-aggressive-highspeed-focus-segment-20260603-025650\qc-20260603-025618`.
+  - First bad event changed from pure `throttle_during_brake_demand` to `overspeed_at_braking_zone` while braking at `520.584m`, `314.938kph`.
+  - Terminal event remained `assist_throttle_brake_demand` at `523.467m`, `311.829kph`.
+  - Actions before failure: `24` throttle, `2` brake_left, `1` brake_right.
+- Decision:
+  - Rejected as a learning run because there was no segment completion and the full-lap behavior collapsed.
+  - Kept as diagnostic evidence: high-speed starts did expose a slightly different behavior, but the policy still failed to retain braking and returned to throttle almost immediately.
+
+### High-Speed Rettifilo Scripted State Library Generated - 2026-06-03
+- Purpose:
+  - Create physically coherent high-speed Rettifilo states for curriculum/backchaining because the old scripted full-lap library was too slow in the approach range.
+- Artifact:
+  - `artifacts\highspeed-rettifilo-scripted-library-20260603-030010`
+  - State library: `artifacts\highspeed-rettifilo-scripted-library-20260603-030010\state_library.json`
+- Contents:
+  - `91` snapshots from scripted high-speed Rettifilo attempts.
+  - Approach snapshots include speeds up to about `330kph`.
+  - Selected rollouts from starts at `480m`, `500m`, `520m`, `540m`, and `560m` could reach the Rettifilo exit/post-exit target under speed gates.
+- Guardrail:
+  - This state library is a curriculum/debugging resource only.
+  - It is not an imitation initialization and does not count toward final success.
+  - Final promotion still requires scratch PPO weights and honest normal-start eval with assists/scaffolds disabled.
+
+### Aggressive Rettifilo Backchain Library Diagnostic Rejected - 2026-06-03
+- Status:
+  - Diagnostic only, not a promotion candidate, because it resumed from a previous trained PPO checkpoint.
+- Hypothesis:
+  - Backchaining from the high-speed Rettifilo state library would reduce the approach speed enough for PPO to discover sustained braking.
+- Artifact:
+  - `artifacts\ppo-aggressive-rettifilo-backchain-library-goal-8k-20260603-030432`
+- Result:
+  - Initial normal-start eval was effectively dead: about `3.595m`, `max_steps`.
+  - Final normal-start eval was still collapsed: about `214.165m`, `4/120`, `off_track`.
+  - Segment completion remained `0.0`.
+  - Final segment evidence reached only `523.775m` and terminated by `assist_throttle_brake_demand`.
+- QC:
+  - Artifact: `artifacts\qc-aggressive-backchain-segment-20260603-031000\qc-20260603-030948`.
+  - First bad event: `overspeed_at_braking_zone` at `521.570m`, `240.316kph`, action `brake_left`.
+  - Terminal event: `assist_throttle_brake_demand` at `523.775m`, `238.545kph`, action `throttle`.
+  - Actions before failure: only `brake_left: 1`; the very next relevant action returned to throttle.
+- Decision:
+  - Rejected.
+  - Useful signal: the state-library/backchain setup lowered speed from `~315kph` to `~240kph`, but the policy still did not learn sustained braking or a valid section exit.
+
+### Next Scratch Curriculum Experiment - 2026-06-03
+- Active hypothesis:
+  - The transferred policy is too biased toward the old throttle solution. A scratch PPO policy trained only on the real high-speed Rettifilo brake gate should learn the local "do not throttle, brake and slow down" skill more cleanly.
+- Experiment shape:
+  - Random PPO weights.
+  - `observation_profile=racing_v2`.
+  - `action_set=racing`.
+  - High-speed focus starts around `520m`, `310-340kph`.
+  - Target `720m` with target max speed `190kph`.
+  - Strong training-only assist termination for throttle-through-brake-demand.
+  - Zero progress reward in active brake demand.
+  - High entropy to force exploration.
+  - Short eval interval and immediate QC inspection.
+- Rejection condition:
+  - Reject quickly if segment eval still ends at `~520-524m` with `assist_throttle_brake_demand` and action histograms dominated by throttle.
+- Keep condition:
+  - Keep and scale only if telemetry shows sustained braking, lower speed at `520-720m`, later first-bad-event, or nonzero speed-gated section completion.
+
+### Scratch Rettifilo High-Speed Brake-Gate Experiment 1 Rejected, 4k Branch Preserved - 2026-06-03
+- Hypothesis:
+  - The transferred policy was too biased toward the old throttle solution; a random PPO policy trained directly on high-speed Rettifilo starts would discover braking more cleanly.
+- Command:
+  ```powershell
+  uv run --no-sync python -m f1rl.train --timesteps 12000 --seed 1101 --n-envs 8 --max-steps 900 --device auto --require-gpu --vec-env subproc --action-mode discrete --action-set racing --observation-profile racing_v2 --curriculum segments --curriculum-focus-start-progress-m 520 --curriculum-focus-window-m 80 --curriculum-focus-target-progress-m 720 --curriculum-focus-target-max-speed-kph 190 --curriculum-focus-min-speed-kph 310 --curriculum-focus-max-speed-kph 340 --curriculum-focus-position-noise-m 0.3 --curriculum-focus-heading-noise-deg 1.0 --curriculum-focus-speed-noise-kph 2.0 --curriculum-promotion-resets 1000000 --curriculum-normal-start-probability 0.0 --assist-enabled --assist-throttle-brake-demand-terminate --assist-throttle-brake-demand-min-throttle 0.25 --assist-throttle-brake-demand-penalty-scale 40.0 --assist-brake-zone-progress-multiplier 0.0 --assist-no-brake-penalty -40.0 --assist-no-brake-min-brake 0.10 --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 75.0 --assist-overspeed-turn-in-penalty -160.0 --reward-progress-scale 0.01 --reward-collision-penalty -220.0 --reward-off-track-penalty -220.0 --reward-lateral-penalty-scale 0.006 --reward-track-limit-penalty-scale 0.006 --reward-heading-deadzone-deg 8 --reward-heading-penalty-scale 0.002 --reward-speed-target-min-kph 70 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 8 --reward-speed-target-penalty-scale 0.006 --reward-overspeed-throttle-penalty-scale 0.08 --reward-overspeed-brake-reward-scale 0.03 --reward-scaffold-brake-reward-scale 3.0 --reward-scaffold-no-throttle-penalty-scale 4.0 --reward-scaffold-turn-in-speed-penalty-scale 2.0 --reward-scaffold-apex-clean-reward-scale 0.05 --reward-scaffold-exit-alignment-reward-scale 0.05 --reward-scaffold-exit-speed-reward-scale 0.05 --normalize-reward --n-steps 256 --batch-size 256 --n-epochs 4 --learning-rate 0.0001 --gamma 0.995 --ent-coef 0.04 --checkpoint-every 2000 --eval-every 2000 --eval-episodes 4 --telemetry selected --telemetry-every 1 --run-name ppo-scratch-rettifilo-highspeed-brakegate-goal-12k
+  ```
+- Artifact:
+  - `artifacts\ppo-scratch-rettifilo-highspeed-brakegate-goal-12k-20260603-032057`
+- Validation/hardware:
+  - `device=cuda`, `vec_env=subproc`, training FPS `68.2`, env steps/sec `545.7`.
+  - Initial policy was scratch/random: `scratch_initialization=true`, `transfer_initialization=false`, `resume_checkpoint=null`.
+- Eval summary:
+  - `0`: full-lap `0.0m`; segment completion `0.0`; mean segment best `597.61m`; segment terminations `1` assist throttle, `3` collisions.
+  - `2000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `586.09m`; terminations `1` assist throttle, `3` collisions.
+  - `4000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `615.71m`; mean segment delta `110.90m`; terminations `4` collisions.
+  - `6000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `554.96m`; terminations `4` assist throttle.
+  - `8000`: full-lap `27.85m`; segment completion `0.0`; mean segment best `543.75m`; terminations `4` assist throttle.
+  - `10000`: full-lap `24.99m`; segment completion `0.0`; mean segment best `536.06m`; terminations `4` assist throttle.
+  - `12000`: full-lap `12.58m`; segment completion `0.0`; mean segment best `530.43m`; terminations `4` assist throttle.
+- QC at the useful `4000` checkpoint:
+  - Telemetry: `artifacts\ppo-scratch-rettifilo-highspeed-brakegate-goal-12k-20260603-032057\eval\selected_telemetry\ppo_curriculum_segment_train_00004000-episode-000-steps.jsonl`.
+  - QC artifact: `artifacts\qc-scratch-highspeed-brakegate-4k-20260603-032057\qc-20260603-032448`.
+  - First bad event: `overspeed_at_braking_zone` at `526.648m`, `313.340kph`.
+  - Terminal: collision at `600.601m`, `258.736kph`.
+  - Average throttle/brake in Rettifilo: `0.0` / `0.35`.
+  - Action histogram: `soft_brake_soft_right: 59`.
+  - Interpretation: the run discovered braking and stopped throttle, but collapsed to a single soft-brake/right-steer action that slowed too little and crashed before turn-in.
+- QC at final `12000` checkpoint:
+  - QC artifact: `artifacts\qc-scratch-highspeed-brakegate-12k-20260603-032057\qc-20260603-032448`.
+  - First bad event: `throttle_during_brake_demand` at `520.072m`, `314.843kph`.
+  - Terminal: `assist_throttle_brake_demand` at `520.072m`, `314.843kph`.
+  - Average throttle/brake in Rettifilo: `0.5` / `0.0`.
+  - Actions before failure: `half_throttle_right: 18`.
+  - Interpretation: final policy regressed to the old root failure, now through half-throttle.
+- Decision:
+  - Final `12k` checkpoint rejected.
+  - Experiment not promoted: no segment completion, no valid lap, no normal-start progress.
+  - Preserve the `4000` scratch-derived checkpoint as a branch point because it materially changed behavior from throttle to braking and revealed the next blocker: full-brake intensity plus line/turn-in control.
+- Next branch hypothesis:
+  - Continue from `artifacts\ppo-scratch-rettifilo-highspeed-brakegate-goal-12k-20260603-032057\checkpoints\ppo_monza_4000_steps.zip`, not from the regressed final checkpoint.
+  - Increase pressure for full braking instead of soft braking.
+  - Add stronger steering/line/corridor pressure so the policy cannot solve the gate by repeating `soft_brake_soft_right`.
+  - Keep target `720m <=190kph`; reject if it returns to throttle or a single wrong steering action.
+
+### Scratch-Derived 4k Full-Brake/Line Branch Rejected - 2026-06-03
+- Hypothesis:
+  - The useful `4000` checkpoint from the scratch run could be refined by penalizing soft braking, adding corridor termination, and adding steering-target pressure.
+- Command:
+  ```powershell
+  uv run --no-sync python -m f1rl.train --timesteps 8000 --seed 1102 --n-envs 8 --max-steps 900 --device auto --require-gpu --vec-env subproc --resume-checkpoint "artifacts\ppo-scratch-rettifilo-highspeed-brakegate-goal-12k-20260603-032057\checkpoints\ppo_monza_4000_steps.zip" --vec-normalize-path "artifacts\ppo-scratch-rettifilo-highspeed-brakegate-goal-12k-20260603-032057\vecnormalize.pkl" --action-mode discrete --action-set racing --observation-profile racing_v2 --curriculum segments --curriculum-focus-start-progress-m 520 --curriculum-focus-window-m 80 --curriculum-focus-target-progress-m 720 --curriculum-focus-target-max-speed-kph 190 --curriculum-focus-min-speed-kph 310 --curriculum-focus-max-speed-kph 340 --curriculum-focus-position-noise-m 0.3 --curriculum-focus-heading-noise-deg 1.0 --curriculum-focus-speed-noise-kph 2.0 --curriculum-promotion-resets 1000000 --curriculum-normal-start-probability 0.0 --assist-enabled --assist-throttle-brake-demand-terminate --assist-throttle-brake-demand-min-throttle 0.25 --assist-throttle-brake-demand-penalty-scale 40.0 --assist-brake-zone-progress-multiplier 0.0 --assist-no-brake-penalty -120.0 --assist-no-brake-min-brake 0.90 --assist-overspeed-turn-in-terminate --assist-overspeed-turn-in-margin-kph 75.0 --assist-overspeed-turn-in-penalty -160.0 --assist-virtual-corridor-m 9.0 --assist-virtual-corridor-penalty -80.0 --assist-virtual-corridor-terminate --reward-progress-scale 0.005 --reward-collision-penalty -240.0 --reward-off-track-penalty -240.0 --reward-lateral-penalty-scale 0.02 --reward-track-limit-penalty-scale 0.02 --reward-heading-deadzone-deg 6 --reward-heading-penalty-scale 0.006 --reward-speed-target-min-kph 70 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 4 --reward-speed-target-penalty-scale 0.01 --reward-overspeed-throttle-penalty-scale 0.08 --reward-overspeed-brake-reward-scale 0.08 --reward-steering-target-deadzone 0.08 --reward-steering-target-penalty-scale 0.15 --reward-scaffold-brake-reward-scale 5.0 --reward-scaffold-no-throttle-penalty-scale 5.0 --reward-scaffold-turn-in-speed-penalty-scale 3.0 --reward-scaffold-apex-clean-reward-scale 0.05 --reward-scaffold-exit-alignment-reward-scale 0.08 --reward-scaffold-exit-speed-reward-scale 0.05 --normalize-reward --n-steps 256 --batch-size 256 --n-epochs 3 --learning-rate 0.00005 --gamma 0.995 --ent-coef 0.02 --checkpoint-every 2000 --eval-every 2000 --eval-episodes 4 --telemetry selected --telemetry-every 1 --run-name ppo-scratch-rettifilo-4k-fullbrake-line-goal-8k
+  ```
+- Artifact:
+  - `artifacts\ppo-scratch-rettifilo-4k-fullbrake-line-goal-8k-20260603-032828`
+- Eval summary:
+  - Initial resume: full-lap `0.0m`; segment completion `0.0`; mean segment best `594.63m`; terminations `4` virtual corridor.
+  - `2000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `595.49m`; terminations `4` virtual corridor.
+  - `4000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `577.74m`; terminations `4` virtual corridor.
+  - `6000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `535.66m`; terminations `4` assist throttle.
+  - `8000`: full-lap `0.0m`; segment completion `0.0`; mean segment best `536.10m`; terminations `4` assist throttle.
+- QC at `2000`:
+  - Artifact: `artifacts\qc-scratch-4k-fullbrake-line-2k-20260603-032828\qc-20260603-033046`.
+  - First bad event: `overspeed_at_braking_zone` at `539.500m`, `321.985kph`.
+  - Terminal: `assist_virtual_corridor` at `591.507m`, `281.921kph`.
+  - Action histogram: `soft_brake_soft_right: 39`.
+  - Max lateral error: `9.030m`; max heading error: `17.383deg`.
+- QC at `8000`:
+  - Artifact: `artifacts\qc-scratch-4k-fullbrake-line-8k-20260603-032828\qc-20260603-033046`.
+  - First bad event: `throttle_during_brake_demand` at `543.302m`, `315.608kph`.
+  - Terminal: `assist_throttle_brake_demand`.
+  - Action histogram: `half_throttle_left: 1`.
+- Decision:
+  - Rejected.
+  - The `racing` action set still encourages soft/half action local optima under this setup.
+  - Stronger no-brake penalties and corridor termination did not produce full braking or a speed-gated Rettifilo approach success.
+- Next axis:
+  - Run a fresh scratch high-speed focus with `action_set=legacy` to remove half-throttle and soft-brake actions from the local search.
+  - Keep the same honest guardrail: section training can be assisted/scaffolded, but no final promotion can use assists/scaffolds or transferred/scripted initialization.
+
+### Scratch Legacy-Action High-Speed Rettifilo Experiment Rejected - 2026-06-03
+- Hypothesis:
+  - Removing half-throttle and soft-brake actions would stop the local optima seen with the richer `racing` action set and force PPO to choose full braking in the high-speed Rettifilo brake gate.
+- Artifact:
+  - `artifacts\ppo-scratch-legacy-rettifilo-highspeed-brakegate-goal-10k-20260603-033227`
+- Result:
+  - Scratch/random initial policy: `scratch_initialization=true`, `transfer_initialization=false`, CUDA training.
+  - `0`: segment completion `0.0`, mean segment best `538.66m`, mean segment delta `15.89m`.
+  - `2000`: segment completion `0.0`, mean segment best `554.49m`, mean segment delta `46.90m`.
+  - `4000`: segment completion `0.0`, mean segment best `554.12m`, mean segment delta `0.0m`.
+  - `6000`: segment completion `0.0`, mean segment best `535.62m`, mean segment delta `0.76m`.
+  - `8000`: segment completion `0.0`, mean segment best `523.02m`, mean segment delta `14.44m`.
+  - `10000`: segment completion `0.0`, mean segment best `520.46m`, mean segment delta `19.72m`.
+- QC at useful `2000` interval:
+  - Artifact: `artifacts\qc-scratch-legacy-highspeed-2k-20260603-033227\qc-20260603-033504`.
+  - First bad event: `overspeed_at_braking_zone` at `521.134m`, `284.003kph`.
+  - Terminal: `assist_virtual_corridor` at `547.648m`, `264.484kph`.
+  - Action histogram: `brake_right: 27`, `right: 22`, `throttle_left: 1`.
+  - Average throttle/brake: `0.02` / `0.54`.
+  - Max lateral error: `12.195m`; max heading error: `22.338deg`.
+- QC at final `10000` interval:
+  - Artifact: `artifacts\qc-scratch-legacy-highspeed-10k-20260603-033227\qc-20260603-033504`.
+  - First bad event: `throttle_during_brake_demand` at `520.398m`, `302.102kph`.
+  - Terminal: `assist_throttle_brake_demand`.
+  - Action histogram: `throttle_left: 11`.
+- Decision:
+  - Rejected.
+  - The legacy action space did force full-brake actions early, but the policy coupled braking with steering (`brake_right`) and exited the corridor well before the `720m` turn-in target.
+  - Later training regressed back to throttle.
+- Probe:
+  - A one-off simulator probe showed `_target_steer()` is near straight through the brake phase:
+    - `520m`: `0.015`
+    - `540m`: `0.015`
+    - `560m`: `0.016`
+    - `600m`: `-0.004`
+    - `650m`: `0.019`
+  - Therefore the next experiment can use a much stronger existing `reward_steering_target_penalty_scale` instead of adding a new code path yet.
+- Next axis:
+  - Decompose Rettifilo further into a pure braking micro-stage.
+  - Start around `500-540m`, `310-340kph`.
+  - Target `600m` with max speed around `260kph`.
+  - Use legacy actions, full-brake pressure, and strong straight-steering penalty.
+  - Only after this micro-stage succeeds should turn-in/exit be trained.
+
+### Scratch Legacy Pure-Brake Micro-Stage Rejected - 2026-06-03
+- Hypothesis:
+  - A smaller Rettifilo micro-stage (`~520m` start, target `600m <=260kph`) with legacy actions, zero progress reward, full-brake pressure, a narrow corridor, and strong target-steer penalty would teach the missing straight-line braking skill before turn-in.
+- Artifact:
+  - `artifacts\ppo-scratch-legacy-rettifilo-brake-straight-micro-goal-6k-20260603-033723`
+- Result:
+  - Scratch/random initial policy: `scratch_initialization=true`, `transfer_initialization=false`, CUDA training.
+  - Eval table:
+    - `0`: segment completion `0.0`, mean segment best `575.66m`, terminations `6` virtual-corridor.
+    - `1000`: segment completion `0.0`, mean segment best `573.84m`, terminations `6` virtual-corridor.
+    - `2000`: segment completion `0.0`, mean segment best `529.31m`, terminations `6` throttle-brake-demand.
+    - `3000`: segment completion `0.0`, mean segment best `529.28m`, terminations `6` throttle-brake-demand.
+    - `4000`: segment completion `0.0`, mean segment best `526.46m`, terminations `6` throttle-brake-demand.
+    - `5000`: segment completion `0.0`, mean segment best `526.57m`, terminations `6` throttle-brake-demand.
+    - `6000`: segment completion `0.0`, mean segment best `522.07m`, terminations `6` throttle-brake-demand.
+  - Full-lap diagnostic at final was only `239.04m`, `4/120`, `max_steps`; no valid lap and no finish.
+- QC:
+  - Initial QC artifact: `artifacts\qc-scratch-legacy-brake-straight-micro-initial-20260603-033723\qc-20260603-034344`.
+    - First bad event: `overspeed_at_braking_zone` at `526.979m`, `315.914kph`.
+    - Terminal: `assist_virtual_corridor` at `580.577m`, `274.956kph`.
+    - Actions: `left: 41`, average throttle/brake `0.0/0.0`.
+  - `1000` QC artifact: `artifacts\qc-scratch-legacy-brake-straight-micro-1k-20260603-033723\qc-20260603-034344`.
+    - First bad event: `overspeed_at_braking_zone` at `521.034m`, `309.547kph`.
+    - Terminal: `assist_virtual_corridor` at `564.798m`, `276.273kph`.
+    - Actions: `left: 39`, average throttle/brake `0.0/0.0`.
+  - Final QC artifact: `artifacts\qc-scratch-legacy-brake-straight-micro-6k-20260603-033723\qc-20260603-034344`.
+    - First bad event: `throttle_during_brake_demand` at `521.384m`, `318.552kph`.
+    - Terminal: `assist_throttle_brake_demand` at the same point.
+    - Actions: `throttle: 14`, average throttle/brake `1.0/0.0`.
+- Diagnosis:
+  - The run exposed a reward-design bug in the focused assisted setup.
+  - Immediate throttle termination produced a short episode around `-217` reward, while wrong-but-longer coasting/steering attempts accumulated thousands of per-step no-brake and steering penalties before corridor termination.
+  - PPO learned the short-episode escape hatch instead of braking.
+  - The global speed-target reward did not penalize the straight brake-zone overspeed because the lookahead-derived target remained high on the straight approach; the active section pressure came mostly from action-dependent assist/scaffold terms.
+- Decision:
+  - Reject the final checkpoint and do not preserve this branch.
+  - Next experiment should keep scratch/random weights but change the local objective so `throttle` in brake demand is catastrophically worse than attempting the segment, reduce or remove the per-step no-brake trap that makes long exploration look worse than quick death, and make full straight braking strongly positive.
+
+### Scratch Legacy Anti-Escape Brake Micro-Stage Succeeded - 2026-06-03
+- Hypothesis:
+  - The prior micro-stage failed because quick throttle termination was less negative than longer exploration. Make throttle during brake demand catastrophically worse, reduce the per-step no-brake trap, keep full-brake reward high, and train the same `520m -> 600m <=220kph` gate from random PPO weights.
+- Command:
+  ```powershell
+  uv run --no-sync python -m f1rl.train --timesteps 8000 --seed 1131 --n-envs 8 --max-steps 180 --device auto --require-gpu --vec-env subproc --action-mode discrete --action-set legacy --observation-profile racing_v2 --curriculum segments --curriculum-focus-start-progress-m 520 --curriculum-focus-window-m 20 --curriculum-focus-target-progress-m 600 --curriculum-focus-target-max-speed-kph 220 --curriculum-focus-min-speed-kph 315 --curriculum-focus-max-speed-kph 335 --curriculum-focus-position-noise-m 0.2 --curriculum-focus-heading-noise-deg 0.5 --curriculum-focus-speed-noise-kph 1.0 --curriculum-promotion-resets 1000000 --curriculum-normal-start-probability 0.0 --assist-enabled --assist-throttle-brake-demand-terminate --assist-throttle-brake-demand-min-throttle 0.25 --assist-throttle-brake-demand-penalty-scale 2000.0 --assist-brake-zone-progress-multiplier 0.0 --assist-no-brake-penalty -8.0 --assist-no-brake-min-brake 0.90 --assist-virtual-corridor-m 12.0 --assist-virtual-corridor-penalty -120.0 --assist-virtual-corridor-terminate --reward-progress-scale 0.0 --reward-collision-penalty -500.0 --reward-off-track-penalty -500.0 --reward-lateral-penalty-scale 0.01 --reward-track-limit-penalty-scale 0.01 --reward-heading-deadzone-deg 5 --reward-heading-penalty-scale 0.004 --reward-speed-target-min-kph 70 --reward-speed-target-max-kph 340 --reward-speed-target-heading-scale 2.5 --reward-speed-target-deadzone-kph 4 --reward-speed-target-penalty-scale 0.0 --reward-overspeed-throttle-penalty-scale 0.0 --reward-overspeed-brake-reward-scale 0.0 --reward-steering-target-deadzone 0.04 --reward-steering-target-penalty-scale 0.3 --reward-scaffold-brake-reward-scale 20.0 --reward-scaffold-no-throttle-penalty-scale 20.0 --reward-scaffold-turn-in-speed-penalty-scale 0.0 --normalize-reward --n-steps 128 --batch-size 128 --n-epochs 4 --learning-rate 0.0001 --gamma 0.99 --ent-coef 0.08 --checkpoint-every 1000 --eval-every 1000 --eval-episodes 8 --telemetry selected --telemetry-every 1 --run-name ppo-scratch-legacy-rettifilo-brake-anti-escape-micro-goal-8k
+  ```
+- Artifact:
+  - `artifacts\ppo-scratch-legacy-rettifilo-brake-anti-escape-micro-goal-8k-20260603-034805`
+- Result:
+  - Scratch/random initialization confirmed: no resume, no transfer, CUDA training.
+  - Eval progression:
+    - `0`: segment completion `0.0`, mean segment best `584.61m`, terminations `8` throttle-brake-demand.
+    - `1000`: segment completion `0.0`, mean segment best `586.57m`, terminations `8` throttle-brake-demand.
+    - `2000`: segment completion `0.0`, mean segment best `597.28m`, terminations `8` virtual-corridor.
+    - `3000-7000`: segment completion `0.0`, virtual-corridor failures.
+    - `8000`: segment completion `1.0`, mean segment best `600.41m`, terminations `8` segment-complete.
+  - Full-lap metric remained `0.0m` throughout and is irrelevant for this micro-stage.
+- QC:
+  - Useful early diagnostic: `artifacts\qc-scratch-legacy-brake-anti-escape-micro-2k-20260603-034805\qc-20260603-035143`.
+    - Full braking appeared, but the policy coupled it with `brake_left/brake_right` and exited the corridor at `~596m`, `~266.5kph`.
+  - Success artifact: `artifacts\qc-scratch-legacy-brake-anti-escape-micro-8k-20260603-034805\qc-20260603-040142`.
+    - Terminal: `segment_complete` at `600.321m`, `159.150kph`.
+    - Actions: `brake: 67`.
+    - Average throttle/brake: `0.0` / `1.0`.
+    - Max lateral error: `0.167m`.
+    - Max heading error: `0.685deg`.
+- Decision:
+  - Preserve `artifacts\ppo-scratch-legacy-rettifilo-brake-anti-escape-micro-goal-8k-20260603-034805\checkpoints\ppo_monza_8000_steps.zip` as the first scratch-derived Rettifilo straight-braking micro-skill checkpoint.
+  - This is not promotion toward final success by itself because it is assisted/scaffolded section training only.
+  - Next stage: continue from this scratch-derived checkpoint into a longer braking/turn-in gate, e.g. `520m -> 720m <=190kph`, with scaffold/assist still enabled and immediate QC.
+
+### Brake-Straight Action-Set Probe Rejected - 2026-06-03
+- Purpose:
+  - Test whether removing combined brake/steer actions would make the straight-brake micro-skill easier.
+- Implementation:
+  - Added `BRAKE_STRAIGHT_DISCRETE_ACTIONS` and CLI action set `brake_straight`.
+  - Actions: coast, throttle, brake, left, right.
+  - Focused validation passed:
+    - `uv run --no-sync ruff check src\f1rl\config.py tests\test_sim.py` -> passed.
+    - `uv run --no-sync pytest tests\test_sim.py -q` -> passed.
+    - `uv run --no-sync python -m f1rl.train --help` -> `--action-set {brake_straight,expanded,legacy,racing}`.
+- Artifact:
+  - `artifacts\ppo-scratch-brakestreet-rettifilo-straight-brake-micro-goal-4k-20260603-035659`
+- Result:
+  - Stopped after the `2000` eval because `segment_completion_rate` remained `0.0` and mean segment best regressed from `593.50m` to `587.99m`.
+  - QC at `1000`: `artifacts\qc-scratch-brakestreet-straight-brake-micro-1k-20260603-035659\qc-20260603-035849`.
+    - Actions: `right: 49`, `left: 1`.
+    - Average throttle/brake: `0.0` / `0.0`.
+    - Terminal: `assist_virtual_corridor` at `588.018m`, `276.973kph`.
+- Decision:
+  - Reject as a training branch because it did not discover braking quickly.
+  - Keep the action set available as an experimental tool, but the active branch is the successful legacy anti-escape `8000` checkpoint.
+
+### Release-Gated Brake-Release Backchain and Rettifilo Corridor Audit - 2026-06-03
+- Context:
+  - The old honest normal-start PPO ceiling remains no valid lap, with best trusted normal-start progress around `970.775m` and collision near Rettifilo.
+  - The active fine-tuned plan required rejecting fake segment success and proving linked brake-release transfer before moving to steering/full Rettifilo.
+- Implementation changes:
+  - Added strict segment release gating:
+    - Reset options: `segment_require_release`, `segment_release_max_brake`, `segment_release_max_throttle`, `segment_release_min_speed_kph`, `segment_release_max_speed_kph`.
+    - New terminal reason: `segment_release_gate_failed`.
+    - Curriculum/CLI flags: `--curriculum-segment-require-release`, `--curriculum-segment-release-max-brake`.
+  - Added strict speed/release support fields to `info`: `segment_require_release`, `segment_release_observed`.
+  - Added `brake_release` action set: `brake`, `trail_brake`, `coast`.
+  - Added `release_brake` action set: `coast`, `trail_brake`, `brake`.
+  - Added dense scaffold `scaffold_brake_curve` to penalize deviation from a section-relative braking speed curve.
+  - Added `racing_release` observation profile features for release threshold/surplus/deficit/in-band state.
+  - Added `--initialize-source-action-set` so action-head expansion can map source rows by action semantics when transferring from a smaller action set.
+  - Added state-library progress/speed filters used for release/backchain libraries.
+- Validation:
+  - `uv run --no-sync ruff check src\f1rl\config.py src\f1rl\telemetry.py src\f1rl\sim.py src\f1rl\curriculum.py src\f1rl\train.py tests\test_sim.py tests\test_curriculum.py` passed during development.
+  - `uv run --no-sync pytest tests\test_sim.py tests\test_curriculum.py -q` passed (`48` focused tests).
+  - `uv run --no-sync ruff check src\f1rl\train.py` passed after adding `--initialize-source-action-set`.
+- Key rejected experiments:
+  - `artifacts\ppo-link520-crispgate-1024-20260603-060019`: `0/8`, all `assist_overbrake_gate` through `1024`; rejected.
+  - `artifacts\ppo-link520-brakerelease-scratch-1536-20260603-061056`: `0/8`, all `assist_overbrake_gate` through `512`; rejected early.
+  - `artifacts\ppo-link520-brakecurve-term-1024-20260603-061547`: changed no-brake to overbrake but no completion; rejected at `768`.
+  - `artifacts\ppo-link520-brakecurve-softover-1024-20260603-061914`: got `8/8` strict speed-gated completions at `384`, but QC showed fake release: `trail_brake:107`, no coast; rejected as promotion but kept as diagnostic.
+  - `artifacts\ppo-link520-releasegate-transfer-1024-20260603-062810`: release gate correctly demoted trail-only behavior; `0/8` through `512`, all `segment_release_gate_failed`.
+  - `artifacts\ppo-rel570-releasegate-transfer-1024-20260603-063155`: release-gated 570->650 with `brake_release` stayed `0/12`, gate failed; logit inspection showed deterministic action bias away from `coast`.
+- Accepted release/backchain milestones:
+  - `artifacts\ppo-rel570-releasebrake-gated-scratch-1024-20260603-063822`:
+    - Initial random `release_brake` policy completed `12/12` on release-gated 570->650.
+    - QC: `artifacts\qc-ppo-rel570-releasebrake-initial-20260603-063822\qc-20260603-063944`.
+    - Selected replay: `segment_complete` at `650.522m`, `157.005kph`; actions `brake:10`, `trail_brake:1`, `coast:76`.
+  - `artifacts\ppo-rel540-highspeed-softnobrake-1024-20260603-065156`:
+    - High-speed 540->571 backchain initially failed speed gate, then solved at `896/1024` with `13/13` completions.
+    - QC: `artifacts\qc-ppo-rel540-highspeed-softnobrake-1024-20260603-065156\qc-20260603-070026`.
+    - Selected replay: `segment_complete` at `650.694m`, `157.422kph`; actions `brake:37`, `coast:77`.
+  - `artifacts\ppo-link520-releasebrake-softnobrake-transfer-1024-20260603-070121`:
+    - Strict linked 520->650 release-gated retest completed `8/8` at initial transfer.
+    - QC: `artifacts\qc-ppo-link520-releasebrake-softnobrake-initial-20260603-070121\qc-20260603-070238`.
+    - Selected replay: `segment_complete` at `650.784m`, `154.489kph`; actions `brake:50`, `coast:86`.
+    - This is the first accepted linked brake-release transfer milestone. It is scaffolded/assisted section training, not final success.
+- Steering / Rettifilo extension:
+  - `artifacts\ppo-turnin760-expanded-transfer-1024-20260603-070512`:
+    - Expanded action-set transfer to 520->760 completed `8/8` at initial transfer.
+    - QC: `artifacts\qc-ppo-turnin760-expanded-initial-20260603-070512\qc-20260603-070714`.
+    - Selected replay used no steering (`brake:43`, `coast:237`, avg abs steering `0.0`) and reached `760.199m` at `129.373kph`; accepted only as early turn-in progress, not steering proof.
+  - `artifacts\ppo-rettifilo930-expanded-transfer-1024-20260603-070818`:
+    - 520->930 completed `8/8` at initial transfer.
+    - QC: `artifacts\qc-ppo-rettifilo930-expanded-initial-20260603-070818\qc-20260603-071158`.
+    - Still no steering (`brake:45`, `coast:652`, avg abs steering `0.0`) and very slow terminal speed `75.325kph`; not full Rettifilo behavior.
+  - `artifacts\ppo-rettifilo1220-expanded-transfer-1024-20260603-071315`:
+    - Full Rettifilo-exit probe failed at initial/128 around `961-966m` with `assist_virtual_corridor`.
+    - Training collapsed after `384` to `assist_throttle_brake_demand` around `523-525m`; reject continuation.
+    - QC: `artifacts\qc-ppo-rettifilo1220-expanded-initial-20260603-071315\qc-20260603-071850`.
+    - Selected replay: `assist_virtual_corridor` at `964.272m`, max lateral error `14.156m`, actions `brake:40`, `coast:808`, avg abs steering `0.0`.
+  - `artifacts\ppo-corridor900-1220-expanded-1024-20260603-072009`:
+    - 900->1220 corridor rung from the exact 1220 failure replay stayed at `assist_virtual_corridor` through `512`; stopped and rejected.
+- Current diagnosis:
+  - PPO has made real curriculum progress: it can now complete a strict, release-gated linked 520->650 brake-release segment with brake then coast.
+  - It has not completed a normal-start full lap.
+  - It has not completed full Rettifilo exit. The current blocker has moved from "does not brake before Rettifilo" to "does not steer/throttle out of Rettifilo; drifts out of virtual corridor around `964m`."
+- Next action:
+  - Do not continue mild PPO on the same 900->1220 setup.
+  - Inspect action logits/actions around `900-965m` and run explicit steering/action-perturbation or elite search to find clean corridor exits.
+  - Use that elite corridor state/action evidence to train a steering/throttle rung, then retest 520->1220 and only then return to honest normal-start eval.
+
+### Line-Gated Turn-In / Exit Audit - 2026-06-03
+- Context:
+  - The accepted linked brake-release milestone remains `artifacts\ppo-link520-releasebrake-softnobrake-transfer-1024-20260603-070121`.
+  - No honest normal-start full lap has completed; the trusted honest normal-start best remains around `970.775m`, ending in Rettifilo collision.
+  - The immediate goal is not more 520->650 release polishing; it is linked transfer into full Rettifilo behavior.
+- Implementation changes:
+  - Fixed curriculum checkpoint selection:
+    - Full-lap ranking still prioritizes valid full-lap completion.
+    - Curriculum runs now select best checkpoints by segment completion, segment progress delta, then segment best progress.
+    - This prevents section experiments from saving later collapsed policies over better section policies.
+  - Added strict segment target gates:
+    - `segment_target_min_speed_kph`
+    - `segment_target_max_speed_kph`
+    - `segment_target_max_lateral_error_m`
+    - `segment_target_max_heading_error_deg`
+    - New terminal reasons include `segment_min_speed_gate_failed`, `segment_lateral_gate_failed`, and `segment_heading_gate_failed`.
+  - Added dense curriculum scaffold `scaffold_segment_speed` to penalize being outside the target speed band near a configured segment target.
+  - Added transfer CLI `--initialize-new-action-bias-penalty` because new action rows were too strongly suppressed by the default `-4.0` bias when expanding from `release_brake`.
+  - Added section-only action sets:
+    - `turnin_power`: maintenance/half-throttle/soft-brake with soft steering, no pure coast, no full brake.
+    - `turnin_micro`: same drive levels with `0.15` steering for smaller line corrections.
+  - Added `src\f1rl\action_search.py` / `f1-action-search` for fixed-schedule probes and artifact capture.
+- Validation:
+  - `uv run --no-sync ruff check src\f1rl\config.py src\f1rl\telemetry.py src\f1rl\sim.py src\f1rl\curriculum.py src\f1rl\train.py src\f1rl\action_search.py tests\test_sim.py tests\test_curriculum.py tests\test_policy_train_smoke.py tests\test_action_search.py` -> passed.
+  - `uv run --no-sync pytest tests\test_sim.py tests\test_curriculum.py tests\test_policy_train_smoke.py::test_curriculum_checkpoint_selection_prioritizes_segment_transfer tests\test_policy_train_smoke.py::test_transfer_initialization_can_expand_discrete_action_head tests\test_action_search.py -q` -> passed (`56` focused tests).
+- Rejected probes and experiments:
+  - Fixed-schedule 900->1220 action probes:
+    - `artifacts\action-search-corridor900single-1220-cap8-20260603-miniprobe`
+    - `artifacts\action-search-corridor900single-1220-cap20-20260603-poweredsteer`
+    - `artifacts\action-search-preexit650-1220-cap24-20260603-linkedrung`
+    - `artifacts\action-search-preexit650-1220-delayedturn-20260603-rung`
+    - `artifacts\action-search-preexit650-1220-delay120left20-20260603-rung`
+    - `artifacts\action-search-preexit650-1220-delay180left20-20260603-rung`
+    - `artifacts\action-search-preexit650-1220-delay180left-turn12-20260603-rung`
+    - `artifacts\action-search-preexit650-1220-delay180right20-20260603-rung`
+    - Best variants changed behavior but still failed before full Rettifilo exit, usually corridor/collision around `850-983m`; rejected as non-transfer.
+  - `artifacts\ppo-preexit650-corridorheading-hardgate-512-20260603-rung-20260603-083927`:
+    - Corrected selector saved the `256` checkpoint, but selected replay failed at `855.585m` with `assist_virtual_corridor`.
+    - First bad event: `wrong_heading` at `854.004m`; actions mostly hard right throttle/brake.
+    - Rejected.
+  - `artifacts\ppo-turnin650-930-linegated-256-20260603-rung-20260603-085445`:
+    - New line/speed gates exposed full-brake collapse.
+    - Selected replay: `brake:285`, stopped at `710.442m`, `no_progress`.
+    - Rejected.
+  - `artifacts\ppo-turnin650-930-releaseinit-overbraketerm-256-20260603-rung-20260603-085810`:
+    - Release initialization and terminal overbrake removed brake camping but collapsed to coast.
+    - Initial transfer reached the target but failed `segment_min_speed_gate_failed`; trained replay terminated early on overspeed assist.
+    - Rejected.
+  - `artifacts\ppo-turnin650-930-segspeed-nooverterm-256-20260603-rung-20260603-090322`:
+    - Dense segment-speed penalty added.
+    - Selected replay still pure `coast`, failed `segment_min_speed_gate_failed` at `930.338m`, `75.398kph`, heading `-10.265deg`.
+    - Rejected as no action change.
+  - `artifacts\ppo-turnin650-930-newactionbias05-256-20260603-rung-20260603-090813`:
+    - Softer new-action transfer bias `-0.5`.
+    - Selected replay still pure `coast`, timed out at `911.264m`, `79.636kph`.
+    - Rejected.
+  - `artifacts\ppo-turnin650-930-nobrakegate-256-20260603-rung-20260603-091818`:
+    - Continued from `turnin_power`; no-brake gate made some episodes fail earlier.
+    - Best selected behavior stayed straight `maintenance`, reached `930.616m` at `149.989kph`, failed only `segment_heading_gate_failed` at about `-10.122deg`.
+    - Rejected as a steering skill, but kept as useful speed-carry evidence.
+- Useful retained artifacts:
+  - `artifacts\state-library-rettifilo-turnin-650_760-from930-20260603-linegate\state_library.json`: 5 early post-release snapshots.
+  - `artifacts\ppo-turnin650-930-turninpower-256-20260603-rung-20260603-091309`:
+    - `turnin_power` changed behavior from coast to straight maintenance throttle.
+    - Selected replay reached `930.236m` at `165.270kph`, lateral `0.772m`, heading `-10.048deg`.
+    - Failed strict speed/heading gates (`segment_speed_gate_failed`) but demonstrates a speed-carry rung; not accepted as steering proof.
+  - `artifacts\state-library-rettifilo-exit-900_935-from-turninpower-20260603\state_library.json`: 3 high-speed exit-entry snapshots from the speed-carry rung.
+- Deterministic control probes:
+  - Constant `0.45` steering from 650/675 is too strong; left/right leave track around `694-720m`.
+  - Constant `0.15` micro steering from 650/675 is still too strong if held continuously; left/right leave track around `717-761m`.
+  - From 900/910/921, constant straight maintenance crashes around `968.8m`; micro-left can push farther (`~979-987m`) but still fails; soft-brake micro-left can reach about `1010.9m` but stops.
+  - Large brute-force phase schedule search was stopped because it was too slow for the experiment loop; use smaller targeted probes or PPO instead.
+- Current diagnosis:
+  - Positive learning/progress: the current section stack can brake/release 520->650 and carry speed to 930m without overbraking.
+  - Negative/blocked behavior: PPO has not learned closed-loop steering for Rettifilo exit. It still cannot complete 900/930->1220, and no full normal-start lap is complete.
+  - First bad event has moved from old `throttle_during_brake_demand` to later turn-in/exit issues depending on rung:
+    - `segment_min_speed_gate_failed` for pure coast.
+    - `no_brake_before_turn_in` / `segment_speed_gate_failed` for straight maintenance.
+    - `segment_heading_gate_failed` when speed is acceptable but steering is absent.
+- Next action:
+  - Treat 650->930 speed-carry as a rung with relaxed heading (`<=12deg`) and speed band (`105-170kph`), not as full Rettifilo success.
+  - Train 900/930->1220 directly from `state-library-rettifilo-exit-900_935-from-turninpower-20260603`, using `turnin_micro` or a smaller delayed-steering curriculum.
+  - Add or use a cheaper targeted phase-search path only if PPO cannot discover delayed micro-left / brake-left behavior.
+  - Promote only after strict linked 520->1220 improves over the old `~970m` normal-start crash, then retest honest normal start.
+
+### Honest Normal-Start Diagnostic Probe - 2026-06-03
+- User-directed course correction:
+  - Before committing more time to micro-rungs, run a short honest normal-start full-lap probe only as a diagnostic.
+  - Use metadata-faithful eval/benchmark, no scaffold rewards, no training assists, no ghost/scripted/imitation initialization, and inspect telemetry/QC/replay/first-bad-event.
+  - If the probe reproduces the Rettifilo `~970m` failure, immediately return to the linked Rettifilo transfer ladder.
+- Probe target:
+  - Checkpoint: `artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip`.
+  - This remains the current honest normal-start PPO candidate; later `delayed_turn`/section-only checkpoints are not normal-start promotable without transfer because their action sets are section-specific.
+- Commands:
+  - `uv run --no-sync python -m f1rl.benchmark --policies ppo --episodes 3 --max-steps 7000 --seed 8603 --checkpoint artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip --device auto --telemetry all --telemetry-every 1 --metadata-mode require --disable-scaffold-rewards --disable-training-assists --ppo-deterministic`
+  - `uv run --no-sync python -m f1rl.eval --checkpoint artifacts\ppo-transfer-racing-actionhead-rettifilo-mix-goal-60k-20260603-013341\best_model.zip --steps 7000 --seed 9603 --device auto --metadata-mode require --disable-scaffold-rewards --disable-training-assists --ppo-deterministic`
+  - `uv run --no-sync python -m f1rl.qc --telemetry artifacts\benchmark-20260603-113711\selected_telemetry --max-telemetry-files 3 --output-dir artifacts\qc-honest-normalstart-probe-20260603-113711`
+  - `uv run --no-sync python -m f1rl.replay artifacts\benchmark-20260603-113711\selected_telemetry\ppo-episode-000-steps.jsonl --headless --no-timing`
+- Artifacts:
+  - Benchmark: `artifacts\benchmark-20260603-113711`.
+  - Eval: `artifacts\eval-20260603-113846`.
+  - QC: `artifacts\qc-honest-normalstart-probe-20260603-113711\qc-20260603-113926`.
+  - Replay source: `artifacts\benchmark-20260603-113711\selected_telemetry\ppo-episode-000-steps.jsonl`.
+- Result:
+  - Benchmark: `0/3` completed laps, `0/3` valid laps, `3/3` collisions.
+  - Best and average progress: `970.7748596765059m`.
+  - Checkpoints: `20/120`.
+  - Elapsed time before terminal event: `13.566666666666666s`.
+  - Metadata was loaded from `run_metadata.json`; effective eval config used `action_set=racing`, `observation_profile=racing`, `max_steps=7000`.
+  - `disable_scaffold_rewards=true` and `disable_training_assists=true`.
+- First-bad-event/QC:
+  - First bad event remains `throttle_during_brake_demand`.
+  - Location: `rettifilo_chicane`, `520.8062228014228m`.
+  - Speed: `334.0937462671194kph` against `115kph` target.
+  - Action/control: `throttle` / `throttle_straight`.
+  - Terminal event: `collision` at `970.7748596765059m`, `273.8250186268078kph`, `brake_left`, lateral error `19.251011748766587m`, heading error `-46.941228724576874deg`.
+  - Rettifilo section summary: entry `325.77099057844515kph`, max `338.71177209006987kph`, min `273.8250186268078kph`, average brake `0.12465373961218837`, average throttle `0.8753462603878116`.
+  - Action histogram in Rettifilo: `throttle:316`, `brake_left:23`, `brake_right:22`.
+- Decision:
+  - Reject the probe as unchanged honest behavior. It does not improve beyond the old `970.775m` failure and does not complete a lap.
+  - Do not launch long full-lap PPO.
+  - Return immediately to curriculum and finish the linked Rettifilo transfer ladder:
+    - stable yaw/steering handoff,
+    - `848/900->1080`,
+    - `650->1220`,
+    - `520->1220`,
+    - then honest normal-start eval again.
+
+### Rejected 945m Handoff Attempts - 2026-06-03
+- Purpose:
+  - After the honest normal-start probe reproduced the old `~970.775m` collision, isolate the next linked-transfer blocker after clean release around `900->945m`.
+  - Target behavior: from clean `944-946m` states, stabilize yaw/heading and survive toward `1080m` without fake segment success.
+- State libraries:
+  - `artifacts\state-library-rettifilo-clean935_946-from-releaseprobe-20260603\state_library.json`.
+    - Built from `artifacts\targeted-probe-release900-945-yawgate-turninpower-20260603-rung\selected_telemetry`.
+    - 18 snapshots between `935m` and `946m`, speed `140-170kph`.
+  - `artifacts\state-library-rettifilo-clean944_946-rank000-20260603\state_library.json`.
+    - Built from `rank-000-maint.jsonl`.
+    - 2 clean snapshots around `944-946m`, speed about `162kph`, zero yaw rate, near-straight controls.
+- Rejected broad action searches:
+  - `artifacts\action-search-clean945-1080-turninpower-cap190-20260603-rung`.
+  - `artifacts\action-search-clean943_946-1080-turninpower-cap190-20260603-rung`.
+  - `artifacts\action-search-clean944_946-1080-turninpower-cap190-small-20260603-rung`.
+  - These sweeps were stopped because they were too slow for the required aggressive mini-experiment loop. Keep the lesson, not the runtime: broad phase schedule search is not the right tool for this handoff unless the schedule space is drastically reduced.
+- Rejected PPO handoff run:
+  - Artifact: `artifacts\ppo-clean945-1080-delayedturn-tight-512-20260603-rung-20260603-114845`.
+  - Start state: clean `946.305m`, `162.081kph`.
+  - Action set: `delayed_turn`.
+  - Target: `1080m`, max speed `190kph`, strict virtual corridor/yaw/heading gates.
+  - Early eval result: `0/8` completions; all selected episodes terminated on `assist_virtual_corridor`.
+  - Representative selected telemetry:
+    - Terminal progress: `969.218m`.
+    - Terminal speed: `162.550kph`.
+    - Lateral error: `12.136m`.
+    - Heading error: `-45.453deg`.
+    - Action histogram: `maintenance_tiny_left: 39`; no braking, no stabilizing correction.
+    - First bad event: `no_brake_before_turn_in` on the first step because the policy remained overspeed and chose left-biased maintenance.
+- Decision:
+  - Reject the run. It changed the action distribution, but in the wrong direction: it learned to hold tiny-left and drift out, not to stabilize the exit.
+  - Next experiment should be narrower and earlier: prove `945->1000` stabilization before stretching to `1080`.
+  - Forbid or remove early left bias, prefer straight/right/soft-brake stabilization, and only reintroduce left/turn-in after the car remains alive through the handoff.

@@ -503,3 +503,37 @@ Next experiment:
   - speed-gated `chicane-skill` Rettifilo curriculum;
   - honest normal-start evals every short interval;
   - no promotion unless the QC failure changes materially or the normal-start lap progresses beyond the current plateau.
+
+Pre-run probe:
+
+- `artifacts\ppo-racingv2-speedgated-curriculum-probe-goal-64-20260603-023012` confirmed the corrected path.
+- The old near-970m policy still reaches `970.775m` in normal-start eval.
+- The same policy gets `0.0` speed-gated Rettifilo segment completion, despite reaching about `968.0m` in segment eval.
+- VecNormalize reward stats transfer across `racing -> racing_v2` observation expansion now works when old observation normalization was disabled.
+
+## Transcript-Driven Aggressive Loop - 2026-06-03
+
+Active mode:
+
+- Do not run more mild continuations that preserve the same `520m` first bad event.
+- Do not count infrastructure completion or tiny meter gains as learning progress.
+- Use the `transcripts/` method directly:
+  - force the missing behavior during section training;
+  - run short attempts;
+  - inspect QC immediately;
+  - reject quickly if the old behavior remains;
+  - preserve telemetry and elite states only when braking/entry/exit behavior actually changes.
+
+New training-only levers:
+
+- `--assist-throttle-brake-demand-terminate`
+- `--assist-throttle-brake-demand-min-throttle`
+- `--assist-brake-zone-progress-multiplier`
+
+First aggressive mini-experiment:
+
+- Hard Rettifilo section run, about `5000` timesteps.
+- Start from the best racing-action transfer checkpoint.
+- Use `racing_v2`, `action_set=racing`, speed-gated Rettifilo stages, no normal-start mix, hard throttle/no-brake/overspeed assists, reduced progress scale, stronger speed-target and overspeed-action penalties.
+- Rejection condition: if selected eval/QC still reports `throttle_during_brake_demand` around `520m`, reject and move to a different axis.
+- Keep condition: if the first bad event changes materially, preserve telemetry and build the next experiment around the new failure.

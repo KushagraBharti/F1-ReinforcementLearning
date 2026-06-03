@@ -10,7 +10,11 @@ from f1rl import policy_io, train
 from f1rl.config import SimConfig
 from f1rl.curriculum import CurriculumConfig, CurriculumStage
 from f1rl.env import MonzaEnv
-from f1rl.train import _full_lap_selection_score, _segment_eval_curriculum_config
+from f1rl.train import (
+    _checkpoint_selection_score,
+    _full_lap_selection_score,
+    _segment_eval_curriculum_config,
+)
 
 
 @pytest.mark.skipif(importlib.util.find_spec("stable_baselines3") is None, reason="stable-baselines3 not installed")
@@ -78,6 +82,39 @@ def test_full_lap_selection_score_keeps_segment_success_as_tiebreaker() -> None:
     assert _full_lap_selection_score(stronger_full_lap) > _full_lap_selection_score(
         weaker_full_lap_with_segment_win
     )
+
+
+def test_curriculum_checkpoint_selection_prioritizes_segment_transfer() -> None:
+    stronger_section = {
+        "completion_rate": 0.0,
+        "mean_best_progress_m": 850.0,
+        "segment_completion_rate": 0.0,
+        "mean_segment_progress_delta_m": 130.0,
+        "mean_segment_best_progress_m": 905.0,
+        "curriculum_segment_episodes": [{"segment_complete": False}],
+    }
+    weaker_section_better_full_lap = {
+        "completion_rate": 0.0,
+        "mean_best_progress_m": 1200.0,
+        "segment_completion_rate": 0.0,
+        "mean_segment_progress_delta_m": 70.0,
+        "mean_segment_best_progress_m": 860.0,
+        "curriculum_segment_episodes": [{"segment_complete": False}],
+    }
+
+    section_score, section_priority = _checkpoint_selection_score(
+        stronger_section,
+        curriculum_enabled=True,
+        has_segment_eval=True,
+    )
+    weaker_score, _ = _checkpoint_selection_score(
+        weaker_section_better_full_lap,
+        curriculum_enabled=True,
+        has_segment_eval=True,
+    )
+
+    assert section_score > weaker_score
+    assert section_priority.startswith("curriculum segment completion")
 
 
 def test_segment_eval_curriculum_removes_normal_start_mix() -> None:
@@ -275,7 +312,13 @@ def test_transfer_initialization_can_expand_discrete_action_head() -> None:
         action_count=9,
     )
 
-    report = train._copy_compatible_policy_weights(target, source, target_action_set="racing")
+    report = train._copy_compatible_policy_weights(
+        target,
+        source,
+        source_action_set="legacy",
+        target_action_set="racing",
+        new_action_bias_penalty=-1.25,
+    )
     target_state = target.policy.state_dict()
 
     assert torch.equal(target_state["action_net.weight"][2], source_weight[1])
@@ -287,3 +330,37 @@ def test_transfer_initialization_can_expand_discrete_action_head() -> None:
     bias_report = next(row for row in report if row["key"] == "action_net.bias")
     soft_brake_row = next(row for row in bias_report["rows"] if row["target_action"] == "soft_brake")
     assert soft_brake_row["mode"] == "nearest_with_bias_penalty"
+    assert soft_brake_row["bias_penalty"] == -1.25
+
+
+def test_transfer_initialization_maps_same_size_discrete_action_heads() -> None:
+    source_weight = torch.stack([torch.full((3,), float(index)) for index in range(9)])
+    source_bias = torch.arange(9, dtype=torch.float32)
+    target = _FakeModel(
+        {
+            "action_net.weight": torch.zeros((9, 3), dtype=torch.float32),
+            "action_net.bias": torch.zeros(9, dtype=torch.float32),
+        },
+        action_count=9,
+    )
+    source = _FakeModel(
+        {
+            "action_net.weight": source_weight,
+            "action_net.bias": source_bias,
+        },
+        action_count=9,
+    )
+
+    report = train._copy_compatible_policy_weights(
+        target,
+        source,
+        source_action_set="turnin_power",
+        target_action_set="turnin_micro",
+        new_action_bias_penalty=-0.5,
+    )
+    target_state = target.policy.state_dict()
+
+    assert torch.equal(target_state["action_net.weight"][0], source_weight[0])
+    assert target_state["action_net.bias"][0].item() == pytest.approx(source_bias[0].item())
+    assert target_state["action_net.bias"][1].item() == pytest.approx(source_bias[0].item() - 0.5)
+    assert [row["mode"] for row in report].count("mapped_discrete_action_head") == 2

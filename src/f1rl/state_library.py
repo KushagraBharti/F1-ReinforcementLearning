@@ -65,6 +65,10 @@ def snapshots_from_telemetry(
     sample_every_m: float,
     sample_every_steps: int,
     max_snapshots: int,
+    min_progress_m: float | None = None,
+    max_progress_m: float | None = None,
+    min_speed_kph: float | None = None,
+    max_speed_kph: float | None = None,
 ) -> list[StateSnapshot]:
     snapshots: list[StateSnapshot] = []
     for telemetry_path in _telemetry_paths(path):
@@ -72,6 +76,15 @@ def snapshots_from_telemetry(
         next_progress_m: float | None = None
         for index, row in enumerate(rows):
             progress_m = float(row.get("monotonic_progress_m", 0.0))
+            speed_kph = float(row.get("speed_kph", float(row.get("speed_mps", 0.0)) * 3.6))
+            if min_progress_m is not None and progress_m + 1e-9 < float(min_progress_m):
+                continue
+            if max_progress_m is not None and progress_m - 1e-9 > float(max_progress_m):
+                continue
+            if min_speed_kph is not None and speed_kph + 1e-9 < float(min_speed_kph):
+                continue
+            if max_speed_kph is not None and speed_kph - 1e-9 > float(max_speed_kph):
+                continue
             if next_progress_m is None:
                 next_progress_m = progress_m
             step_due = sample_every_steps > 0 and index % sample_every_steps == 0
@@ -138,6 +151,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--sample-every-m", type=float, default=100.0)
     parser.add_argument("--sample-every-steps", type=int, default=0)
     parser.add_argument("--max-snapshots", type=int, default=0)
+    parser.add_argument("--min-progress-m", type=float)
+    parser.add_argument("--max-progress-m", type=float)
+    parser.add_argument("--min-speed-kph", type=float)
+    parser.add_argument("--max-speed-kph", type=float)
     return parser.parse_args(argv)
 
 
@@ -166,11 +183,19 @@ def main(argv: list[str] | None = None) -> int:
             sample_every_m=args.sample_every_m,
             sample_every_steps=args.sample_every_steps,
             max_snapshots=args.max_snapshots,
+            min_progress_m=args.min_progress_m,
+            max_progress_m=args.max_progress_m,
+            min_speed_kph=args.min_speed_kph,
+            max_speed_kph=args.max_speed_kph,
         )
         metadata = {
             "telemetry": str(args.telemetry),
             "sample_every_m": args.sample_every_m,
             "sample_every_steps": args.sample_every_steps,
+            "min_progress_m": args.min_progress_m,
+            "max_progress_m": args.max_progress_m,
+            "min_speed_kph": args.min_speed_kph,
+            "max_speed_kph": args.max_speed_kph,
         }
     write_state_library(output, snapshots, source=args.source, metadata=metadata)
     print(f"state_library_complete path={output} snapshots={len(snapshots)}")

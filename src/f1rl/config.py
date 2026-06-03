@@ -96,6 +96,16 @@ class RewardConfig:
     scaffold_apex_clean_reward_scale: float = 0.0
     scaffold_exit_alignment_reward_scale: float = 0.0
     scaffold_exit_speed_reward_scale: float = 0.0
+    scaffold_release_reward_scale: float = 0.0
+    scaffold_overbrake_penalty_scale: float = 0.0
+    scaffold_release_min_speed_kph: float = 135.0
+    scaffold_release_max_speed_kph: float = 210.0
+    scaffold_brake_curve_penalty_scale: float = 0.0
+    scaffold_brake_curve_start_speed_kph: float = 335.0
+    scaffold_brake_curve_deadzone_kph: float = 8.0
+    scaffold_corridor_center_penalty_scale: float = 0.0
+    scaffold_corridor_center_deadzone_m: float = 2.0
+    scaffold_segment_speed_penalty_scale: float = 0.0
 
     def component_keys(self) -> tuple[str, ...]:
         return (
@@ -117,10 +127,18 @@ class RewardConfig:
             "scaffold_apex_clean",
             "scaffold_exit_alignment",
             "scaffold_exit_speed",
+            "scaffold_release",
+            "scaffold_overbrake",
+            "scaffold_brake_curve",
+            "scaffold_corridor_center",
+            "scaffold_segment_speed",
             "assist_overspeed_gate",
             "assist_throttle_brake_demand",
             "assist_no_brake_gate",
+            "assist_overbrake_gate",
+            "assist_forbidden_steering_gate",
             "assist_virtual_corridor",
+            "assist_brake_zone_progress_suppression",
         )
 
 
@@ -131,11 +149,34 @@ class AssistConfig:
     overspeed_turn_in_margin_kph: float = 45.0
     overspeed_turn_in_penalty: float = -80.0
     throttle_brake_demand_penalty_scale: float = 0.0
+    throttle_brake_demand_terminate: bool = False
+    throttle_brake_demand_min_throttle: float = 0.75
     no_brake_penalty: float = 0.0
     no_brake_min_brake: float = 0.05
+    no_brake_min_speed_kph: float = 0.0
+    no_brake_terminate: bool = False
+    overbrake_penalty: float = 0.0
+    overbrake_terminate: bool = False
+    overbrake_max_speed_kph: float = 135.0
+    overbrake_min_brake: float = 0.50
+    steering_gate_penalty: float = 0.0
+    steering_gate_terminate: bool = False
+    steering_gate_start_m: float = 0.0
+    steering_gate_end_m: float = 0.0
+    steering_gate_min_abs_steer: float = 0.0
+    steering_gate_required_sign: float = 0.0
+    steering_gate_min_speed_kph: float = 0.0
+    forbidden_steering_gate_penalty: float = 0.0
+    forbidden_steering_gate_terminate: bool = False
+    forbidden_steering_gate_start_m: float = 0.0
+    forbidden_steering_gate_end_m: float = 0.0
+    forbidden_steering_gate_min_abs_steer: float = 0.0
+    forbidden_steering_gate_sign: float = 0.0
+    forbidden_steering_gate_min_speed_kph: float = 0.0
     virtual_corridor_m: float = 0.0
     virtual_corridor_penalty: float = -80.0
     virtual_corridor_terminate: bool = False
+    brake_zone_progress_multiplier: float = 1.0
 
 
 @dataclass(slots=True)
@@ -194,6 +235,9 @@ SCAFFOLD_REWARD_FIELDS = (
     "scaffold_apex_clean_reward_scale",
     "scaffold_exit_alignment_reward_scale",
     "scaffold_exit_speed_reward_scale",
+    "scaffold_release_reward_scale",
+    "scaffold_overbrake_penalty_scale",
+    "scaffold_brake_curve_penalty_scale",
 )
 
 
@@ -211,10 +255,22 @@ def training_assists_enabled(assist: AssistConfig) -> bool:
     return bool(
         assist.enabled
         or assist.overspeed_turn_in_terminate
+        or assist.throttle_brake_demand_terminate
         or abs(assist.throttle_brake_demand_penalty_scale) > 1e-12
         or abs(assist.no_brake_penalty) > 1e-12
+        or assist.no_brake_terminate
+        or assist.no_brake_min_speed_kph > 0.0
+        or abs(assist.overbrake_penalty) > 1e-12
+        or assist.overbrake_terminate
+        or abs(assist.steering_gate_penalty) > 1e-12
+        or assist.steering_gate_terminate
+        or assist.steering_gate_end_m > assist.steering_gate_start_m
+        or abs(assist.forbidden_steering_gate_penalty) > 1e-12
+        or assist.forbidden_steering_gate_terminate
+        or assist.forbidden_steering_gate_end_m > assist.forbidden_steering_gate_start_m
         or assist.virtual_corridor_m > 0.0
         or assist.virtual_corridor_terminate
+        or abs(assist.brake_zone_progress_multiplier - 1.0) > 1e-12
     )
 
 
@@ -305,7 +361,7 @@ SteerSpec = tuple[str, float]
 DEFAULT_ACTION_SET = "legacy"
 ACTION_MODES = frozenset({"continuous", "discrete", "multidiscrete"})
 CONTINUOUS_ACTION_SCHEMES = frozenset({"drive_brake", "exclusive_throttle_bias", "throttle_bias"})
-OBSERVATION_PROFILES = frozenset({"base", "brake", "guidance", "racing", "racing_v2"})
+OBSERVATION_PROFILES = frozenset({"base", "brake", "guidance", "racing", "racing_release", "racing_v2"})
 
 LEGACY_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
     ("coast", 0.0, 0.0, 0.0),
@@ -358,6 +414,102 @@ RACING_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
     ("brake_right", 0.0, 1.0, 1.0),
 )
 
+BRAKE_STRAIGHT_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("coast", 0.0, 0.0, 0.0),
+    ("throttle", 1.0, 0.0, 0.0),
+    ("brake", 0.0, 1.0, 0.0),
+    ("left", 0.0, 0.0, -1.0),
+    ("right", 0.0, 0.0, 1.0),
+)
+
+STRAIGHT_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("coast", 0.0, 0.0, 0.0),
+    ("throttle", 1.0, 0.0, 0.0),
+    ("brake", 0.0, 1.0, 0.0),
+)
+
+BRAKE_COAST_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("brake", 0.0, 1.0, 0.0),
+    ("coast", 0.0, 0.0, 0.0),
+)
+
+BRAKE_RELEASE_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("brake", 0.0, 1.0, 0.0),
+    ("trail_brake", 0.0, 0.35, 0.0),
+    ("coast", 0.0, 0.0, 0.0),
+)
+
+RELEASE_BRAKE_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("coast", 0.0, 0.0, 0.0),
+    ("trail_brake", 0.0, 0.35, 0.0),
+    ("brake", 0.0, 1.0, 0.0),
+)
+
+TURNIN_POWER_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("maintenance", 0.22, 0.0, 0.0),
+    ("maintenance_soft_left", 0.22, 0.0, -0.45),
+    ("maintenance_soft_right", 0.22, 0.0, 0.45),
+    ("half_throttle", 0.5, 0.0, 0.0),
+    ("half_throttle_soft_left", 0.5, 0.0, -0.45),
+    ("half_throttle_soft_right", 0.5, 0.0, 0.45),
+    ("soft_brake", 0.0, 0.35, 0.0),
+    ("soft_brake_soft_left", 0.0, 0.35, -0.45),
+    ("soft_brake_soft_right", 0.0, 0.35, 0.45),
+)
+
+TURNIN_MICRO_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("maintenance", 0.22, 0.0, 0.0),
+    ("maintenance_micro_left", 0.22, 0.0, -0.15),
+    ("maintenance_micro_right", 0.22, 0.0, 0.15),
+    ("half_throttle", 0.5, 0.0, 0.0),
+    ("half_throttle_micro_left", 0.5, 0.0, -0.15),
+    ("half_throttle_micro_right", 0.5, 0.0, 0.15),
+    ("soft_brake", 0.0, 0.35, 0.0),
+    ("soft_brake_micro_left", 0.0, 0.35, -0.15),
+    ("soft_brake_micro_right", 0.0, 0.35, 0.15),
+)
+
+DELAYED_TURN_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("maintenance", 0.22, 0.0, 0.0),
+    ("maintenance_left", 0.22, 0.0, -0.12),
+    ("maintenance_tiny_left", 0.22, 0.0, -0.06),
+    ("trail_left", 0.0, 0.12, -0.06),
+    ("soft_left", 0.0, 0.25, -0.06),
+    ("maintenance_tiny_right", 0.22, 0.0, 0.06),
+    ("trail_right", 0.0, 0.12, 0.06),
+    ("soft_brake", 0.0, 0.25, 0.0),
+)
+
+DELAYED_LEFT_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("maintenance", 0.22, 0.0, 0.0),
+    ("maintenance_left", 0.22, 0.0, -0.12),
+    ("maintenance_tiny_left", 0.22, 0.0, -0.06),
+    ("trail_left", 0.0, 0.12, -0.06),
+    ("soft_left", 0.0, 0.25, -0.06),
+    ("soft_brake", 0.0, 0.25, 0.0),
+)
+
+STABILIZE_RIGHT_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("maintenance", 0.22, 0.0, 0.0),
+    ("maintenance_tiny_right", 0.22, 0.0, 0.06),
+    ("maintenance_micro_right", 0.22, 0.0, 0.12),
+    ("trail_right", 0.0, 0.12, 0.06),
+    ("soft_right", 0.0, 0.25, 0.06),
+    ("soft_brake", 0.0, 0.25, 0.0),
+)
+
+EXIT_TINY_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
+    ("maintenance_tiny_left", 0.22, 0.0, -0.06),
+    ("maintenance_tiny_right", 0.22, 0.0, 0.06),
+    ("maintenance_micro_left", 0.22, 0.0, -0.12),
+    ("maintenance_micro_right", 0.22, 0.0, 0.12),
+    ("trail_brake_tiny_left", 0.0, 0.12, -0.06),
+    ("trail_brake_tiny_right", 0.0, 0.12, 0.06),
+    ("soft_brake_tiny_left", 0.0, 0.25, -0.06),
+    ("soft_brake_tiny_right", 0.0, 0.25, 0.06),
+    ("soft_brake", 0.0, 0.25, 0.0),
+)
+
 MULTIDISCRETE_DRIVE_LEVELS: tuple[DriveSpec, ...] = (
     ("brake", 0.0, 1.0),
     ("soft_brake", 0.0, 0.35),
@@ -375,9 +527,20 @@ MULTIDISCRETE_STEER_LEVELS: tuple[SteerSpec, ...] = (
 )
 
 ACTION_SETS: dict[str, tuple[ActionSpec, ...]] = {
+    "brake_coast": BRAKE_COAST_DISCRETE_ACTIONS,
+    "brake_release": BRAKE_RELEASE_DISCRETE_ACTIONS,
+    "brake_straight": BRAKE_STRAIGHT_DISCRETE_ACTIONS,
+    "delayed_left": DELAYED_LEFT_DISCRETE_ACTIONS,
+    "delayed_turn": DELAYED_TURN_DISCRETE_ACTIONS,
     "legacy": LEGACY_DISCRETE_ACTIONS,
+    "release_brake": RELEASE_BRAKE_DISCRETE_ACTIONS,
     "expanded": EXPANDED_DISCRETE_ACTIONS,
+    "exit_tiny": EXIT_TINY_DISCRETE_ACTIONS,
     "racing": RACING_DISCRETE_ACTIONS,
+    "stabilize_right": STABILIZE_RIGHT_DISCRETE_ACTIONS,
+    "straight": STRAIGHT_DISCRETE_ACTIONS,
+    "turnin_micro": TURNIN_MICRO_DISCRETE_ACTIONS,
+    "turnin_power": TURNIN_POWER_DISCRETE_ACTIONS,
 }
 
 DISCRETE_ACTIONS = LEGACY_DISCRETE_ACTIONS

@@ -313,5 +313,10 @@
       "virtual_corridor_penalty": -80.0,
       "virtual_corridor_terminate": false
     }
-  }
+  },
+  "wall_clock_s": 148.2304015000118,
+  "training_fps": 0.4317602823196489,
+  "env_steps_per_second": 0.8635205646392978,
+  "final_checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-racingv2-speedgated-curriculum-probe-goal-64-20260603-023012\\checkpoints\\final_model.zip",
+  "final_vecnormalize": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-racingv2-speedgated-curriculum-probe-goal-64-20260603-023012\\vecnormalize.pkl"
 }

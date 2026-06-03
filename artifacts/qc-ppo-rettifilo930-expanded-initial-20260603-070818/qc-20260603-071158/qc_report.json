@@ -1,0 +1,553 @@
+{
+  "run_id": "qc-20260603-071158",
+  "seed": 7,
+  "track": {
+    "track_name": "monza",
+    "source_image_size": [
+      1894,
+      956
+    ],
+    "track_length_m": 5793.0,
+    "track_length_px": 4538.56689453125,
+    "meters_per_pixel": 1.2763941287994385,
+    "checkpoint_count": 120,
+    "boundary_segment_count": 1800,
+    "sensor_ray_count": 7,
+    "observation_dim": 18,
+    "action_dim": 9,
+    "initial_valid_lap": true,
+    "checkpoint_lateral_limit_m": 24.0
+  },
+  "lap_validity": {
+    "checkpoint_spacing_m": 48.275,
+    "ordered_checkpoint_count": 120,
+    "finish_requires_all_checkpoints": true,
+    "finish_requires_physical_or_virtual_crossing": true,
+    "huge_progress_jump_invalidates_lap": true,
+    "wide_checkpoint_crossing_invalidates_lap": true,
+    "skip_missed_checkpoint_count": 119,
+    "wide_crossing_missed_checkpoint_count": 1
+  },
+  "physics": {
+    "reference_source": "Fast-F1 2024 Italian Grand Prix Qualifying VER fastest lap",
+    "reference_lap_time_s": 79.662,
+    "reference_max_speed_kph": 348.0,
+    "reference_mean_speed_kph": 259.91445380074884,
+    "reference_lateral_g_p95": 4.0949627805901985,
+    "reference_radius_p05_m": 49.098784984464274,
+    "sim_terminal_speed_kph": 351.1393569510544,
+    "sim_speed_after_5s_full_throttle_kph": 294.00623772525853,
+    "sim_speed_after_8s_full_throttle_kph": 336.05126886895226,
+    "sim_braking_330_to_150_kph_m": 66.7097012672699,
+    "sim_braking_330_to_100_kph_m": 78.35121323190806,
+    "sim_steering_limited_radius_m": 11.079660733830915,
+    "sim_cornering_capacity": [
+      {
+        "speed_kph": 100.0,
+        "max_curvature_rad_per_m": 0.030226572000000004,
+        "min_radius_m": 33.083473706512265,
+        "lateral_g_at_limit": 2.3774691358024693,
+        "available_grip_g": 2.3774691358024693
+      },
+      {
+        "speed_kph": 150.0,
+        "max_curvature_rad_per_m": 0.014687532000000003,
+        "min_radius_m": 68.08495804468714,
+        "lateral_g_at_limit": 2.5993055555555555,
+        "available_grip_g": 2.5993055555555555
+      },
+      {
+        "speed_kph": 200.0,
+        "max_curvature_rad_per_m": 0.009248868,
+        "min_radius_m": 108.12133982234366,
+        "lateral_g_at_limit": 2.9098765432098763,
+        "available_grip_g": 2.9098765432098768
+      },
+      {
+        "speed_kph": 250.0,
+        "max_curvature_rad_per_m": 0.006731543520000001,
+        "min_radius_m": 148.55433928770023,
+        "lateral_g_at_limit": 3.3091820987654326,
+        "available_grip_g": 3.309182098765432
+      },
+      {
+        "speed_kph": 300.0,
+        "max_curvature_rad_per_m": 0.005364108000000001,
+        "min_radius_m": 186.42428526793267,
+        "lateral_g_at_limit": 3.7972222222222225,
+        "available_grip_g": 3.7972222222222225
+      }
+    ]
+  },
+  "telemetry": {
+    "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-rettifilo930-expanded-transfer-1024-20260603-070818\\eval\\selected_telemetry\\ppo_curriculum_segment_initial_transfer_00000000-episode-000-steps.jsonl",
+    "steps": 697,
+    "duration_s": 11.616666666666667,
+    "termination_reason": "segment_complete",
+    "completed_lap": false,
+    "valid_lap": false,
+    "finish_crossed": false,
+    "segment_complete": true,
+    "final_progress_m": 930.5947693953591,
+    "best_progress_m": 930.5947693953591,
+    "checkpoints_passed": 19,
+    "missed_checkpoint_count": 0,
+    "avg_speed_kph": 129.96560821450387,
+    "max_speed_kph": 330.22123444908414,
+    "avg_abs_racing_line_deviation_m": 1.4627165934859763,
+    "max_abs_racing_line_deviation_m": 2.488411865763709,
+    "avg_lateral_g": 0.0,
+    "max_lateral_g": 0.0,
+    "avg_longitudinal_g": -0.6300142832417323,
+    "min_longitudinal_g": -6.0644585335657295,
+    "min_ray_distance_m": 15.497292518615723,
+    "avg_min_ray_distance_m": 17.126803660837446,
+    "reward_total": -42678.89626366577,
+    "reward_totals": {
+      "progress": 16.785728014552063,
+      "finish": 500.0,
+      "collision": 0.0,
+      "off_track": 0.0,
+      "no_progress": 0.0,
+      "lateral": 0.0,
+      "track_limit": 0.0,
+      "heading": -125.47115576726026,
+      "speed_target": 0.0,
+      "overspeed_action": 0.0,
+      "steering_target": -224.98685188594072,
+      "smoothness": 0.0,
+      "scaffold_brake": 1069.961613815922,
+      "scaffold_no_throttle": 0.0,
+      "scaffold_turn_in_speed": -8577.067727365658,
+      "scaffold_apex_clean": 56152.91665792465,
+      "scaffold_exit_alignment": 0.0,
+      "scaffold_exit_speed": 0.0,
+      "scaffold_release": 22351.53299391224,
+      "scaffold_overbrake": 0.0,
+      "scaffold_brake_curve": -47834.574281663154,
+      "assist_overspeed_gate": 0.0,
+      "assist_throttle_brake_demand": 0.0,
+      "assist_no_brake_gate": -66000.0,
+      "assist_overbrake_gate": 0.0,
+      "assist_virtual_corridor": 0.0,
+      "assist_brake_zone_progress_suppression": -7.993240651090532
+    },
+    "section_summaries": [
+      {
+        "section": "start_finish_straight",
+        "start_m": 0.0,
+        "end_m": 450.0,
+        "rows": 0,
+        "target_speed_kph": 340.0
+      },
+      {
+        "section": "rettifilo_chicane",
+        "start_m": 450.0,
+        "end_m": 1150.0,
+        "rows": 697,
+        "target_speed_kph": 115.0,
+        "entry_progress_m": 512.4803568483393,
+        "exit_progress_m": 930.5947693953591,
+        "entry_speed_kph": 330.22123444908414,
+        "exit_speed_kph": 75.32476898203063,
+        "min_speed_kph": 75.32476898203063,
+        "max_speed_kph": 330.22123444908414,
+        "avg_speed_kph": 129.96560821450387,
+        "brake_start_progress_m": 512.4803568483393,
+        "throttle_reapplication_progress_m": null,
+        "avg_throttle": 0.0,
+        "avg_brake": 0.06456241032998565,
+        "action_histogram": {
+          "brake": 45,
+          "coast": 652
+        },
+        "control_histogram": {
+          "brake_straight": 45,
+          "coast_straight": 652
+        },
+        "max_speed_surplus_kph": 215.22123444908414,
+        "min_ray_distance_m": 15.497292518615723,
+        "avg_abs_lateral_error_m": 1.4627165934859763,
+        "max_abs_lateral_error_m": 2.488411865763709,
+        "avg_abs_heading_error_deg": 1.1176129233717738,
+        "max_abs_heading_error_deg": 10.227964823635846,
+        "reward_totals": {
+          "progress": 16.785728014552063,
+          "finish": 500.0,
+          "collision": 0.0,
+          "off_track": 0.0,
+          "no_progress": 0.0,
+          "lateral": 0.0,
+          "track_limit": 0.0,
+          "heading": -125.47115576726026,
+          "speed_target": 0.0,
+          "overspeed_action": 0.0,
+          "steering_target": -224.98685188594072,
+          "smoothness": 0.0,
+          "scaffold_brake": 1069.961613815922,
+          "scaffold_no_throttle": 0.0,
+          "scaffold_turn_in_speed": -8577.067727365658,
+          "scaffold_apex_clean": 56152.91665792465,
+          "scaffold_exit_alignment": 0.0,
+          "scaffold_exit_speed": 0.0,
+          "scaffold_release": 22351.53299391224,
+          "scaffold_overbrake": 0.0,
+          "scaffold_brake_curve": -47834.574281663154,
+          "assist_overspeed_gate": 0.0,
+          "assist_throttle_brake_demand": 0.0,
+          "assist_no_brake_gate": -66000.0,
+          "assist_overbrake_gate": 0.0,
+          "assist_virtual_corridor": 0.0,
+          "assist_brake_zone_progress_suppression": -7.993240651090532
+        },
+        "termination_reason": "segment_complete"
+      },
+      {
+        "section": "curva_grande_roggia_run",
+        "start_m": 1150.0,
+        "end_m": 1850.0,
+        "rows": 0,
+        "target_speed_kph": 315.0
+      },
+      {
+        "section": "roggia_chicane",
+        "start_m": 1850.0,
+        "end_m": 2500.0,
+        "rows": 0,
+        "target_speed_kph": 135.0
+      },
+      {
+        "section": "lesmo_1",
+        "start_m": 2500.0,
+        "end_m": 3150.0,
+        "rows": 0,
+        "target_speed_kph": 185.0
+      },
+      {
+        "section": "lesmo_2_serraglio",
+        "start_m": 3150.0,
+        "end_m": 3850.0,
+        "rows": 0,
+        "target_speed_kph": 195.0
+      },
+      {
+        "section": "ascari_approach",
+        "start_m": 3850.0,
+        "end_m": 4450.0,
+        "rows": 0,
+        "target_speed_kph": 320.0
+      },
+      {
+        "section": "ascari_chicane",
+        "start_m": 4450.0,
+        "end_m": 5150.0,
+        "rows": 0,
+        "target_speed_kph": 165.0
+      },
+      {
+        "section": "parabolica_finish",
+        "start_m": 5150.0,
+        "end_m": 5793.0,
+        "rows": 0,
+        "target_speed_kph": 205.0
+      }
+    ],
+    "failure_report": {
+      "failed_section": "rettifilo_chicane",
+      "first_bad_event": {
+        "kind": "overspeed_at_braking_zone",
+        "reason": "car is far above the section target speed in the braking zone",
+        "section": "rettifilo_chicane",
+        "progress_m": 521.3131285825356,
+        "lap_progress_m": 521.3131285825356,
+        "speed_kph": 309.3628654032874,
+        "target_speed_kph": 115.0,
+        "speed_surplus_kph": 194.3628654032874,
+        "throttle": 0.0,
+        "brake": 1.0,
+        "steering": 0.0,
+        "lateral_error_m": 0.08362464031789862,
+        "heading_error_deg": 0.024262046045685402,
+        "min_ray_distance_m": 18.348438262939453,
+        "action": "brake",
+        "control": "brake_straight",
+        "step_index": 7,
+        "sim_time_s": 0.11666666666666667
+      },
+      "terminal_event": {
+        "kind": "segment_complete",
+        "reason": "episode ended with segment_complete",
+        "section": "rettifilo_chicane",
+        "progress_m": 930.5947693953591,
+        "lap_progress_m": 930.5947693953591,
+        "speed_kph": 75.32476898203063,
+        "target_speed_kph": 115.0,
+        "speed_surplus_kph": -39.67523101796937,
+        "throttle": 0.0,
+        "brake": 0.0,
+        "steering": 0.0,
+        "lateral_error_m": 0.026079069740507776,
+        "heading_error_deg": -10.227964823635846,
+        "min_ray_distance_m": 15.542025566101074,
+        "action": "coast",
+        "control": "coast_straight",
+        "step_index": 697,
+        "sim_time_s": 11.616666666666667
+      },
+      "action_histogram_before_failure": {
+        "brake": 7
+      },
+      "control_histogram_before_failure": {
+        "brake_straight": 7
+      }
+    }
+  },
+  "telemetry_reports": [
+    {
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-rettifilo930-expanded-transfer-1024-20260603-070818\\eval\\selected_telemetry\\ppo_curriculum_segment_initial_transfer_00000000-episode-000-steps.jsonl",
+      "steps": 697,
+      "duration_s": 11.616666666666667,
+      "termination_reason": "segment_complete",
+      "completed_lap": false,
+      "valid_lap": false,
+      "finish_crossed": false,
+      "segment_complete": true,
+      "final_progress_m": 930.5947693953591,
+      "best_progress_m": 930.5947693953591,
+      "checkpoints_passed": 19,
+      "missed_checkpoint_count": 0,
+      "avg_speed_kph": 129.96560821450387,
+      "max_speed_kph": 330.22123444908414,
+      "avg_abs_racing_line_deviation_m": 1.4627165934859763,
+      "max_abs_racing_line_deviation_m": 2.488411865763709,
+      "avg_lateral_g": 0.0,
+      "max_lateral_g": 0.0,
+      "avg_longitudinal_g": -0.6300142832417323,
+      "min_longitudinal_g": -6.0644585335657295,
+      "min_ray_distance_m": 15.497292518615723,
+      "avg_min_ray_distance_m": 17.126803660837446,
+      "reward_total": -42678.89626366577,
+      "reward_totals": {
+        "progress": 16.785728014552063,
+        "finish": 500.0,
+        "collision": 0.0,
+        "off_track": 0.0,
+        "no_progress": 0.0,
+        "lateral": 0.0,
+        "track_limit": 0.0,
+        "heading": -125.47115576726026,
+        "speed_target": 0.0,
+        "overspeed_action": 0.0,
+        "steering_target": -224.98685188594072,
+        "smoothness": 0.0,
+        "scaffold_brake": 1069.961613815922,
+        "scaffold_no_throttle": 0.0,
+        "scaffold_turn_in_speed": -8577.067727365658,
+        "scaffold_apex_clean": 56152.91665792465,
+        "scaffold_exit_alignment": 0.0,
+        "scaffold_exit_speed": 0.0,
+        "scaffold_release": 22351.53299391224,
+        "scaffold_overbrake": 0.0,
+        "scaffold_brake_curve": -47834.574281663154,
+        "assist_overspeed_gate": 0.0,
+        "assist_throttle_brake_demand": 0.0,
+        "assist_no_brake_gate": -66000.0,
+        "assist_overbrake_gate": 0.0,
+        "assist_virtual_corridor": 0.0,
+        "assist_brake_zone_progress_suppression": -7.993240651090532
+      },
+      "section_summaries": [
+        {
+          "section": "start_finish_straight",
+          "start_m": 0.0,
+          "end_m": 450.0,
+          "rows": 0,
+          "target_speed_kph": 340.0
+        },
+        {
+          "section": "rettifilo_chicane",
+          "start_m": 450.0,
+          "end_m": 1150.0,
+          "rows": 697,
+          "target_speed_kph": 115.0,
+          "entry_progress_m": 512.4803568483393,
+          "exit_progress_m": 930.5947693953591,
+          "entry_speed_kph": 330.22123444908414,
+          "exit_speed_kph": 75.32476898203063,
+          "min_speed_kph": 75.32476898203063,
+          "max_speed_kph": 330.22123444908414,
+          "avg_speed_kph": 129.96560821450387,
+          "brake_start_progress_m": 512.4803568483393,
+          "throttle_reapplication_progress_m": null,
+          "avg_throttle": 0.0,
+          "avg_brake": 0.06456241032998565,
+          "action_histogram": {
+            "brake": 45,
+            "coast": 652
+          },
+          "control_histogram": {
+            "brake_straight": 45,
+            "coast_straight": 652
+          },
+          "max_speed_surplus_kph": 215.22123444908414,
+          "min_ray_distance_m": 15.497292518615723,
+          "avg_abs_lateral_error_m": 1.4627165934859763,
+          "max_abs_lateral_error_m": 2.488411865763709,
+          "avg_abs_heading_error_deg": 1.1176129233717738,
+          "max_abs_heading_error_deg": 10.227964823635846,
+          "reward_totals": {
+            "progress": 16.785728014552063,
+            "finish": 500.0,
+            "collision": 0.0,
+            "off_track": 0.0,
+            "no_progress": 0.0,
+            "lateral": 0.0,
+            "track_limit": 0.0,
+            "heading": -125.47115576726026,
+            "speed_target": 0.0,
+            "overspeed_action": 0.0,
+            "steering_target": -224.98685188594072,
+            "smoothness": 0.0,
+            "scaffold_brake": 1069.961613815922,
+            "scaffold_no_throttle": 0.0,
+            "scaffold_turn_in_speed": -8577.067727365658,
+            "scaffold_apex_clean": 56152.91665792465,
+            "scaffold_exit_alignment": 0.0,
+            "scaffold_exit_speed": 0.0,
+            "scaffold_release": 22351.53299391224,
+            "scaffold_overbrake": 0.0,
+            "scaffold_brake_curve": -47834.574281663154,
+            "assist_overspeed_gate": 0.0,
+            "assist_throttle_brake_demand": 0.0,
+            "assist_no_brake_gate": -66000.0,
+            "assist_overbrake_gate": 0.0,
+            "assist_virtual_corridor": 0.0,
+            "assist_brake_zone_progress_suppression": -7.993240651090532
+          },
+          "termination_reason": "segment_complete"
+        },
+        {
+          "section": "curva_grande_roggia_run",
+          "start_m": 1150.0,
+          "end_m": 1850.0,
+          "rows": 0,
+          "target_speed_kph": 315.0
+        },
+        {
+          "section": "roggia_chicane",
+          "start_m": 1850.0,
+          "end_m": 2500.0,
+          "rows": 0,
+          "target_speed_kph": 135.0
+        },
+        {
+          "section": "lesmo_1",
+          "start_m": 2500.0,
+          "end_m": 3150.0,
+          "rows": 0,
+          "target_speed_kph": 185.0
+        },
+        {
+          "section": "lesmo_2_serraglio",
+          "start_m": 3150.0,
+          "end_m": 3850.0,
+          "rows": 0,
+          "target_speed_kph": 195.0
+        },
+        {
+          "section": "ascari_approach",
+          "start_m": 3850.0,
+          "end_m": 4450.0,
+          "rows": 0,
+          "target_speed_kph": 320.0
+        },
+        {
+          "section": "ascari_chicane",
+          "start_m": 4450.0,
+          "end_m": 5150.0,
+          "rows": 0,
+          "target_speed_kph": 165.0
+        },
+        {
+          "section": "parabolica_finish",
+          "start_m": 5150.0,
+          "end_m": 5793.0,
+          "rows": 0,
+          "target_speed_kph": 205.0
+        }
+      ],
+      "failure_report": {
+        "failed_section": "rettifilo_chicane",
+        "first_bad_event": {
+          "kind": "overspeed_at_braking_zone",
+          "reason": "car is far above the section target speed in the braking zone",
+          "section": "rettifilo_chicane",
+          "progress_m": 521.3131285825356,
+          "lap_progress_m": 521.3131285825356,
+          "speed_kph": 309.3628654032874,
+          "target_speed_kph": 115.0,
+          "speed_surplus_kph": 194.3628654032874,
+          "throttle": 0.0,
+          "brake": 1.0,
+          "steering": 0.0,
+          "lateral_error_m": 0.08362464031789862,
+          "heading_error_deg": 0.024262046045685402,
+          "min_ray_distance_m": 18.348438262939453,
+          "action": "brake",
+          "control": "brake_straight",
+          "step_index": 7,
+          "sim_time_s": 0.11666666666666667
+        },
+        "terminal_event": {
+          "kind": "segment_complete",
+          "reason": "episode ended with segment_complete",
+          "section": "rettifilo_chicane",
+          "progress_m": 930.5947693953591,
+          "lap_progress_m": 930.5947693953591,
+          "speed_kph": 75.32476898203063,
+          "target_speed_kph": 115.0,
+          "speed_surplus_kph": -39.67523101796937,
+          "throttle": 0.0,
+          "brake": 0.0,
+          "steering": 0.0,
+          "lateral_error_m": 0.026079069740507776,
+          "heading_error_deg": -10.227964823635846,
+          "min_ray_distance_m": 15.542025566101074,
+          "action": "coast",
+          "control": "coast_straight",
+          "step_index": 697,
+          "sim_time_s": 11.616666666666667
+        },
+        "action_histogram_before_failure": {
+          "brake": 7
+        },
+        "control_histogram_before_failure": {
+          "brake_straight": 7
+        }
+      }
+    }
+  ],
+  "failure_table": [
+    {
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\ppo-rettifilo930-expanded-transfer-1024-20260603-070818\\eval\\selected_telemetry\\ppo_curriculum_segment_initial_transfer_00000000-episode-000-steps.jsonl",
+      "steps": 697,
+      "best_progress_m": 930.5947693953591,
+      "termination_reason": "segment_complete",
+      "failed_section": "rettifilo_chicane",
+      "first_bad_kind": "overspeed_at_braking_zone",
+      "first_bad_progress_m": 521.3131285825356,
+      "first_bad_speed_kph": 309.3628654032874,
+      "first_bad_reason": "car is far above the section target speed in the braking zone",
+      "terminal_kind": "segment_complete",
+      "terminal_progress_m": 930.5947693953591,
+      "terminal_speed_kph": 75.32476898203063,
+      "actions_before_failure": {
+        "brake": 7
+      },
+      "controls_before_failure": {
+        "brake_straight": 7
+      }
+    }
+  ],
+  "scripted": null
+}
