@@ -1,5 +1,9 @@
 # Evolution Search Plan
 
+This file documents the evolution-search implementation and the original pivot away from PPO micro-engineering. The active repeatable loop is now `workflow.md`, and the active target is `goal.md`.
+
+The latest large run already produced valid slow laps, so do not treat the older Rettifilo-first target list as the current bottleneck unless new artifacts prove it has regressed. The current bottleneck is speed: get a valid normal-start evolved lap under `80.0s`.
+
 ## Why This Pivot Exists
 
 The previous PPO/curriculum loop learned useful local subskills, but it did not improve the honest normal-start scoreboard:

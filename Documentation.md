@@ -4,14 +4,17 @@
 
 Date: 2026-06-04.
 
-The project has pivoted from PPO micro-rung tuning to reusable elitist evolutionary search.
+The project has pivoted from PPO micro-rung tuning to reusable elitist evolutionary search. The current active goal is evolved-controller search first: get a valid normal-start evolved Monza lap under `80.0s`, then use useful search behavior for PPO transfer later.
 
-Honest scoreboard:
+Current scoreboard:
 
 - Valid normal-start PPO lap: no.
 - Lap time: none.
 - Best honest normal-start PPO progress: about `970.775m`.
-- Final target: valid normal-start PPO lap near `<=80.0s`.
+- Historical best valid evolved lap: `148.3s`.
+- Latest completed evolved run: `C:\f1rl-artifacts\evolution-speed-100x30-fastlap-v1-20260604`.
+- Latest evolved run result: `39` valid laps, fastest valid lap `161.95s`, final generation average distance `2733.5m`, final generation average pace `117.2 kph`, final generation top-decile pace `168.4 kph`.
+- Active target: valid normal-start evolved lap `<=80.0s`.
 
 Why the pivot happened:
 
@@ -22,17 +25,29 @@ Why the pivot happened:
 
 ## Active Direction
 
-Use `EvolutionSearchPlan.md` and `EvolutionGoal.md`.
+Use `goal.md` and `workflow.md`.
 
 Immediate method:
 
-1. Run elitist evolutionary search to discover viable section trajectories.
-2. Save elite telemetry and elite state libraries.
-3. Run the evolution ladder to alternate honest full-lap probes with focused segment discovery.
-4. Use PPO curriculum to learn from those search-discovered states.
-5. Retest honest normal-start PPO.
+1. Analyze the latest full-run artifacts.
+2. Make aggressive scoring/selection/storage changes aimed at speed and population breadth.
+3. Validate with focused checks and small searches.
+4. Re-read the latest full run against the changes.
+5. Start archiving the analyzed old run to D: after the second review confirms it is safe.
+6. Verify archive, delete the old C: original, and run the next large comparison.
+7. Repeat until the evolved valid lap is `<=80.0s`.
 
 Do not resume the old PPO micro-engineering loop.
+
+## Storage Contract
+
+Large evolution runs split artifacts by purpose:
+
+- Hot control artifacts stay on `C:\f1rl-artifacts\<run-name>`: summaries, attempts, generation summaries, checkpoints, manifests, top genomes, elite libraries, bridges, and next-command files.
+- Bulky all-candidate step telemetry goes to `D:\f1-rl-artifacts\cold-telemetry\<run-name>` as lossless `.jsonl.gz`.
+- Old analyzed large-run archives go to `D:\f1-rl-artifacts\archives`.
+- The C: manifest points to D: cold trace paths, so replay and state-library extraction can still start from the C: run folder.
+- Do not delete a C: original until the D: archive exists and `tar -tzf` can list it.
 
 ## Active Implementation
 
@@ -56,6 +71,8 @@ Outputs:
 - `population_checkpoint.json`
 - `top_genomes/*.json`
 - `selected_telemetry/*.jsonl`
+- `selected_telemetry/manifest.json`
+- optional cold all-candidate `*.jsonl.gz` traces on D:
 - `elite_state_library.json`
 - `ppo_bridge.json`
 - `next_commands.md`

@@ -32,6 +32,7 @@ from f1rl.evolution_search import (
 from f1rl.sim import MonzaSim
 from f1rl.state_library import load_state_library, write_state_library
 from f1rl.state_snapshot import snapshot_from_sim
+from f1rl.telemetry import load_steps
 
 
 def test_random_and_mutated_phase_genomes_stay_valid() -> None:
@@ -254,6 +255,68 @@ def test_early_pace_profile_rewards_fast_progress_without_steering_flip_penalty(
     assert fast_score > slow_score
 
 
+def test_speed_profiles_prefer_faster_valid_lap_over_slow_finish() -> None:
+    def lap_rows(elapsed_s: float) -> list[dict]:
+        return [
+            {
+                "monotonic_progress_m": 0.0,
+                "sim_time_s": 0.0,
+                "speed_kph": 80.0,
+                "lateral_error_m": 0.0,
+                "heading_error_deg": 0.0,
+                "yaw_rate_rps": 0.0,
+                "steering": 0.0,
+                "throttle": 0.8,
+                "brake": 0.0,
+                "missed_checkpoint_count": 0,
+                "segment_complete": False,
+                "completed_lap": False,
+                "valid_lap": True,
+                "finish_crossed": False,
+                "collided": False,
+                "off_track": False,
+                "termination_reason": "running",
+            },
+            {
+                "monotonic_progress_m": 5812.0,
+                "sim_time_s": elapsed_s,
+                "speed_kph": 150.0,
+                "lateral_error_m": 1.0,
+                "heading_error_deg": 2.0,
+                "yaw_rate_rps": 0.1,
+                "steering": 0.1,
+                "throttle": 0.8,
+                "brake": 0.0,
+                "missed_checkpoint_count": 0,
+                "segment_complete": False,
+                "completed_lap": False,
+                "valid_lap": True,
+                "finish_crossed": True,
+                "collided": False,
+                "off_track": False,
+                "termination_reason": "lap_complete",
+            },
+        ]
+
+    gates = EvolutionGates(target_progress_m=1500.0, terminate_at_target_progress=False)
+    faster = _score_rows(
+        lap_rows(120.0),
+        start_progress_m=0.0,
+        gates=gates,
+        scoring_profiles=("fast_valid_lap", "time_attack", "lap_pace"),
+    )
+    slower = _score_rows(
+        lap_rows(180.0),
+        start_progress_m=0.0,
+        gates=gates,
+        scoring_profiles=("fast_valid_lap", "time_attack", "lap_pace"),
+    )
+
+    assert faster["fast_valid_lap"] > slower["fast_valid_lap"]
+    assert faster["time_attack"] > slower["time_attack"]
+    assert faster["lap_pace"] > slower["lap_pace"]
+
+
 def test_frontier_recovery_prefers_alive_controlled_exit_over_farther_stall() -> None:
     def row(progress_m: float, speed_kph: float, heading_deg: float, lateral_m: float, reason: str) -> dict:
         return {
@@ -344,7 +407,14 @@ def test_dynamic_survival_floor_and_parent_buckets_are_performance_based() -> No
     assert report["survival_floor_pass_rate"] == 0.75
     assert report["next_survival_floor_m"] == 1220.0
     assert all(row["best_progress_m"] >= 1220.0 for row in buckets["survival_gate"])
-    assert set(buckets) == {"survival_gate", "farthest_distance", "far_fast", "fastest_pace", "cleanest_distance"}
+    assert set(buckets) == {
+        "survival_gate",
+        "farthest_distance",
+        "far_fast",
+        "fastest_pace",
+        "cleanest_distance",
+        "fast_frontier_score",
+    }
     assert summary["parent_survival_floor_m"] == 1220.0
 
 
@@ -717,18 +787,24 @@ def test_evolution_search_can_save_all_candidate_telemetry_for_swarm_replay(tmp_
             workers=2,
             worker_chunk_size=1,
             telemetry_selection="all",
+            telemetry_compression="gzip",
+            all_candidate_telemetry_dir=tmp_path / "cold-telemetry",
         ),
         gates=EvolutionGates(target_progress_m=5.0),
         start_speed_kph=60.0,
     )
 
     telemetry_dir = output_dir / "selected_telemetry"
+    cold_dir = tmp_path / "cold-telemetry"
     manifest = json.loads((telemetry_dir / "manifest.json").read_text(encoding="utf-8"))
 
     assert manifest["telemetry_selection"] == "all"
+    assert manifest["telemetry_compression"] == "gzip"
+    assert manifest["all_candidate_telemetry_dir"] == str(cold_dir)
     assert manifest["trace_count"] == 6
-    assert len(list(telemetry_dir.glob("*.jsonl"))) == 6
+    assert len(list(cold_dir.glob("*.jsonl.gz"))) == 6
     assert all(Path(row["path"]).exists() for row in manifest["traces"])
+    assert load_steps(Path(manifest["traces"][0]["path"]))
     attempts = [
         json.loads(line)
         for line in (output_dir / "attempts.jsonl").read_text(encoding="utf-8").splitlines()

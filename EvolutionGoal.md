@@ -1,5 +1,9 @@
 # Evolution Goal Prompt
 
+This file is retained for historical context. The active goal prompt is now `goal.md`, and the active implementation loop is `workflow.md`.
+
+Read those first. The older Rettifilo-first language below is superseded by the current speed-focused objective: use the evolutionary loop to produce a valid normal-start Monza lap under `80.0s`.
+
 Stop the old PPO micro-engineering loop and use `EvolutionSearchPlan.md` as the active operating plan.
 
 The original final target still matters: train a scratch/random SB3 PPO agent that completes a valid normal-start Monza lap near `<=80.0s`. But the immediate method changes. PPO has not made honest normal-start progress beyond the old `~970.775m` failure after hours of narrow curriculum work, so do not keep adding one-off micro-rungs and schedule presets.

@@ -1,3 +1,4 @@
+import gzip
 import json
 from pathlib import Path
 
@@ -123,6 +124,51 @@ def test_state_library_from_telemetry_file(tmp_path: Path) -> None:
     assert snapshots[0].source_file == str(telemetry_path)
     assert snapshots[0].monotonic_progress_m == 123.0
     assert snapshots[0].last_throttle == 0.5
+
+
+def test_state_library_from_compressed_telemetry_directory(tmp_path: Path) -> None:
+    telemetry_path = tmp_path / "selected_telemetry" / "candidate-steps.jsonl.gz"
+    telemetry_path.parent.mkdir(parents=True)
+    row = {
+        "step_index": 10,
+        "sim_time_s": 1.0,
+        "x": 100.0,
+        "y": 200.0,
+        "heading_deg": 45.0,
+        "speed_kph": 108.0,
+        "yaw_rate_rps": 0.1,
+        "steering": 0.25,
+        "raw_progress_m": 123.0,
+        "monotonic_progress_m": 123.0,
+        "checkpoint_index": 2,
+        "next_checkpoint_index": 3,
+        "checkpoints_passed": 2,
+        "missed_checkpoint_count": 0,
+        "lap_index": 0,
+        "valid_lap": True,
+        "finish_crossed": False,
+        "segment_complete": False,
+        "throttle": 0.5,
+        "brake": 0.0,
+        "action_id": 1,
+    }
+    with gzip.open(telemetry_path, "wt", encoding="utf-8") as file:
+        file.write(json.dumps(row) + "\n")
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"traces": [{"path": str(telemetry_path)}]}),
+        encoding="utf-8",
+    )
+
+    snapshots = snapshots_from_telemetry(
+        tmp_path,
+        sample_every_m=0.0,
+        sample_every_steps=1,
+        max_snapshots=0,
+    )
+
+    assert len(snapshots) == 1
+    assert snapshots[0].source_file == str(telemetry_path)
+    assert snapshots[0].monotonic_progress_m == 123.0
 
 
 def test_state_library_from_telemetry_filters_progress_and_speed(tmp_path: Path) -> None:

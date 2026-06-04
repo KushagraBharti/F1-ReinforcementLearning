@@ -34,7 +34,9 @@ def _reward_totals(steps: list[dict[str, Any]]) -> dict[str, float]:
 
 def latest_telemetry_path(root: Path = ARTIFACTS_DIR) -> Path | None:
     candidates = [path for path in root.glob("**/steps.jsonl") if path.is_file()]
+    candidates.extend(path for path in root.glob("**/steps.jsonl.gz") if path.is_file())
     candidates.extend(path for path in root.glob("**/selected_telemetry/*-steps.jsonl") if path.is_file())
+    candidates.extend(path for path in root.glob("**/selected_telemetry/*-steps.jsonl.gz") if path.is_file())
     if not candidates:
         return None
     return max(candidates, key=lambda path: path.stat().st_mtime)
@@ -50,8 +52,13 @@ def telemetry_paths_from_input(path: Path | None, *, max_files: int = 20) -> lis
         candidates = sorted(
             candidate for candidate in path.glob("**/*-steps.jsonl") if candidate.is_file()
         )
+        candidates.extend(
+            sorted(candidate for candidate in path.glob("**/*-steps.jsonl.gz") if candidate.is_file())
+        )
         if not candidates and (path / "steps.jsonl").is_file():
             candidates = [path / "steps.jsonl"]
+        if not candidates and (path / "steps.jsonl.gz").is_file():
+            candidates = [path / "steps.jsonl.gz"]
         return candidates[:max_files]
     raise FileNotFoundError(f"Telemetry path does not exist: {path}")
 

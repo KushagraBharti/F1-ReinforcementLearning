@@ -22,6 +22,8 @@ Final target remains a valid normal-start Monza PPO lap near `<=80.0s`.
 Read these first:
 
 - `README.md`
+- `goal.md`
+- `workflow.md`
 - `EvolutionSearchPlan.md`
 - `EvolutionGoal.md`
 - `Documentation.md`
@@ -49,6 +51,8 @@ Do not bulk-read those folders by default.
 - Do use `f1rl.evolution_ladder` for repeatable Yosh-style search ladders instead of hand-inventing every rung.
 - Do use PPO only after search has found behavior worth learning.
 - Do keep artifacts and validation explicit.
+- Do compress verified old analyzed large-run folders under `C:\f1rl-artifacts\archives` and delete the original folders after the next changes have been implemented/validated and immediately before launching another full `100x30` or larger run.
+- Do not delete active, unanalyzed, or unverified runs.
 - Treat `action_search.py` and `elite_search.py` as legacy diagnostics. They are not the main path.
 
 ## Work Loop

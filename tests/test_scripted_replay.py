@@ -1,3 +1,4 @@
+import gzip
 import json
 from pathlib import Path
 
@@ -84,7 +85,12 @@ def _write_minimal_trace(path: Path, *, progress_m: float) -> None:
             "termination_reason": "max_steps",
         },
     ]
-    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    payload = "".join(json.dumps(row) + "\n" for row in rows)
+    if path.suffix == ".gz":
+        with gzip.open(path, "wt", encoding="utf-8") as file:
+            file.write(payload)
+    else:
+        path.write_text(payload, encoding="utf-8")
 
 
 def test_replay_can_group_manifest_traces_by_generation(tmp_path: Path, capsys) -> None:
@@ -92,7 +98,8 @@ def test_replay_can_group_manifest_traces_by_generation(tmp_path: Path, capsys) 
     for generation in range(2):
         for candidate_index in range(2):
             progress_m = float(generation * 100 + candidate_index)
-            trace_path = tmp_path / f"trace-g{generation}-c{candidate_index}.jsonl"
+            suffix = ".jsonl.gz" if generation == 1 else ".jsonl"
+            trace_path = tmp_path / f"trace-g{generation}-c{candidate_index}{suffix}"
             _write_minimal_trace(trace_path, progress_m=progress_m)
             traces.append(
                 {

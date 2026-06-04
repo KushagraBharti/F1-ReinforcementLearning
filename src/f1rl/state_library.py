@@ -55,7 +55,23 @@ def _telemetry_paths(path: Path) -> list[Path]:
     if path.is_file():
         return [path]
     if path.is_dir():
-        return sorted(item for item in path.rglob("*.jsonl") if item.is_file())
+        manifest_path = path / "manifest.json"
+        if manifest_path.exists():
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest_paths = [
+                Path(str(row.get("path", "")))
+                for row in payload.get("traces", [])
+                if row.get("path")
+            ]
+            existing = [item for item in manifest_paths if item.exists()]
+            if existing:
+                return existing
+        return sorted(
+            item
+            for pattern in ("*.jsonl", "*.jsonl.gz")
+            for item in path.rglob(pattern)
+            if item.is_file()
+        )
     raise FileNotFoundError(f"Telemetry path does not exist: {path}")
 
 

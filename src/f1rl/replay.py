@@ -188,9 +188,14 @@ def _resolve_replay_paths(paths: Sequence[Path], *, limit: int | None = None, so
     scores: dict[Path, float] = {}
     for path in paths:
         if path.is_dir():
+            manifest_paths = sorted(path for path in _manifest_metadata(path) if path.exists())
             if sort_by in {"best-progress", "score"}:
                 scores.update(_manifest_scores(path, sort_by=sort_by))
-            resolved.extend(sorted(path.glob("*.jsonl")))
+            if manifest_paths:
+                resolved.extend(manifest_paths)
+            else:
+                resolved.extend(sorted(path.glob("*.jsonl")))
+                resolved.extend(sorted(path.glob("*.jsonl.gz")))
         else:
             resolved.append(path)
     unique: list[Path] = []

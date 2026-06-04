@@ -19,7 +19,7 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, cast
 
 import numpy as np
 
@@ -58,6 +58,10 @@ SCORING_PROFILES = frozenset(
         "farthest_distance",
         "frontier_recovery",
         "frontier_novelty",
+        "fast_valid_lap",
+        "time_attack",
+        "lap_pace",
+        "fast_frontier",
     }
 )
 CONTROLLER_FEATURE_NAMES: tuple[str, ...] = (
@@ -161,6 +165,7 @@ class EvolutionSearchConfig:
     scoring_profiles: tuple[str, ...] = ("max_progress",)
     telemetry_selection: str = "top"
     telemetry_compression: str = "none"
+    all_candidate_telemetry_dir: Path | None = None
     checkpoint_every_generations: int = 1
     progress_every_generation: bool = False
     adaptive_survival_floor: bool = True
@@ -208,23 +213,45 @@ def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     tmp_path.replace(path)
 
 
+def _jsonl_text_open(path: Path, mode: str) -> TextIO:
+    text_mode = mode if "t" in mode else f"{mode}t"
+    opener = gzip.open if path.suffix == ".gz" else Path.open
+    return cast(TextIO, opener(path, text_mode, encoding="utf-8"))
+
+
+def _telemetry_file_suffix(compression: str) -> str:
+    if compression == "none":
+        return ".jsonl"
+    if compression == "gzip":
+        return ".jsonl.gz"
+    raise ValueError(f"Unknown telemetry compression {compression!r}")
+
+
+def _tmp_jsonl_path(path: Path) -> Path:
+    if path.name.endswith(".jsonl.gz"):
+        return path.with_name(f"{path.name.removesuffix('.jsonl.gz')}.tmp.jsonl.gz")
+    if path.name.endswith(".jsonl"):
+        return path.with_name(f"{path.name.removesuffix('.jsonl')}.tmp.jsonl")
+    return path.with_name(f"{path.name}.tmp")
+
+
 def _append_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as file:
+    with _jsonl_text_open(path, "a") as file:
         for row in rows:
             file.write(json.dumps(row, default=_json_default) + "\n")
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as file:
+    with _jsonl_text_open(path, "w") as file:
         for row in rows:
             file.write(json.dumps(row, default=_json_default) + "\n")
 
 
 def _last_jsonl_row(path: Path) -> dict[str, Any]:
     last_row: dict[str, Any] = {}
-    with path.open("r", encoding="utf-8") as file:
+    with _jsonl_text_open(path, "r") as file:
         for line in file:
             if line.strip():
                 last_row = json.loads(line)
@@ -291,6 +318,9 @@ def _validate_config(config: EvolutionSearchConfig) -> None:
     if config.telemetry_selection not in TELEMETRY_SELECTIONS:
         valid = ", ".join(sorted(TELEMETRY_SELECTIONS))
         raise ValueError(f"Unknown telemetry selection {config.telemetry_selection!r}; expected one of: {valid}")
+    if config.telemetry_compression not in TELEMETRY_COMPRESSIONS:
+        valid = ", ".join(sorted(TELEMETRY_COMPRESSIONS))
+        raise ValueError(f"Unknown telemetry compression {config.telemetry_compression!r}; expected one of: {valid}")
     if config.max_steps_schedule:
         previous_generation = -1
         for generation, max_steps in config.max_steps_schedule:
@@ -997,6 +1027,44 @@ def _pace_metrics(rows: list[dict[str, Any]], *, start_progress_m: float) -> dic
     }
 
 
+def _row_is_valid_finish(row: dict[str, Any]) -> bool:
+    return bool(
+        row.get("completed_lap")
+        or row.get("valid_lap")
+        or row.get("finish_crossed")
+        or str(row.get("termination_reason", "")) == "lap_complete"
+    )
+
+
+def _row_elapsed_s(row: dict[str, Any]) -> float:
+    elapsed = row.get("elapsed_s")
+    if elapsed is None:
+        final_row = row.get("final_row")
+        if isinstance(final_row, dict):
+            elapsed = final_row.get("sim_time_s")
+    if elapsed is None:
+        elapsed = row.get("sim_time_s")
+    if elapsed is None:
+        return float("inf")
+    try:
+        return float(elapsed)
+    except (TypeError, ValueError):
+        return float("inf")
+
+
+def _fast_lap_rank_key(row: dict[str, Any]) -> tuple[float, float, float, float, float]:
+    valid = 1.0 if _row_is_valid_finish(row) else 0.0
+    elapsed = _row_elapsed_s(row)
+    elapsed_score = -elapsed if math.isfinite(elapsed) else -1_000_000.0
+    return (
+        valid,
+        elapsed_score,
+        float(row.get("pace_kph", 0.0) or 0.0),
+        float(row.get("score", 0.0) or 0.0),
+        float(row.get("best_progress_m", 0.0) or 0.0),
+    )
+
+
 def _score_profile(
     rows: list[dict[str, Any]],
     *,
@@ -1038,6 +1106,7 @@ def _score_profile(
     beyond_target_m = max(0.0, best_progress_m - gates.target_progress_m)
     stalled = reason == "max_steps" and final_speed_kph < 20.0
     pace = _pace_metrics(rows, start_progress_m=start_progress_m)
+    elapsed_s = float(pace["elapsed_s"])
     pace_kph = float(pace["pace_kph"])
     avg_speed_first_300_m = float(pace["avg_speed_first_300_m"])
     avg_speed_first_450_m = float(pace["avg_speed_first_450_m"])
@@ -1060,6 +1129,7 @@ def _score_profile(
     focus_stop_penalty = max(0.0, 90.0 - final_speed_kph) * 170.0 if reached_focus else 0.0
     late_progress_factor = float(np.clip((best_progress_m - 3000.0) / 2200.0, 0.0, 1.0))
     frontier_quality_factor = float(np.clip((best_progress_m - 1500.0) / 3500.0, 0.0, 1.0))
+    lap_progress_ratio = float(np.clip(best_progress_m / MONZA_LENGTH_METERS, 0.0, 1.0))
     demand_rows = [
         row
         for row in rows
@@ -1096,6 +1166,21 @@ def _score_profile(
         + avg_throttle_demand_zone * 7_500.0
     )
     viability_penalty = setup_penalty + late_setup_penalty + brake_demand_penalty
+    valid_elapsed_s = elapsed_s if valid_finish and elapsed_s > 0.0 else float("inf")
+    valid_lap_speed_bonus = 0.0
+    if valid_finish and math.isfinite(valid_elapsed_s):
+        valid_lap_speed_bonus = (
+            8_500_000.0
+            + max(0.0, 220.0 - valid_elapsed_s) * 58_000.0
+            + max(0.0, 170.0 - valid_elapsed_s) * 72_000.0
+            + max(0.0, 130.0 - valid_elapsed_s) * 120_000.0
+            + max(0.0, 100.0 - valid_elapsed_s) * 180_000.0
+            + max(0.0, 85.0 - valid_elapsed_s) * 260_000.0
+            + min(pace_kph, 380.0) * 16_000.0
+            - max(0.0, valid_elapsed_s - 100.0) * 34_000.0
+            - max(0.0, valid_elapsed_s - 130.0) * 80_000.0
+            - max(0.0, valid_elapsed_s - 170.0) * 140_000.0
+        )
 
     if profile == "frontier":
         collision_penalty = 4_500.0
@@ -1120,6 +1205,88 @@ def _score_profile(
     if clean:
         score += 3_500.0 + progress_ratio * 3_000.0
 
+    if profile == "fast_valid_lap":
+        score += raw_progress_m * 20.0 + best_progress_m * 16.0
+        score += frontier_m * 70.0 + near_target_m * 160.0 + beyond_target_m * 250.0
+        score += min(pace_kph, 380.0) * 4_600.0
+        score += min(final_speed_kph, 360.0) * 120.0
+        if valid_finish:
+            score += valid_lap_speed_bonus
+            score -= max(0.0, valid_elapsed_s - 150.0) * 95_000.0
+            score -= max(0.0, valid_elapsed_s - 180.0) * 140_000.0
+        else:
+            score -= remaining_m * 70.0
+            if reason == "max_steps":
+                score -= 80_000.0 + max(0.0, elapsed_s - 120.0) * 800.0
+        if time_to_450_m is not None:
+            score += max(0.0, 16.5 - float(time_to_450_m)) * 1_200.0
+        score -= early_slow_penalty * 2.40
+        score -= early_brake_penalty * 1.60
+        score -= viability_penalty * (0.35 if valid_finish else 0.70)
+        score -= missed_checkpoints * 12_000.0
+        return float(score)
+
+    if profile == "time_attack":
+        score += raw_progress_m * 12.0 + best_progress_m * 10.0
+        score += frontier_m * 55.0 + near_target_m * 130.0 + beyond_target_m * 190.0
+        score += min(pace_kph, 400.0) * 8_800.0 * max(0.20, progress_ratio)
+        if valid_finish:
+            score += 6_500_000.0
+            score += max(0.0, 180.0 - valid_elapsed_s) * 95_000.0
+            score += max(0.0, 120.0 - valid_elapsed_s) * 160_000.0
+            score += max(0.0, 90.0 - valid_elapsed_s) * 280_000.0
+            score -= max(0.0, valid_elapsed_s - 120.0) * 80_000.0
+            score -= max(0.0, valid_elapsed_s - 150.0) * 150_000.0
+        else:
+            score -= remaining_m * 90.0
+            if reason in {"max_steps", "no_progress"}:
+                score -= 90_000.0
+        score -= early_slow_penalty * 2.10
+        score -= viability_penalty * 0.45
+        score -= missed_checkpoints * 14_000.0
+        return float(score)
+
+    if profile == "lap_pace":
+        score += raw_progress_m * 24.0 + best_progress_m * 12.0
+        score += frontier_m * 60.0 + near_target_m * 135.0 + beyond_target_m * 210.0
+        score += min(pace_kph, 390.0) * 3_800.0 * max(0.30, frontier_quality_factor)
+        score += min(avg_speed_first_450_m, 340.0) * 150.0
+        if valid_finish:
+            score += 2_800_000.0 + max(0.0, 190.0 - valid_elapsed_s) * 50_000.0
+            score -= max(0.0, valid_elapsed_s - 150.0) * 55_000.0
+        if reason == "max_steps":
+            score -= max(0.0, elapsed_s - 150.0) * 1_200.0
+        score -= early_slow_penalty * 1.80
+        score -= viability_penalty * 0.50
+        score -= missed_checkpoints * 8_000.0
+        return float(score)
+
+    if profile == "fast_frontier":
+        progress_pace_factor = 0.18 + lap_progress_ratio * 1.95
+        score += raw_progress_m * 18.0 + best_progress_m * 120.0
+        score += frontier_m * 70.0 + near_target_m * 130.0 + beyond_target_m * 170.0
+        score += min(pace_kph, 360.0) * 13_500.0 * progress_pace_factor
+        score += min(final_speed_kph, 360.0) * 1_200.0 * max(0.15, lap_progress_ratio)
+        score += min(avg_speed_first_450_m, 340.0) * 160.0
+        if best_progress_m >= 3000.0:
+            score += 260_000.0 + min(pace_kph, 330.0) * 1_200.0
+        if best_progress_m >= 4000.0:
+            score += 360_000.0 + min(pace_kph, 330.0) * 1_700.0
+        if best_progress_m >= 5000.0:
+            score += 520_000.0 + min(pace_kph, 330.0) * 2_400.0
+        if valid_finish:
+            score -= 650_000.0 + max(0.0, valid_elapsed_s - 150.0) * 90_000.0
+        else:
+            score -= remaining_m * 28.0
+        if best_progress_m >= 2400.0:
+            score -= max(0.0, 175.0 - pace_kph) * 14_000.0
+        if reason in {"max_steps", "no_progress"} and not valid_finish:
+            score -= 65_000.0 + max(0.0, elapsed_s - 130.0) * 900.0
+        score -= early_slow_penalty * 1.45
+        score -= viability_penalty * 0.38
+        score -= missed_checkpoints * 10_000.0
+        return float(score)
+
     if profile == "frontier":
         score += best_progress_m * 12.0 + min(final_speed_kph, 360.0) * 18.0
         score += frontier_m * 95.0 + near_target_m * 210.0 + beyond_target_m * 320.0
@@ -1136,6 +1303,8 @@ def _score_profile(
         score += best_progress_m * 18.0 + min(final_speed_kph, 380.0) * 20.0
         score += min(pace_kph, 310.0) * 86.0
         score += frontier_m * 105.0 + near_target_m * 235.0 + beyond_target_m * 340.0
+        if valid_finish:
+            score += valid_lap_speed_bonus * 0.18
         if time_to_450_m is not None:
             score += max(0.0, 18.0 - float(time_to_450_m)) * 260.0
         score += min(avg_speed_first_450_m, 320.0) * 28.0
@@ -1384,8 +1553,8 @@ def _run_candidate(
     try:
         if stream_telemetry_path is not None:
             stream_telemetry_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_stream_path = stream_telemetry_path.with_name(f"{stream_telemetry_path.name}.tmp")
-            stream_file = tmp_stream_path.open("w", encoding="utf-8")
+            tmp_stream_path = _tmp_jsonl_path(stream_telemetry_path)
+            stream_file = _jsonl_text_open(tmp_stream_path, "w")
         for step_index in range(sim_config.max_steps):
             search_features = active_sim.search_features(
                 segment_start_progress_m=start_progress_m,
@@ -1556,8 +1725,10 @@ def _evaluate_population(
     frontier_focus_end_m: float,
     capture_step_telemetry: bool,
     stream_telemetry_dir: Path | None = None,
+    telemetry_compression: str = "none",
     executor: ProcessPoolExecutor | None = None,
 ) -> list[dict[str, Any]]:
+    telemetry_suffix = _telemetry_file_suffix(telemetry_compression)
     tasks = [
         {
             "candidate_index": index,
@@ -1575,7 +1746,7 @@ def _evaluate_population(
             "capture_step_telemetry": capture_step_telemetry,
             "stream_telemetry_path": str(
                 stream_telemetry_dir
-                / f"evolution-all_candidates-gen-{generation:03d}-candidate-{index:05d}-steps.jsonl"
+                / f"evolution-all_candidates-gen-{generation:03d}-candidate-{index:05d}-steps{telemetry_suffix}"
             )
             if capture_step_telemetry and stream_telemetry_dir is not None
             else None,
@@ -1603,7 +1774,27 @@ def _evaluate_population(
 def _select_elite_rows(ranked: list[dict[str, Any]], config: EvolutionSearchConfig) -> list[dict[str, Any]]:
     if not ranked:
         return []
-    selected: dict[tuple[int, int], dict[str, Any]] = {}
+    selected: list[dict[str, Any]] = []
+    seen: set[tuple[int, int]] = set()
+
+    def add(row: dict[str, Any]) -> None:
+        key = (int(row["generation"]), int(row["candidate_index"]))
+        if key not in seen:
+            seen.add(key)
+            selected.append(row)
+
+    valid_rows = [row for row in ranked if _row_is_valid_finish(row)]
+    fastest_valid_rows = sorted(
+        valid_rows,
+        key=lambda row: (
+            _row_elapsed_s(row),
+            -float(row.get("pace_kph", 0.0) or 0.0),
+            -float(row.get("score", 0.0) or 0.0),
+        ),
+    )
+    for row in fastest_valid_rows[: max(1, config.elite_count // 4)]:
+        add(row)
+
     per_profile = max(1, config.elite_count // max(1, len(config.scoring_profiles)))
     for profile in config.scoring_profiles:
         profile_ranked = sorted(
@@ -1612,14 +1803,12 @@ def _select_elite_rows(ranked: list[dict[str, Any]], config: EvolutionSearchConf
             reverse=True,
         )
         for row in profile_ranked[:per_profile]:
-            selected[(int(row["generation"]), int(row["candidate_index"]))] = row
+            add(row)
     for row in ranked:
         if len(selected) >= config.elite_count:
             break
-        selected[(int(row["generation"]), int(row["candidate_index"]))] = row
-    rows = list(selected.values())
-    rows.sort(key=lambda row: float(row["score"]), reverse=True)
-    return rows[: max(1, min(config.elite_count, len(ranked)))]
+        add(row)
+    return selected[: max(1, min(config.elite_count, len(ranked)))]
 
 
 def _rank_biased_index(count: int, rng: np.random.Generator) -> int:
@@ -1771,7 +1960,7 @@ def _parent_buckets(
     if not ranked:
         return {}, {"parent_pool_size": 0, "parent_bucket_counts": {}}
     pool_size = _parent_pool_size(config, len(ranked))
-    per_bucket = max(1, math.ceil(pool_size / 7))
+    per_bucket = max(1, math.ceil(pool_size / 10))
     leader_progress_m = max(
         (float(row.get("best_progress_m", 0.0) or 0.0) for row in ranked),
         default=0.0,
@@ -1794,7 +1983,31 @@ def _parent_buckets(
         for row in ranked
         if float(row.get("best_progress_m", 0.0) or 0.0) >= speed_bucket_floor_m
     ]
+    valid_rows = [row for row in ranked if _row_is_valid_finish(row)]
+    non_finish_frontier_rows = [row for row in speed_rows if not _row_is_valid_finish(row)]
     buckets = {
+        "fastest_valid_lap": sorted(
+            valid_rows,
+            key=lambda row: (
+                _row_elapsed_s(row),
+                -float(row.get("pace_kph", 0.0) or 0.0),
+                -float(row.get("score", 0.0) or 0.0),
+            ),
+        )[:per_bucket],
+        "fast_valid_lap_score": sorted(
+            valid_rows,
+            key=lambda row: float(row.get("profile_scores", {}).get("fast_valid_lap", row.get("score", float("-inf")))),
+            reverse=True,
+        )[:per_bucket],
+        "fast_frontier_score": sorted(
+            non_finish_frontier_rows,
+            key=lambda row: (
+                float(row.get("profile_scores", {}).get("fast_frontier", row.get("score", float("-inf")))),
+                float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+                float(row.get("pace_kph", float("-inf")) or float("-inf")),
+            ),
+            reverse=True,
+        )[:per_bucket],
         "survival_gate": sorted(survival_rows, key=lambda row: float(row.get("score", float("-inf"))), reverse=True)[
             :per_bucket
         ],
@@ -1869,13 +2082,16 @@ def _sample_parent_row(
     if not names:
         raise ValueError("Cannot sample parent from empty parent buckets")
     bucket_weights = {
+        "fastest_valid_lap": 9.5,
+        "fast_valid_lap_score": 9.0,
+        "fast_frontier_score": 7.2,
         "late_frontier_distance": 4.0,
         "frontier_distance": 3.0,
-        "farthest_distance": 2.8,
-        "survival_gate": 2.2,
-        "far_fast": 2.4,
-        "cleanest_distance": 1.7,
-        "fastest_pace": 1.3,
+        "farthest_distance": 1.3,
+        "survival_gate": 1.1,
+        "far_fast": 4.8,
+        "cleanest_distance": 1.3,
+        "fastest_pace": 4.2,
         "fallback_top_score": 1.0,
     }
     weights = np.asarray([bucket_weights.get(name, 1.0) for name in names], dtype=np.float64)
@@ -2095,22 +2311,14 @@ def _next_population(
 
     current_source_rows = sorted(
         ranked,
-        key=lambda row: (
-            float(row.get("best_progress_m", float("-inf")) or float("-inf")),
-            float(row.get("pace_kph", float("-inf")) or float("-inf")),
-            float(row.get("score", float("-inf"))),
-        ),
+        key=_fast_lap_rank_key,
         reverse=True,
     )[: max(len(elite_rows), config.elite_count * 3, 8)]
     if not current_source_rows:
         current_source_rows = elite_rows or ranked
     global_source_rows = sorted(
         best_rows or current_source_rows,
-        key=lambda row: (
-            float(row.get("best_progress_m", float("-inf")) or float("-inf")),
-            float(row.get("pace_kph", float("-inf")) or float("-inf")),
-            float(row.get("score", float("-inf"))),
-        ),
+        key=_fast_lap_rank_key,
         reverse=True,
     )
     for _ in range(immigrant_counts["smart"]):
@@ -2249,6 +2457,18 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
         if top_decile_pace_rows
         else 0.0
     )
+    valid_lap_rows = [row for row in ranked if _row_is_valid_finish(row)]
+    valid_lap_count = len(valid_lap_rows)
+    fastest_valid_lap = min(valid_lap_rows, key=_row_elapsed_s, default=None)
+    fastest_valid_lap_s = _row_elapsed_s(fastest_valid_lap) if fastest_valid_lap is not None else None
+    average_valid_lap_s = (
+        sum(_row_elapsed_s(row) for row in valid_lap_rows) / valid_lap_count
+        if valid_lap_rows
+        else None
+    )
+    fastest_valid_lap_pace_kph = (
+        float(fastest_valid_lap.get("pace_kph", 0.0) or 0.0) if fastest_valid_lap is not None else None
+    )
     progress_threshold_counts = {
         str(threshold): sum(1 for row in ranked if float(row.get("best_progress_m", 0.0) or 0.0) >= threshold)
         for threshold in (100, 300, 450, 650, 1000, 1220, 1500, 2000, 2400, 3000, 4000, 5000, 5500, 5793)
@@ -2277,6 +2497,12 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
         "generation_average_pace_kph": avg_pace_kph,
         "generation_top_decile_distance_m": top_decile_distance_m,
         "generation_top_decile_pace_kph": top_decile_pace_kph,
+        "valid_lap_count": valid_lap_count,
+        "valid_lap_rate": valid_lap_count / max(1, len(ranked)),
+        "fastest_valid_lap_s": fastest_valid_lap_s,
+        "average_valid_lap_s": average_valid_lap_s,
+        "fastest_valid_lap_pace_kph": fastest_valid_lap_pace_kph,
+        "fastest_valid_lap_attempt": fastest_valid_lap,
         "progress_threshold_counts": progress_threshold_counts,
         "best_remaining_m": ranked[0]["remaining_m"] if ranked else None,
         "completion_count": completion_count,
@@ -2293,7 +2519,16 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
 
 def _merge_best_rows(existing: list[dict[str, Any]], new_rows: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
     combined = [*existing, *new_rows]
-    combined.sort(key=lambda row: float(row["score"]), reverse=True)
+    fastest_valid = sorted(
+        [row for row in combined if _row_is_valid_finish(row)],
+        key=lambda row: (
+            _row_elapsed_s(row),
+            -float(row.get("pace_kph", 0.0) or 0.0),
+            -float(row.get("score", 0.0) or 0.0),
+        ),
+    )
+    top_score = sorted(combined, key=lambda row: float(row["score"]), reverse=True)
+    combined = [*fastest_valid[: max(1, limit // 4)], *top_score]
     seen: set[str] = set()
     rows: list[dict[str, Any]] = []
     for row in combined:
@@ -2390,6 +2625,10 @@ def _select_telemetry_rows(
         leader = _best_by(all_rows, key)
         if leader is not None:
             selected.append(_tagged_row(leader, reason))
+    valid_rows = [row for row in all_rows if _row_is_valid_finish(row)]
+    fastest_valid = min(valid_rows, key=_row_elapsed_s, default=None)
+    if fastest_valid is not None:
+        selected.append(_tagged_row(fastest_valid, "fastest_valid_lap"))
     moving_rows = [
         row
         for row in all_rows
@@ -2543,6 +2782,8 @@ def _resume_command(
         ",".join(config.scoring_profiles),
         "--telemetry-selection",
         config.telemetry_selection,
+        "--telemetry-compression",
+        config.telemetry_compression,
         "--checkpoint-every-generations",
         str(config.checkpoint_every_generations),
         "--survival-floor-stages-m",
@@ -2595,6 +2836,8 @@ def _resume_command(
         parts.append("--no-target-termination")
     if config.progress_every_generation:
         parts.append("--progress-every-generation")
+    if config.all_candidate_telemetry_dir is not None:
+        parts.extend(["--all-candidate-telemetry-dir", _quote_cli(config.all_candidate_telemetry_dir)])
     if state_library is not None:
         parts.extend(["--state-library", _quote_cli(state_library)])
     if start_progress_m is not None:
@@ -2921,6 +3164,11 @@ def run_evolution_search(
     attempts_path = output_dir / "attempts.jsonl"
     generation_summary_path = output_dir / "generation_summary.jsonl"
     selected_dir = output_dir / "selected_telemetry"
+    all_candidate_telemetry_dir = (
+        Path(config.all_candidate_telemetry_dir)
+        if config.all_candidate_telemetry_dir is not None
+        else selected_dir
+    )
     config_hash = _search_hash(
         config=config,
         gates=gates,
@@ -2993,7 +3241,8 @@ def run_evolution_search(
                 frontier_focus_start_m=config.frontier_focus_start_m,
                 frontier_focus_end_m=config.frontier_focus_end_m,
                 capture_step_telemetry=config.telemetry_selection == "all",
-                stream_telemetry_dir=selected_dir if config.telemetry_selection == "all" else None,
+                stream_telemetry_dir=all_candidate_telemetry_dir if config.telemetry_selection == "all" else None,
+                telemetry_compression=config.telemetry_compression,
                 executor=executor,
             )
             for row in evaluated:
@@ -3061,6 +3310,8 @@ def run_evolution_search(
                 best = ranked[0] if ranked else {}
                 farthest = summary.get("farthest_attempt") or {}
                 next_population_summary = summary.get("next_population", {})
+                fastest_valid_lap_s = summary.get("fastest_valid_lap_s")
+                average_valid_lap_s = summary.get("average_valid_lap_s")
                 print(
                     "evolution_generation "
                     f"generation={generation} population={len(ranked)} "
@@ -3071,6 +3322,10 @@ def run_evolution_search(
                     f"generation_average_pace_kph={float(summary.get('generation_average_pace_kph', 0.0)):.3f} "
                     f"top_decile_distance_m={float(summary.get('generation_top_decile_distance_m', 0.0)):.3f} "
                     f"top_decile_pace_kph={float(summary.get('generation_top_decile_pace_kph', 0.0)):.3f} "
+                    f"valid_laps={int(summary.get('valid_lap_count', 0) or 0)} "
+                    f"valid_lap_rate={float(summary.get('valid_lap_rate', 0.0) or 0.0):.3f} "
+                    f"fastest_valid_lap_s={float(fastest_valid_lap_s) if fastest_valid_lap_s is not None else 0.0:.3f} "
+                    f"average_valid_lap_s={float(average_valid_lap_s) if average_valid_lap_s is not None else 0.0:.3f} "
                     f"global_best_distance_m={global_best_distance_m:.3f} "
                     f"best_score={float(best.get('score', 0.0)):.3f} "
                     f"survival_floor_m={float(summary.get('survival_floor_m', 0.0)):.1f} "
@@ -3187,9 +3442,10 @@ def run_evolution_search(
                 collect_full_telemetry=True,
             )
             reason = _safe_slug(str(row.get("telemetry_selection_reason", "selected")))
+            telemetry_suffix = _telemetry_file_suffix(config.telemetry_compression)
             telemetry_path = selected_dir / (
                 f"evolution-{reason}-rank-{rank:03d}-gen-{int(row['generation']):03d}-"
-                f"candidate-{int(row['candidate_index']):05d}-steps.jsonl"
+                f"candidate-{int(row['candidate_index']):05d}-steps{telemetry_suffix}"
             )
             _write_jsonl(telemetry_path, rows)
             final_row = rows[-1] if rows else {}
@@ -3231,6 +3487,10 @@ def run_evolution_search(
         selected_dir / "manifest.json",
         {
             "telemetry_selection": config.telemetry_selection,
+            "telemetry_compression": config.telemetry_compression,
+            "all_candidate_telemetry_dir": str(all_candidate_telemetry_dir)
+            if config.telemetry_selection == "all"
+            else None,
             "trace_count": len(telemetry_manifest),
             "traces": telemetry_manifest,
         },
@@ -3247,7 +3507,7 @@ def run_evolution_search(
             "start_speed_kph": start_speed_kph,
             "start_min_progress_m": start_min_progress_m,
             "start_max_progress_m": start_max_progress_m,
-            "config": asdict(config),
+            "config": dataclass_to_dict(config),
             "gates": asdict(gates),
         },
     )
@@ -3360,6 +3620,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--genome-type", choices=sorted(GENOME_TYPES), default="phase")
     parser.add_argument("--scoring-profiles", default="max_progress")
     parser.add_argument("--telemetry-selection", choices=sorted(TELEMETRY_SELECTIONS), default="top")
+    parser.add_argument("--telemetry-compression", choices=sorted(TELEMETRY_COMPRESSIONS), default="none")
+    parser.add_argument(
+        "--all-candidate-telemetry-dir",
+        type=Path,
+        help="Optional external directory for --telemetry-selection all trace files; manifests stay in output-dir.",
+    )
     parser.add_argument("--checkpoint-every-generations", type=int, default=1)
     parser.add_argument("--progress-every-generation", action="store_true")
     parser.add_argument("--no-adaptive-survival-floor", action="store_true")
@@ -3415,6 +3681,8 @@ def main(argv: list[str] | None = None) -> int:
         genome_type=args.genome_type,
         scoring_profiles=_parse_csv(args.scoring_profiles),
         telemetry_selection=args.telemetry_selection,
+        telemetry_compression=args.telemetry_compression,
+        all_candidate_telemetry_dir=args.all_candidate_telemetry_dir,
         checkpoint_every_generations=max(0, args.checkpoint_every_generations),
         progress_every_generation=bool(args.progress_every_generation),
         adaptive_survival_floor=not bool(args.no_adaptive_survival_floor),
