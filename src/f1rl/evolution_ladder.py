@@ -157,6 +157,29 @@ def _rungs(scale: LadderScale) -> list[LadderRung]:
             target_max_lateral_error_m=18.0,
             target_max_heading_error_deg=35.0,
         ),
+        LadderRung(
+            name="roggia-exit-lesmo-1900-2800",
+            start_progress_m=1900.0,
+            target_progress_m=2800.0,
+            start_speed_kph=315.0,
+            max_steps=max(scale.max_steps, 420),
+            target_min_speed_kph=120.0,
+            target_max_speed_kph=245.0,
+            target_max_lateral_error_m=16.0,
+            target_max_heading_error_deg=34.0,
+        ),
+        LadderRung(
+            name="roggia-lesmo-transfer-2000-3030",
+            start_progress_m=2000.0,
+            target_progress_m=3030.0,
+            start_speed_kph=260.0,
+            max_steps=max(scale.max_steps, 520),
+            target_min_speed_kph=135.0,
+            target_max_speed_kph=250.0,
+            target_max_lateral_error_m=16.0,
+            target_max_heading_error_deg=34.0,
+            use_previous_elites=True,
+        ),
     ]
 
 
@@ -191,6 +214,15 @@ def _search_config(
         scoring_profiles=tuple(args.scoring_profiles),
         checkpoint_every_generations=args.checkpoint_every_generations,
         progress_every_generation=args.progress_every_generation,
+        frontier_focus_start_m=args.frontier_focus_start_m,
+        frontier_focus_end_m=args.frontier_focus_end_m,
+        frontier_parent_min_progress_m=args.frontier_parent_min_progress_m,
+        plateau_mode=not args.no_plateau_mode,
+        plateau_generations=args.plateau_generations,
+        plateau_distance_epsilon_m=args.plateau_distance_epsilon_m,
+        plateau_average_improvement_m=args.plateau_average_improvement_m,
+        plateau_elite_fraction=args.plateau_elite_fraction,
+        plateau_extra_mutations=args.plateau_extra_mutations,
     )
 
 
@@ -266,6 +298,8 @@ def run_ladder(args: argparse.Namespace) -> Path:
         elif args.full_probe_mode == "major" and rung.name in {
             "linked-rettifilo-520-1220",
             "normal-start-transfer-0-1220",
+            "roggia-exit-lesmo-1900-2800",
+            "roggia-lesmo-transfer-2000-3030",
         }:
             runs.append(_full_probe(root=root, scale=scale, args=args, name=f"full-probe-after-{rung.name}"))
 
@@ -289,7 +323,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=0)
     parser.add_argument("--worker-chunk-size", type=int, default=0)
     parser.add_argument("--genome-type", choices=["phase", "progress_phase", "controller"], default="controller")
-    parser.add_argument("--scoring-profiles", default="max_progress,clean_exit,risk_seeking")
+    parser.add_argument(
+        "--scoring-profiles",
+        default="max_progress,clean_exit,risk_seeking,frontier_recovery,frontier_novelty",
+    )
     parser.add_argument("--action-set", default="racing")
     parser.add_argument("--observation-profile", default="racing_v2")
     parser.add_argument("--seed", type=int, default=7)
@@ -305,6 +342,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--checkpoint-every-generations", type=int, default=1)
     parser.add_argument("--progress-every-generation", action="store_true")
     parser.add_argument("--full-probe-mode", choices=["none", "major", "every-rung"], default="major")
+    parser.add_argument("--frontier-focus-start-m", type=float, default=2200.0)
+    parser.add_argument("--frontier-focus-end-m", type=float, default=2600.0)
+    parser.add_argument("--frontier-parent-min-progress-m", type=float, default=2000.0)
+    parser.add_argument("--no-plateau-mode", action="store_true")
+    parser.add_argument("--plateau-generations", type=int, default=3)
+    parser.add_argument("--plateau-distance-epsilon-m", type=float, default=8.0)
+    parser.add_argument("--plateau-average-improvement-m", type=float, default=80.0)
+    parser.add_argument("--plateau-elite-fraction", type=float, default=0.50)
+    parser.add_argument("--plateau-extra-mutations", type=int, default=1)
     args = parser.parse_args(argv)
     args.scoring_profiles = tuple(item.strip() for item in args.scoring_profiles.split(",") if item.strip())
     return args

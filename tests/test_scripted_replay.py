@@ -1,8 +1,32 @@
 import json
 from pathlib import Path
 
-from f1rl.replay import run_replay, run_replay_paths
+from f1rl.replay import ReplayControls, run_replay, run_replay_paths
 from f1rl.scripted import run_scripted
+
+
+def test_replay_controls_clamp_speed_and_queue_skips() -> None:
+    controls = ReplayControls(speed=1.0)
+
+    for _ in range(40):
+        controls.speed_up()
+    assert controls.speed == 32.0
+
+    for _ in range(80):
+        controls.speed_down()
+    assert controls.speed == 0.05
+
+    controls.reset_speed()
+    assert controls.speed == 1.0
+
+    controls.queue_generation_skip(3)
+    assert controls.take_generation_skip()
+    assert controls.take_generation_skip()
+    assert controls.take_generation_skip()
+    assert not controls.take_generation_skip()
+
+    controls.skip_remaining_generations()
+    assert controls.take_generation_skip()
 
 
 def test_scripted_and_replay_smoke() -> None:

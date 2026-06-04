@@ -8,6 +8,7 @@ libraries that PPO can later use as curriculum starts.
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import math
@@ -16,9 +17,9 @@ import sys
 import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 import numpy as np
 
@@ -40,6 +41,7 @@ from f1rl.state_snapshot import (
 
 GENOME_TYPES = frozenset({"phase", "progress_phase", "controller"})
 TELEMETRY_SELECTIONS = frozenset({"top", "leaders", "all"})
+TELEMETRY_COMPRESSIONS = frozenset({"none", "gzip"})
 SCORING_PROFILES = frozenset(
     {
         "frontier",
@@ -50,6 +52,12 @@ SCORING_PROFILES = frozenset(
         "exit_speed",
         "full_lap_validity",
         "risk_seeking",
+        "frontier_fast",
+        "early_pace",
+        "clean_distance",
+        "farthest_distance",
+        "frontier_recovery",
+        "frontier_novelty",
     }
 )
 CONTROLLER_FEATURE_NAMES: tuple[str, ...] = (
@@ -58,6 +66,11 @@ CONTROLLER_FEATURE_NAMES: tuple[str, ...] = (
     "target_speed_norm",
     "speed_error_norm",
     "brake_demand",
+    "future_brake_demand",
+    "target_speed_drop_norm",
+    "brake_gate_proximity",
+    "brake_gate_distance_norm",
+    "lookahead_abs_max",
     "signed_lateral_error_norm",
     "heading_error_norm",
     "yaw_rate_norm",
@@ -100,6 +113,7 @@ class Genome:
 class Candidate:
     genome: Genome
     snapshot_index: int
+    lineage: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +139,7 @@ class EvolutionSearchConfig:
     action_set: str = "racing"
     observation_profile: str = "racing_v2"
     max_steps: int = 600
+    max_steps_schedule: tuple[tuple[int, int], ...] = ()
     population: int = 256
     generations: int = 20
     elite_count: int = 16
@@ -145,8 +160,28 @@ class EvolutionSearchConfig:
     genome_type: str = "phase"
     scoring_profiles: tuple[str, ...] = ("max_progress",)
     telemetry_selection: str = "top"
+    telemetry_compression: str = "none"
     checkpoint_every_generations: int = 1
     progress_every_generation: bool = False
+    adaptive_survival_floor: bool = True
+    survival_floor_stages_m: tuple[float, ...] = (450.0, 1000.0, 1220.0, 1500.0, 2000.0, 2400.0, 3000.0, 4000.0, 5000.0)
+    survival_floor_pass_rate: float = 0.30
+    parent_pool_size: int = 0
+    adaptive_immigrants: bool = True
+    min_random_immigrants: int = 2
+    smart_immigrant_fraction: float = 0.50
+    smart_immigrant_current_fraction: float = 0.90
+    frontier_focus_start_m: float = 2200.0
+    frontier_focus_end_m: float = 2600.0
+    frontier_parent_min_progress_m: float = 2000.0
+    survival_floor_leader_jump: bool = True
+    late_frontier_trigger_m: float = 4000.0
+    plateau_mode: bool = True
+    plateau_generations: int = 3
+    plateau_distance_epsilon_m: float = 8.0
+    plateau_average_improvement_m: float = 80.0
+    plateau_elite_fraction: float = 0.50
+    plateau_extra_mutations: int = 1
 
 
 def _json_default(value: Any) -> Any:
@@ -204,6 +239,51 @@ def _parse_csv(value: str | tuple[str, ...] | list[str]) -> tuple[str, ...]:
     return tuple(item.strip() for item in value.split(",") if item.strip())
 
 
+def _parse_float_csv(value: str | tuple[float, ...] | list[float]) -> tuple[float, ...]:
+    if isinstance(value, tuple):
+        return tuple(float(item) for item in value)
+    if isinstance(value, list):
+        return tuple(float(item) for item in value)
+    return tuple(float(item.strip()) for item in value.split(",") if item.strip())
+
+
+def _parse_max_steps_schedule(value: str | tuple[tuple[int, int], ...] | list[tuple[int, int]]) -> tuple[tuple[int, int], ...]:
+    if isinstance(value, tuple):
+        return tuple((int(generation), int(steps)) for generation, steps in value)
+    if isinstance(value, list):
+        return tuple((int(generation), int(steps)) for generation, steps in value)
+    if not value.strip():
+        return ()
+    schedule: list[tuple[int, int]] = []
+    for item in value.split(","):
+        if not item.strip():
+            continue
+        generation_text, separator, steps_text = item.partition(":")
+        if separator != ":":
+            raise ValueError("max steps schedule entries must use generation:steps, e.g. 0:10000,5:15000")
+        schedule.append((int(generation_text.strip()), int(steps_text.strip())))
+    return tuple(schedule)
+
+
+def _max_steps_for_generation(config: EvolutionSearchConfig, generation: int) -> int:
+    max_steps = int(config.max_steps)
+    for start_generation, scheduled_steps in config.max_steps_schedule:
+        if generation >= start_generation:
+            max_steps = int(scheduled_steps)
+        else:
+            break
+    return max(1, max_steps)
+
+
+def _sim_config_for_generation(config: EvolutionSearchConfig, generation: int) -> SimConfig:
+    return SimConfig(
+        max_steps=_max_steps_for_generation(config, generation),
+        action_mode="continuous" if config.genome_type == "controller" else "discrete",
+        action_set=config.action_set,
+        observation_profile=config.observation_profile,
+    )
+
+
 def _validate_config(config: EvolutionSearchConfig) -> None:
     if config.genome_type not in GENOME_TYPES:
         valid = ", ".join(sorted(GENOME_TYPES))
@@ -211,11 +291,53 @@ def _validate_config(config: EvolutionSearchConfig) -> None:
     if config.telemetry_selection not in TELEMETRY_SELECTIONS:
         valid = ", ".join(sorted(TELEMETRY_SELECTIONS))
         raise ValueError(f"Unknown telemetry selection {config.telemetry_selection!r}; expected one of: {valid}")
+    if config.max_steps_schedule:
+        previous_generation = -1
+        for generation, max_steps in config.max_steps_schedule:
+            if generation < 0:
+                raise ValueError("max_steps_schedule generations must be >= 0")
+            if max_steps <= 0:
+                raise ValueError("max_steps_schedule step counts must be > 0")
+            if generation <= previous_generation:
+                raise ValueError("max_steps_schedule generations must be sorted ascending and unique")
+            previous_generation = generation
     unknown_profiles = set(config.scoring_profiles) - SCORING_PROFILES
     if unknown_profiles:
         valid = ", ".join(sorted(SCORING_PROFILES))
         unknown = ", ".join(sorted(unknown_profiles))
         raise ValueError(f"Unknown scoring profile(s): {unknown}; expected one or more of: {valid}")
+    if config.parent_pool_size < 0:
+        raise ValueError("parent_pool_size must be >= 0")
+    if not config.survival_floor_stages_m:
+        raise ValueError("survival_floor_stages_m must contain at least one progress floor")
+    if any(stage < 0.0 for stage in config.survival_floor_stages_m):
+        raise ValueError("survival_floor_stages_m values must be >= 0")
+    if tuple(sorted(config.survival_floor_stages_m)) != tuple(config.survival_floor_stages_m):
+        raise ValueError("survival_floor_stages_m must be sorted ascending")
+    if not 0.0 <= config.survival_floor_pass_rate <= 1.0:
+        raise ValueError("survival_floor_pass_rate must be between 0 and 1")
+    if config.min_random_immigrants < 0:
+        raise ValueError("min_random_immigrants must be >= 0")
+    if not 0.0 <= config.smart_immigrant_fraction <= 1.0:
+        raise ValueError("smart_immigrant_fraction must be between 0 and 1")
+    if not 0.0 <= config.smart_immigrant_current_fraction <= 1.0:
+        raise ValueError("smart_immigrant_current_fraction must be between 0 and 1")
+    if config.frontier_focus_end_m <= config.frontier_focus_start_m:
+        raise ValueError("frontier_focus_end_m must be greater than frontier_focus_start_m")
+    if config.frontier_parent_min_progress_m < 0.0:
+        raise ValueError("frontier_parent_min_progress_m must be >= 0")
+    if config.late_frontier_trigger_m < 0.0:
+        raise ValueError("late_frontier_trigger_m must be >= 0")
+    if config.plateau_generations < 2:
+        raise ValueError("plateau_generations must be >= 2")
+    if config.plateau_distance_epsilon_m < 0.0:
+        raise ValueError("plateau_distance_epsilon_m must be >= 0")
+    if config.plateau_average_improvement_m < 0.0:
+        raise ValueError("plateau_average_improvement_m must be >= 0")
+    if not 0.0 < config.plateau_elite_fraction <= 1.0:
+        raise ValueError("plateau_elite_fraction must be in (0, 1]")
+    if config.plateau_extra_mutations < 0:
+        raise ValueError("plateau_extra_mutations must be >= 0")
 
 
 def _controller_weight_count() -> int:
@@ -259,6 +381,7 @@ def candidate_to_dict(candidate: Candidate) -> dict[str, Any]:
     return {
         "snapshot_index": candidate.snapshot_index,
         "genome": genome_to_dict(candidate.genome),
+        "lineage": candidate.lineage,
     }
 
 
@@ -266,6 +389,7 @@ def candidate_from_mapping(value: dict[str, Any]) -> Candidate:
     return Candidate(
         genome=genome_from_mapping(value["genome"]),
         snapshot_index=int(value["snapshot_index"]),
+        lineage=dict(value.get("lineage", {})),
     )
 
 
@@ -375,8 +499,18 @@ def random_genome(
     if genome_type == "controller":
         weights = rng.normal(0.0, 0.75, _controller_weight_count())
         feature_count = len(CONTROLLER_FEATURE_NAMES)
-        weights[0] += 1.0
-        weights[feature_count] -= 1.0
+        feature_index = {name: index for index, name in enumerate(CONTROLLER_FEATURE_NAMES)}
+        throttle_offset = 0
+        brake_offset = feature_count
+        steer_offset = feature_count * 2
+        weights[throttle_offset + feature_index["bias"]] += 1.0
+        weights[brake_offset + feature_index["bias"]] -= 1.0
+        for name in ("brake_demand", "future_brake_demand", "target_speed_drop_norm", "brake_gate_proximity"):
+            weights[brake_offset + feature_index[name]] += 0.65
+            weights[throttle_offset + feature_index[name]] -= 0.45
+        weights[steer_offset + feature_index["target_steer"]] += 0.80
+        weights[steer_offset + feature_index["heading_error_norm"]] -= 0.25
+        weights[steer_offset + feature_index["signed_lateral_error_norm"]] -= 0.20
         return _normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(weights)))
     phase_count = int(rng.integers(min_phases, max_phases + 1))
     if genome_type == "progress_phase":
@@ -408,7 +542,7 @@ def random_genome(
     )
 
 
-def mutate_genome(
+def mutate_genome_with_metadata(
     genome: Genome,
     rng: np.random.Generator,
     *,
@@ -418,11 +552,19 @@ def mutate_genome(
     max_phases: int,
     min_phase_progress_m: float = 5.0,
     max_phase_progress_m: float = 160.0,
-) -> Genome:
+    mutation_scale: float = 1.0,
+) -> tuple[Genome, dict[str, Any]]:
+    mutation_scale = max(0.05, float(mutation_scale))
+    metadata: dict[str, Any] = {
+        "mutation_type": "none",
+        "mutation_sigma": None,
+        "reset_count": 0,
+        "changed_gene_count": 0,
+    }
     if genome.kind == "controller":
         weights = np.asarray(genome.controller_weights, dtype=np.float64).copy()
         if len(weights) == 0:
-            return random_genome(
+            random = random_genome(
                 rng,
                 action_names=action_names,
                 min_phases=1,
@@ -431,24 +573,61 @@ def mutate_genome(
                 max_phase_steps=max_phase_steps,
                 genome_type="controller",
             )
+            metadata.update(
+                {
+                    "mutation_type": "controller_random_reset",
+                    "reset_count": len(random.controller_weights),
+                    "changed_gene_count": len(random.controller_weights),
+                }
+            )
+            return random, metadata
         roll = float(rng.random())
         if roll < 0.52:
             mask = rng.random(len(weights)) < 0.42
             if not bool(mask.any()):
                 mask[int(rng.integers(0, len(weights)))] = True
-            weights[mask] += rng.normal(0.0, 0.58, int(mask.sum()))
+            changed = int(mask.sum())
+            sigma = 0.58 * mutation_scale
+            weights[mask] += rng.normal(0.0, sigma, changed)
+            metadata.update(
+                {
+                    "mutation_type": "controller_masked_gaussian",
+                    "mutation_sigma": sigma,
+                    "changed_gene_count": changed,
+                }
+            )
         elif roll < 0.82:
-            weights += rng.normal(0.0, 0.34, len(weights))
+            sigma = 0.34 * mutation_scale
+            weights += rng.normal(0.0, sigma, len(weights))
+            metadata.update(
+                {
+                    "mutation_type": "controller_full_gaussian",
+                    "mutation_sigma": sigma,
+                    "changed_gene_count": len(weights),
+                }
+            )
         else:
             reset_count = int(rng.integers(3, min(9, len(weights) + 1)))
             indices = rng.choice(len(weights), size=reset_count, replace=False)
-            weights[indices] = rng.normal(0.0, 2.05, reset_count)
-        return _normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(weights)))
+            sigma = 2.05 * mutation_scale
+            if mutation_scale < 0.75:
+                weights[indices] += rng.normal(0.0, sigma, reset_count)
+            else:
+                weights[indices] = rng.normal(0.0, sigma, reset_count)
+            metadata.update(
+                {
+                    "mutation_type": "controller_weight_reset",
+                    "mutation_sigma": sigma,
+                    "reset_count": reset_count,
+                    "changed_gene_count": reset_count,
+                }
+            )
+        return _normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(weights))), metadata
 
     if genome.kind == "progress_phase":
         phases = list(genome.progress_phases)
         if not phases:
-            return random_genome(
+            random = random_genome(
                 rng,
                 action_names=action_names,
                 min_phases=1,
@@ -459,19 +638,37 @@ def mutate_genome(
                 min_phase_progress_m=min_phase_progress_m,
                 max_phase_progress_m=max_phase_progress_m,
             )
+            metadata.update(
+                {
+                    "mutation_type": "progress_phase_random_reset",
+                    "reset_count": len(random.progress_phases),
+                    "changed_gene_count": len(random.progress_phases),
+                }
+            )
+            return random, metadata
         operation = str(rng.choice(["action", "duration", "insert", "delete", "swap"]))
+        metadata["mutation_type"] = f"progress_phase_{operation}"
         if operation == "action":
             index = int(rng.integers(0, len(phases)))
             phases[index] = ProgressPhaseGene(
                 action=str(action_names[int(rng.integers(0, len(action_names)))]),
                 progress_m=phases[index].progress_m,
             )
+            metadata.update({"changed_gene_count": 1, "changed_gene_index": index})
         elif operation == "duration":
             index = int(rng.integers(0, len(phases)))
-            delta = float(rng.normal(0.0, max(2.0, (max_phase_progress_m - min_phase_progress_m) / 6.0)))
+            sigma = max(2.0, (max_phase_progress_m - min_phase_progress_m) / 6.0) * mutation_scale
+            delta = float(rng.normal(0.0, sigma))
             phases[index] = ProgressPhaseGene(
                 action=phases[index].action,
                 progress_m=phases[index].progress_m + delta,
+            )
+            metadata.update(
+                {
+                    "mutation_sigma": sigma,
+                    "changed_gene_count": 1,
+                    "changed_gene_index": index,
+                }
             )
         elif operation == "insert" and len(phases) < max_phases:
             index = int(rng.integers(0, len(phases) + 1))
@@ -482,22 +679,26 @@ def mutate_genome(
                     progress_m=float(rng.uniform(min_phase_progress_m, max_phase_progress_m)),
                 ),
             )
+            metadata.update({"changed_gene_count": 1, "changed_gene_index": index})
         elif operation == "delete" and len(phases) > 1:
-            del phases[int(rng.integers(0, len(phases)))]
+            index = int(rng.integers(0, len(phases)))
+            del phases[index]
+            metadata.update({"changed_gene_count": 1, "changed_gene_index": index})
         elif operation == "swap" and len(phases) > 1:
             left = int(rng.integers(0, len(phases)))
             right = int(rng.integers(0, len(phases)))
             phases[left], phases[right] = phases[right], phases[left]
+            metadata.update({"changed_gene_count": 2, "changed_gene_indices": [left, right]})
         return _normalize_progress_genome(
             Genome(kind="progress_phase", progress_phases=tuple(phases)),
             action_names=action_names,
             min_progress_m=min_phase_progress_m,
             max_progress_m=max_phase_progress_m,
-        )
+        ), metadata
 
     phases = list(genome.phases)
     if not phases:
-        return random_genome(
+        random = random_genome(
             rng,
             action_names=action_names,
             min_phases=1,
@@ -505,18 +706,36 @@ def mutate_genome(
             min_phase_steps=min_phase_steps,
             max_phase_steps=max_phase_steps,
         )
+        metadata.update(
+            {
+                "mutation_type": "phase_random_reset",
+                "reset_count": len(random.phases),
+                "changed_gene_count": len(random.phases),
+            }
+        )
+        return random, metadata
 
     operation = str(rng.choice(["action", "duration", "insert", "delete", "swap"]))
+    metadata["mutation_type"] = f"phase_{operation}"
     if operation == "action":
         index = int(rng.integers(0, len(phases)))
         phases[index] = PhaseGene(
             action=str(action_names[int(rng.integers(0, len(action_names)))]),
             steps=phases[index].steps,
         )
+        metadata.update({"changed_gene_count": 1, "changed_gene_index": index})
     elif operation == "duration":
         index = int(rng.integers(0, len(phases)))
-        delta = int(rng.normal(0.0, max(2.0, (max_phase_steps - min_phase_steps) / 5.0)))
+        sigma = max(2.0, (max_phase_steps - min_phase_steps) / 5.0) * mutation_scale
+        delta = int(rng.normal(0.0, sigma))
         phases[index] = PhaseGene(action=phases[index].action, steps=phases[index].steps + delta)
+        metadata.update(
+            {
+                "mutation_sigma": sigma,
+                "changed_gene_count": 1,
+                "changed_gene_index": index,
+            }
+        )
     elif operation == "insert" and len(phases) < max_phases:
         index = int(rng.integers(0, len(phases) + 1))
         phases.insert(
@@ -526,19 +745,49 @@ def mutate_genome(
                 steps=int(rng.integers(min_phase_steps, max_phase_steps + 1)),
             ),
         )
+        metadata.update({"changed_gene_count": 1, "changed_gene_index": index})
     elif operation == "delete" and len(phases) > 1:
-        del phases[int(rng.integers(0, len(phases)))]
+        index = int(rng.integers(0, len(phases)))
+        del phases[index]
+        metadata.update({"changed_gene_count": 1, "changed_gene_index": index})
     elif operation == "swap" and len(phases) > 1:
         left = int(rng.integers(0, len(phases)))
         right = int(rng.integers(0, len(phases)))
         phases[left], phases[right] = phases[right], phases[left]
+        metadata.update({"changed_gene_count": 2, "changed_gene_indices": [left, right]})
 
     return _normalize_phase_genome(
         Genome(kind="phase", phases=tuple(phases)),
         action_names=action_names,
         min_steps=min_phase_steps,
         max_steps=max_phase_steps,
+    ), metadata
+
+
+def mutate_genome(
+    genome: Genome,
+    rng: np.random.Generator,
+    *,
+    action_names: list[str],
+    min_phase_steps: int,
+    max_phase_steps: int,
+    max_phases: int,
+    min_phase_progress_m: float = 5.0,
+    max_phase_progress_m: float = 160.0,
+    mutation_scale: float = 1.0,
+) -> Genome:
+    mutated, _ = mutate_genome_with_metadata(
+        genome,
+        rng,
+        action_names=action_names,
+        min_phase_steps=min_phase_steps,
+        max_phase_steps=max_phase_steps,
+        max_phases=max_phases,
+        min_phase_progress_m=min_phase_progress_m,
+        max_phase_progress_m=max_phase_progress_m,
+        mutation_scale=mutation_scale,
     )
+    return mutated
 
 
 def crossover_genomes(
@@ -690,17 +939,78 @@ def _reset_options(snapshot: StateSnapshot, gates: EvolutionGates, *, collect_ob
     return options
 
 
+def _pace_metrics(rows: list[dict[str, Any]], *, start_progress_m: float) -> dict[str, Any]:
+    if not rows:
+        return {
+            "elapsed_s": 0.0,
+            "pace_mps": 0.0,
+            "pace_kph": 0.0,
+            "time_to_300_m": None,
+            "time_to_450_m": None,
+            "avg_speed_first_300_m": 0.0,
+            "avg_speed_first_450_m": 0.0,
+            "avg_brake_first_300_m": 0.0,
+            "avg_brake_first_450_m": 0.0,
+        }
+
+    final = rows[-1]
+    best_progress_m = max(float(row["monotonic_progress_m"]) for row in rows)
+    raw_progress_m = max(0.0, best_progress_m - start_progress_m)
+    elapsed_s = float(final.get("sim_time_s", 0.0) or 0.0)
+    if elapsed_s <= 0.0:
+        elapsed_s = len(rows) / 60.0
+    pace_mps = raw_progress_m / max(elapsed_s, 1e-6)
+
+    def first_time_for(delta_m: float) -> float | None:
+        target = start_progress_m + delta_m
+        for row in rows:
+            if float(row.get("monotonic_progress_m", start_progress_m) or start_progress_m) >= target:
+                time_s = float(row.get("sim_time_s", 0.0) or 0.0)
+                return time_s if time_s > 0.0 else None
+        return None
+
+    def averages_before(delta_m: float) -> tuple[float, float]:
+        target = start_progress_m + delta_m
+        selected = [
+            row
+            for row in rows
+            if float(row.get("monotonic_progress_m", start_progress_m) or start_progress_m) <= target
+        ]
+        if not selected:
+            selected = rows[:1]
+        avg_speed = sum(float(row.get("speed_kph", 0.0) or 0.0) for row in selected) / max(1, len(selected))
+        avg_brake = sum(float(row.get("brake", 0.0) or 0.0) for row in selected) / max(1, len(selected))
+        return avg_speed, avg_brake
+
+    avg_speed_300, avg_brake_300 = averages_before(300.0)
+    avg_speed_450, avg_brake_450 = averages_before(450.0)
+    return {
+        "elapsed_s": elapsed_s,
+        "pace_mps": pace_mps,
+        "pace_kph": pace_mps * 3.6,
+        "time_to_300_m": first_time_for(300.0),
+        "time_to_450_m": first_time_for(450.0),
+        "avg_speed_first_300_m": avg_speed_300,
+        "avg_speed_first_450_m": avg_speed_450,
+        "avg_brake_first_300_m": avg_brake_300,
+        "avg_brake_first_450_m": avg_brake_450,
+    }
+
+
 def _score_profile(
     rows: list[dict[str, Any]],
     *,
     start_progress_m: float,
     gates: EvolutionGates,
     profile: str,
+    frontier_focus_start_m: float = 2200.0,
+    frontier_focus_end_m: float = 2600.0,
 ) -> float:
     if not rows:
         return float("-inf")
     final = rows[-1]
-    best_progress_m = max(float(row["monotonic_progress_m"]) for row in rows)
+    best_row = max(rows, key=lambda row: float(row["monotonic_progress_m"]))
+    best_progress_m = float(best_row["monotonic_progress_m"])
     raw_progress_m = best_progress_m - start_progress_m
     if gates.terminate_at_target_progress:
         progress_to_target_m = min(best_progress_m, gates.target_progress_m) - start_progress_m
@@ -712,6 +1022,9 @@ def _score_profile(
     final_heading_error_deg = abs(float(final.get("heading_error_deg", 0.0) or 0.0))
     final_yaw_rate_rps = abs(float(final.get("yaw_rate_rps", 0.0) or 0.0))
     final_steering = abs(float(final.get("steering", 0.0) or 0.0))
+    best_speed_kph = float(best_row.get("speed_kph", final_speed_kph) or final_speed_kph)
+    best_lateral_error_m = abs(float(best_row.get("lateral_error_m", final_lateral_error_m) or final_lateral_error_m))
+    best_heading_error_deg = abs(float(best_row.get("heading_error_deg", final_heading_error_deg) or final_heading_error_deg))
     missed_checkpoints = int(final.get("missed_checkpoint_count", 0) or 0)
     clean = not final.get("collided") and not final.get("off_track")
     milestone_complete = best_progress_m >= gates.target_progress_m
@@ -724,6 +1037,65 @@ def _score_profile(
     near_target_m = max(0.0, progress_to_target_m - target_span_m * 0.88)
     beyond_target_m = max(0.0, best_progress_m - gates.target_progress_m)
     stalled = reason == "max_steps" and final_speed_kph < 20.0
+    pace = _pace_metrics(rows, start_progress_m=start_progress_m)
+    pace_kph = float(pace["pace_kph"])
+    avg_speed_first_300_m = float(pace["avg_speed_first_300_m"])
+    avg_speed_first_450_m = float(pace["avg_speed_first_450_m"])
+    avg_brake_first_450_m = float(pace["avg_brake_first_450_m"])
+    time_to_450_m = pace.get("time_to_450_m")
+    early_slow_penalty = max(0.0, 125.0 - avg_speed_first_300_m) * 34.0
+    if raw_progress_m >= 450.0:
+        early_slow_penalty += max(0.0, 145.0 - avg_speed_first_450_m) * 18.0
+    early_brake_penalty = max(0.0, avg_brake_first_450_m - 0.32) * 1_800.0
+    focus_start_m = min(frontier_focus_start_m, frontier_focus_end_m)
+    focus_end_m = max(frontier_focus_start_m, frontier_focus_end_m)
+    focus_span_m = max(1.0, focus_end_m - focus_start_m)
+    focus_progress_m = float(np.clip(best_progress_m - focus_start_m, 0.0, focus_span_m))
+    focus_progress_ratio = focus_progress_m / focus_span_m
+    reached_focus = best_progress_m >= focus_start_m
+    cleared_focus = best_progress_m >= focus_end_m
+    stalled_in_focus = reached_focus and reason == "no_progress"
+    focus_lateral_penalty = max(0.0, best_lateral_error_m - 9.0) * 420.0
+    focus_heading_penalty = max(0.0, best_heading_error_deg - 18.0) * 520.0
+    focus_stop_penalty = max(0.0, 90.0 - final_speed_kph) * 170.0 if reached_focus else 0.0
+    late_progress_factor = float(np.clip((best_progress_m - 3000.0) / 2200.0, 0.0, 1.0))
+    frontier_quality_factor = float(np.clip((best_progress_m - 1500.0) / 3500.0, 0.0, 1.0))
+    demand_rows = [
+        row
+        for row in rows
+        if (
+            float(row.get("future_brake_demand", row.get("brake_demand", 0.0)) or 0.0) >= 0.22
+            or float(row.get("brake_gate_proximity", 0.0) or 0.0) >= 0.70
+            or float(row.get("target_speed_drop_norm", 0.0) or 0.0) >= 0.18
+        )
+        and float(row.get("speed_kph", 0.0) or 0.0) >= 135.0
+    ]
+    if demand_rows:
+        avg_brake_demand_zone = sum(float(row.get("brake", 0.0) or 0.0) for row in demand_rows) / len(demand_rows)
+        avg_throttle_demand_zone = sum(float(row.get("throttle", 0.0) or 0.0) for row in demand_rows) / len(demand_rows)
+        max_future_brake_demand = max(
+            float(row.get("future_brake_demand", row.get("brake_demand", 0.0)) or 0.0)
+            for row in demand_rows
+        )
+    else:
+        avg_brake_demand_zone = 0.0
+        avg_throttle_demand_zone = 0.0
+        max_future_brake_demand = 0.0
+    setup_penalty = frontier_quality_factor * (
+        max(0.0, final_lateral_error_m - 12.0) * 620.0
+        + max(0.0, final_heading_error_deg - 22.0) * 720.0
+        + max(0.0, final_yaw_rate_rps - 0.85) * 2_200.0
+    )
+    late_setup_penalty = late_progress_factor * (
+        max(0.0, final_lateral_error_m - 9.0) * 900.0
+        + max(0.0, final_heading_error_deg - 16.0) * 1_050.0
+        + max(0.0, 115.0 - final_speed_kph) * 120.0
+    )
+    brake_demand_penalty = frontier_quality_factor * max_future_brake_demand * (
+        max(0.0, 0.32 - avg_brake_demand_zone) * 18_000.0
+        + avg_throttle_demand_zone * 7_500.0
+    )
+    viability_penalty = setup_penalty + late_setup_penalty + brake_demand_penalty
 
     if profile == "frontier":
         collision_penalty = 4_500.0
@@ -751,6 +1123,8 @@ def _score_profile(
     if profile == "frontier":
         score += best_progress_m * 12.0 + min(final_speed_kph, 360.0) * 18.0
         score += frontier_m * 95.0 + near_target_m * 210.0 + beyond_target_m * 320.0
+        score += min(pace_kph, 300.0) * 16.0
+        score -= viability_penalty * 0.42
         score -= final_lateral_error_m * 72.0
         score -= final_heading_error_deg * 26.0
         score -= final_yaw_rate_rps * 330.0
@@ -758,11 +1132,108 @@ def _score_profile(
         score -= missed_checkpoints * 2_500.0
         return float(score)
 
+    if profile == "frontier_fast":
+        score += best_progress_m * 18.0 + min(final_speed_kph, 380.0) * 20.0
+        score += min(pace_kph, 310.0) * 86.0
+        score += frontier_m * 105.0 + near_target_m * 235.0 + beyond_target_m * 340.0
+        if time_to_450_m is not None:
+            score += max(0.0, 18.0 - float(time_to_450_m)) * 260.0
+        score += min(avg_speed_first_450_m, 320.0) * 28.0
+        score -= early_slow_penalty
+        score -= early_brake_penalty
+        score -= viability_penalty * 0.58
+        score -= final_lateral_error_m * 70.0
+        score -= final_heading_error_deg * 24.0
+        score -= final_yaw_rate_rps * 320.0
+        score -= final_steering * 260.0
+        score -= missed_checkpoints * 2_500.0
+        return float(score)
+
+    if profile == "frontier_recovery":
+        score += raw_progress_m * 18.0 + best_progress_m * 10.0
+        score += focus_progress_m * 1_250.0
+        score += focus_progress_ratio * 28_000.0
+        score += min(best_speed_kph, 300.0) * 35.0
+        score += min(final_speed_kph, 260.0) * 115.0
+        score -= focus_lateral_penalty
+        score -= focus_heading_penalty
+        score -= focus_stop_penalty
+        score -= missed_checkpoints * 3_000.0
+        if cleared_focus:
+            score += 55_000.0
+        if stalled_in_focus:
+            score -= 55_000.0
+        if reason == "no_progress":
+            score -= 18_000.0
+        elif reason in {"collision", "off_track", "assist_virtual_corridor"} and reached_focus:
+            score -= 10_000.0
+        return float(score)
+
+    if profile == "frontier_novelty":
+        speed_bucket = min(5, int(max(0.0, final_speed_kph) // 55.0))
+        lateral_bucket = min(5, int(best_lateral_error_m // 4.0))
+        heading_bucket = min(5, int(best_heading_error_deg // 10.0))
+        novelty_hint = (speed_bucket * 1_100.0) + ((5 - lateral_bucket) * 750.0) + ((5 - heading_bucket) * 650.0)
+        score += raw_progress_m * 16.0 + focus_progress_m * 900.0 + beyond_target_m * 140.0
+        score += novelty_hint
+        score += min(pace_kph, 280.0) * 18.0
+        score += min(final_speed_kph, 320.0) * 70.0
+        score -= focus_lateral_penalty * 0.80
+        score -= focus_heading_penalty * 0.80
+        score -= focus_stop_penalty * 1.20
+        if cleared_focus:
+            score += 36_000.0
+        if stalled_in_focus:
+            score -= 65_000.0
+        if reason == "no_progress":
+            score -= 20_000.0
+        return float(score)
+
     if profile == "risk_seeking":
-        score += best_progress_m * 9.0 + min(final_speed_kph, 360.0) * 18.0
+        score += best_progress_m * 11.0 + min(final_speed_kph, 380.0) * 24.0
+        score += min(pace_kph, 320.0) * 22.0
         score += frontier_m * 70.0 + near_target_m * 150.0 + beyond_target_m * 220.0
+        score -= viability_penalty * 0.18
         score -= final_lateral_error_m * 52.0
         score -= final_heading_error_deg * 18.0
+        return float(score)
+
+    if profile == "farthest_distance":
+        score += raw_progress_m * 31.0 + best_progress_m * 22.0
+        score += frontier_m * 75.0 + near_target_m * 160.0 + beyond_target_m * 280.0
+        score += min(pace_kph, 300.0) * 20.0
+        score -= viability_penalty * 0.22
+        score -= missed_checkpoints * 1_600.0
+        if reason in {"collision", "off_track", "assist_virtual_corridor"}:
+            score -= 1_500.0
+        return float(score)
+
+    if profile == "early_pace":
+        score += raw_progress_m * 20.0 + min(pace_kph, 320.0) * 125.0
+        score += min(avg_speed_first_300_m, 300.0) * 56.0
+        score += min(avg_speed_first_450_m, 320.0) * 38.0
+        if time_to_450_m is not None:
+            score += max(0.0, 20.0 - float(time_to_450_m)) * 420.0
+        score += frontier_m * 38.0 + beyond_target_m * 90.0
+        score -= early_slow_penalty * 1.55
+        score -= early_brake_penalty * 1.35
+        score -= final_lateral_error_m * 45.0
+        score -= final_heading_error_deg * 15.0
+        score -= missed_checkpoints * 1_800.0
+        return float(score)
+
+    if profile == "clean_distance":
+        score += raw_progress_m * 28.0 + best_progress_m * 15.0
+        score += frontier_m * 58.0 + near_target_m * 115.0 + beyond_target_m * 190.0
+        score += min(pace_kph, 280.0) * 18.0
+        score -= viability_penalty * 0.82
+        score -= final_lateral_error_m * 210.0
+        score -= final_heading_error_deg * 80.0
+        score -= final_yaw_rate_rps * 560.0
+        score -= final_steering * 520.0
+        score -= missed_checkpoints * 4_500.0
+        if clean:
+            score += 7_000.0
         return float(score)
 
     if profile == "clean_exit":
@@ -822,16 +1293,32 @@ def _score_rows(
     start_progress_m: float,
     gates: EvolutionGates,
     scoring_profiles: tuple[str, ...] = ("max_progress",),
+    frontier_focus_start_m: float = 2200.0,
+    frontier_focus_end_m: float = 2600.0,
 ) -> dict[str, float]:
     return {
-        profile: _score_profile(rows, start_progress_m=start_progress_m, gates=gates, profile=profile)
+        profile: _score_profile(
+            rows,
+            start_progress_m=start_progress_m,
+            gates=gates,
+            profile=profile,
+            frontier_focus_start_m=frontier_focus_start_m,
+            frontier_focus_end_m=frontier_focus_end_m,
+        )
         for profile in scoring_profiles
     }
 
 
-def _compact_row(row: Any) -> dict[str, Any]:
-    return {
+def _compact_row(row: Any, search_features: dict[str, float] | None = None) -> dict[str, Any]:
+    compact = {
+        "step_index": getattr(row, "step_index", None),
+        "sim_time_s": getattr(row, "sim_time_s", None),
+        "x": row.x,
+        "y": row.y,
+        "heading_deg": row.heading_deg,
+        "speed_mps": row.speed_mps,
         "monotonic_progress_m": row.monotonic_progress_m,
+        "raw_progress_m": row.raw_progress_m,
         "progress_delta_m": row.progress_delta_m,
         "speed_kph": row.speed_kph,
         "lateral_error_m": row.lateral_error_m,
@@ -852,6 +1339,23 @@ def _compact_row(row: Any) -> dict[str, Any]:
         "action_id": row.action_id,
         "action_name": row.action_name,
     }
+    if search_features:
+        for key in (
+            "target_speed_kph",
+            "near_target_speed_kph",
+            "min_future_target_speed_kph",
+            "target_speed_drop_kph",
+            "target_speed_drop_norm",
+            "brake_demand",
+            "future_brake_demand",
+            "brake_gate_proximity",
+            "braking_gate_distance_m",
+            "brake_gate_distance_norm",
+            "lookahead_abs_max",
+        ):
+            if key in search_features:
+                compact[key] = float(search_features[key])
+    return compact
 
 
 def _run_candidate(
@@ -883,12 +1387,12 @@ def _run_candidate(
             tmp_stream_path = stream_telemetry_path.with_name(f"{stream_telemetry_path.name}.tmp")
             stream_file = tmp_stream_path.open("w", encoding="utf-8")
         for step_index in range(sim_config.max_steps):
+            search_features = active_sim.search_features(
+                segment_start_progress_m=start_progress_m,
+                segment_target_progress_m=gates.target_progress_m,
+            )
             if genome.kind == "controller":
-                features = active_sim.search_features(
-                    segment_start_progress_m=start_progress_m,
-                    segment_target_progress_m=gates.target_progress_m,
-                )
-                throttle, brake, steer = _controller_controls(genome, features)
+                throttle, brake, steer = _controller_controls(genome, search_features)
                 action_id = -2
             elif genome.kind == "progress_phase":
                 progress_delta_m = max(0.0, active_sim.state.monotonic_progress_m - start_progress_m)
@@ -908,14 +1412,15 @@ def _run_candidate(
             )
             if stream_file is not None or collect_full_telemetry or keep_step_telemetry:
                 full_row = asdict(result.telemetry)
+                full_row.update(_compact_row(result.telemetry, search_features))
                 if stream_file is not None:
                     stream_file.write(json.dumps(full_row, default=_json_default) + "\n")
                 if collect_full_telemetry or keep_step_telemetry:
                     rows.append(full_row)
                 else:
-                    rows.append(_compact_row(result.telemetry))
+                    rows.append(_compact_row(result.telemetry, search_features))
             else:
-                rows.append(_compact_row(result.telemetry))
+                rows.append(_compact_row(result.telemetry, search_features))
             if result.terminated or result.truncated:
                 break
         completed = True
@@ -935,6 +1440,7 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
     candidate = Candidate(
         genome=genome_from_mapping(task["genome"]),
         snapshot_index=int(task["snapshot_index"]),
+        lineage=dict(task.get("lineage", {})),
     )
     snapshot = snapshot_from_mapping(task["snapshot"])
     stream_telemetry_path = task.get("stream_telemetry_path")
@@ -955,10 +1461,13 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         start_progress_m=snapshot.monotonic_progress_m,
         gates=task["gates"],
         scoring_profiles=tuple(task["scoring_profiles"]),
+        frontier_focus_start_m=float(task.get("frontier_focus_start_m", 2200.0)),
+        frontier_focus_end_m=float(task.get("frontier_focus_end_m", 2600.0)),
     )
     primary_profile = str(task["scoring_profiles"][0])
     final = rows[-1] if rows else {}
     best_progress_m = max([snapshot.monotonic_progress_m, *[float(row["monotonic_progress_m"]) for row in rows]])
+    pace = _pace_metrics(rows, start_progress_m=snapshot.monotonic_progress_m)
     target_reached = best_progress_m >= task["gates"].target_progress_m
     sim_segment_complete = bool(final.get("segment_complete", False))
     result = {
@@ -973,6 +1482,7 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         "start_progress_m": snapshot.monotonic_progress_m,
         "start_speed_kph": snapshot.speed_mps * 3.6,
         "genome": genome_to_dict(candidate.genome),
+        "lineage": candidate.lineage,
         "best_progress_m": best_progress_m,
         "final_progress_m": final.get("monotonic_progress_m", snapshot.monotonic_progress_m),
         "remaining_m": max(0.0, task["gates"].target_progress_m - best_progress_m),
@@ -989,7 +1499,10 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         "final_heading_error_deg": final.get("heading_error_deg"),
         "final_yaw_rate_rps": final.get("yaw_rate_rps"),
         "final_steering": final.get("steering"),
+        "final_row": final,
+        "max_steps": int(task["sim_config"].max_steps),
         "steps": len(rows),
+        **pace,
     }
     if bool(task.get("capture_step_telemetry", False)):
         if stream_path is not None:
@@ -1039,6 +1552,8 @@ def _evaluate_population(
     workers: int,
     worker_chunk_size: int,
     scoring_profiles: tuple[str, ...],
+    frontier_focus_start_m: float,
+    frontier_focus_end_m: float,
     capture_step_telemetry: bool,
     stream_telemetry_dir: Path | None = None,
     executor: ProcessPoolExecutor | None = None,
@@ -1049,11 +1564,14 @@ def _evaluate_population(
             "generation": generation,
             "seed": seed + generation * 1_000_000 + index,
             "genome": genome_to_dict(candidate.genome),
+            "lineage": candidate.lineage,
             "snapshot_index": candidate.snapshot_index,
             "snapshot": snapshot_to_dict(snapshots[candidate.snapshot_index]),
             "sim_config": sim_config,
             "gates": gates,
             "scoring_profiles": scoring_profiles,
+            "frontier_focus_start_m": frontier_focus_start_m,
+            "frontier_focus_end_m": frontier_focus_end_m,
             "capture_step_telemetry": capture_step_telemetry,
             "stream_telemetry_path": str(
                 stream_telemetry_dir
@@ -1113,19 +1631,326 @@ def _rank_biased_index(count: int, rng: np.random.Generator) -> int:
     return int(rng.choice(count, p=weights))
 
 
+def _genome_numeric_vector(genome: Genome) -> np.ndarray:
+    if genome.kind == "controller":
+        return np.asarray(genome.controller_weights, dtype=np.float64)
+    if genome.kind == "progress_phase":
+        values: list[float] = []
+        for phase in genome.progress_phases:
+            values.append(float(sum(ord(char) for char in phase.action) % 997) / 997.0)
+            values.append(float(phase.progress_m))
+        return np.asarray(values, dtype=np.float64)
+    values = []
+    for phase in genome.phases:
+        values.append(float(sum(ord(char) for char in phase.action) % 997) / 997.0)
+        values.append(float(phase.steps))
+    return np.asarray(values, dtype=np.float64)
+
+
+def _genome_distance(left: Genome, right: Genome) -> dict[str, Any]:
+    if left.kind != right.kind:
+        return {"kind_match": False, "l2": None, "max_abs": None, "changed_gene_count": None}
+    left_vector = _genome_numeric_vector(left)
+    right_vector = _genome_numeric_vector(right)
+    length = max(len(left_vector), len(right_vector))
+    if length == 0:
+        return {"kind_match": True, "l2": 0.0, "max_abs": 0.0, "changed_gene_count": 0}
+    left_padded = np.pad(left_vector, (0, length - len(left_vector)))
+    right_padded = np.pad(right_vector, (0, length - len(right_vector)))
+    delta = left_padded - right_padded
+    return {
+        "kind_match": True,
+        "l2": float(np.linalg.norm(delta)),
+        "max_abs": float(np.max(np.abs(delta))),
+        "changed_gene_count": int(np.count_nonzero(np.abs(delta) > 1e-9)),
+    }
+
+
+def _row_reference(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "generation": int(row["generation"]),
+        "candidate_index": int(row["candidate_index"]),
+        "seed": int(row["seed"]),
+        "best_progress_m": float(row.get("best_progress_m", 0.0) or 0.0),
+        "score": float(row.get("score", 0.0) or 0.0),
+        "source": row.get("lineage", {}).get("source"),
+    }
+
+
+def _survival_floor_report(
+    ranked: list[dict[str, Any]],
+    config: EvolutionSearchConfig,
+    *,
+    active_index: int,
+) -> dict[str, Any]:
+    stages = tuple(float(stage) for stage in config.survival_floor_stages_m)
+    active_index = int(np.clip(active_index, 0, len(stages) - 1))
+    floor_m = stages[active_index] if config.adaptive_survival_floor else 0.0
+    pass_count = sum(1 for row in ranked if float(row.get("best_progress_m", 0.0) or 0.0) >= floor_m)
+    pass_rate = pass_count / max(1, len(ranked))
+    next_index = active_index
+    if config.adaptive_survival_floor and pass_rate >= config.survival_floor_pass_rate:
+        next_index = min(active_index + 1, len(stages) - 1)
+    leader_progress_m = max(
+        (float(row.get("best_progress_m", 0.0) or 0.0) for row in ranked),
+        default=0.0,
+    )
+    leader_floor_index = active_index
+    if config.adaptive_survival_floor and config.survival_floor_leader_jump:
+        for index, stage in enumerate(stages):
+            if leader_progress_m >= stage:
+                leader_floor_index = index
+        next_index = max(next_index, leader_floor_index)
+    next_floor_m = stages[next_index] if config.adaptive_survival_floor else 0.0
+    stage_rates = {
+        f"{stage:.1f}": sum(1 for row in ranked if float(row.get("best_progress_m", 0.0) or 0.0) >= stage)
+        / max(1, len(ranked))
+        for stage in stages
+    }
+    return {
+        "survival_floor_m": floor_m,
+        "survival_floor_index": active_index,
+        "survival_floor_pass_count": pass_count,
+        "survival_floor_pass_rate": pass_rate,
+        "survival_floor_pass_threshold": config.survival_floor_pass_rate,
+        "survival_floor_leader_progress_m": leader_progress_m,
+        "survival_floor_leader_index": leader_floor_index,
+        "survival_floor_leader_jump": config.survival_floor_leader_jump,
+        "next_survival_floor_m": next_floor_m,
+        "next_survival_floor_index": next_index,
+        "survival_floor_stage_rates": stage_rates,
+    }
+
+
+def _plateau_report(
+    generation_summaries: list[dict[str, Any]],
+    current_summary: dict[str, Any],
+    config: EvolutionSearchConfig,
+) -> dict[str, Any]:
+    window = [*generation_summaries, current_summary][-config.plateau_generations :]
+    if not config.plateau_mode or len(window) < config.plateau_generations:
+        return {
+            "plateau_active": False,
+            "plateau_window": len(window),
+            "plateau_best_range_m": None,
+            "plateau_average_gain_m": None,
+        }
+    best_values = [
+        float(summary.get("generation_best_distance_m", summary.get("farthest_progress_m", 0.0)) or 0.0)
+        for summary in window
+    ]
+    average_values = [float(summary.get("generation_average_distance_m", 0.0) or 0.0) for summary in window]
+    best_range_m = max(best_values) - min(best_values)
+    average_gain_m = average_values[-1] - average_values[0]
+    active = (
+        best_range_m <= config.plateau_distance_epsilon_m
+        and average_gain_m >= config.plateau_average_improvement_m
+    )
+    return {
+        "plateau_active": bool(active),
+        "plateau_window": len(window),
+        "plateau_best_range_m": best_range_m,
+        "plateau_average_gain_m": average_gain_m,
+        "plateau_distance_epsilon_m": config.plateau_distance_epsilon_m,
+        "plateau_average_improvement_m": config.plateau_average_improvement_m,
+    }
+
+
+def _parent_pool_size(config: EvolutionSearchConfig, ranked_count: int) -> int:
+    if config.parent_pool_size > 0:
+        return min(config.parent_pool_size, ranked_count)
+    return min(ranked_count, max(config.elite_count * 3, 16))
+
+
+def _parent_buckets(
+    ranked: list[dict[str, Any]],
+    config: EvolutionSearchConfig,
+    *,
+    survival_floor_m: float,
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any]]:
+    if not ranked:
+        return {}, {"parent_pool_size": 0, "parent_bucket_counts": {}}
+    pool_size = _parent_pool_size(config, len(ranked))
+    per_bucket = max(1, math.ceil(pool_size / 7))
+    leader_progress_m = max(
+        (float(row.get("best_progress_m", 0.0) or 0.0) for row in ranked),
+        default=0.0,
+    )
+    late_frontier_active = leader_progress_m >= config.late_frontier_trigger_m
+    late_floor_m = max(survival_floor_m, config.frontier_parent_min_progress_m)
+    if late_frontier_active:
+        late_floor_m = max(late_floor_m, leader_progress_m - 900.0)
+    speed_bucket_floor_m = max(450.0, survival_floor_m * 0.50)
+    survival_rows = [
+        row for row in ranked if float(row.get("best_progress_m", 0.0) or 0.0) >= survival_floor_m
+    ]
+    frontier_rows = [
+        row
+        for row in ranked
+        if float(row.get("best_progress_m", 0.0) or 0.0) >= late_floor_m
+    ]
+    speed_rows = [
+        row
+        for row in ranked
+        if float(row.get("best_progress_m", 0.0) or 0.0) >= speed_bucket_floor_m
+    ]
+    buckets = {
+        "survival_gate": sorted(survival_rows, key=lambda row: float(row.get("score", float("-inf"))), reverse=True)[
+            :per_bucket
+        ],
+        "late_frontier_distance": sorted(
+            frontier_rows,
+            key=lambda row: (
+                float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+                float(row.get("pace_kph", float("-inf")) or float("-inf")),
+                float(row.get("final_speed_kph", float("-inf")) or float("-inf")),
+            ),
+            reverse=True,
+        )[:per_bucket],
+        "frontier_distance": sorted(
+            frontier_rows,
+            key=lambda row: (
+                float(row.get("profile_scores", {}).get("frontier_recovery", row.get("score", float("-inf")))),
+                float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+                float(row.get("final_speed_kph", float("-inf")) or float("-inf")),
+            ),
+            reverse=True,
+        )[:per_bucket],
+        "farthest_distance": sorted(
+            ranked,
+            key=lambda row: float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+            reverse=True,
+        )[:per_bucket],
+        "far_fast": sorted(
+            speed_rows,
+            key=lambda row: (
+                float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+                float(row.get("pace_kph", float("-inf")) or float("-inf")),
+                float(row.get("final_speed_kph", float("-inf")) or float("-inf")),
+            ),
+            reverse=True,
+        )[:per_bucket],
+        "fastest_pace": sorted(
+            speed_rows,
+            key=lambda row: (
+                float(row.get("pace_kph", float("-inf")) or float("-inf")),
+                float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+            ),
+            reverse=True,
+        )[:per_bucket],
+        "cleanest_distance": sorted(
+            ranked,
+            key=lambda row: (
+                float(row.get("profile_scores", {}).get("clean_distance", row.get("score", float("-inf")))),
+                float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+            ),
+            reverse=True,
+        )[:per_bucket],
+    }
+    buckets = {name: rows for name, rows in buckets.items() if rows}
+    if not buckets:
+        buckets["fallback_top_score"] = ranked[: max(1, min(pool_size, len(ranked)))]
+    summary = {
+        "parent_pool_size": pool_size,
+        "parent_bucket_counts": {name: len(rows) for name, rows in buckets.items()},
+        "parent_survival_floor_m": survival_floor_m,
+        "parent_late_floor_m": late_floor_m,
+        "parent_late_frontier_active": late_frontier_active,
+        "parent_speed_bucket_floor_m": speed_bucket_floor_m,
+    }
+    return buckets, summary
+
+
+def _sample_parent_row(
+    buckets: dict[str, list[dict[str, Any]]],
+    rng: np.random.Generator,
+) -> tuple[str, dict[str, Any]]:
+    names = [name for name, rows in buckets.items() if rows]
+    if not names:
+        raise ValueError("Cannot sample parent from empty parent buckets")
+    bucket_weights = {
+        "late_frontier_distance": 4.0,
+        "frontier_distance": 3.0,
+        "farthest_distance": 2.8,
+        "survival_gate": 2.2,
+        "far_fast": 2.4,
+        "cleanest_distance": 1.7,
+        "fastest_pace": 1.3,
+        "fallback_top_score": 1.0,
+    }
+    weights = np.asarray([bucket_weights.get(name, 1.0) for name in names], dtype=np.float64)
+    weights /= weights.sum()
+    bucket_name = str(rng.choice(names, p=weights))
+    rows = buckets[bucket_name]
+    return bucket_name, rows[_rank_biased_index(len(rows), rng)]
+
+
+def _effective_immigrant_counts(
+    config: EvolutionSearchConfig,
+    *,
+    generation: int,
+    remaining_slots: int,
+    quality_pass_rate: float,
+    frontier_best_m: float = 0.0,
+) -> dict[str, int]:
+    total = min(config.random_immigrants, max(0, remaining_slots))
+    if config.adaptive_immigrants and generation >= 2 and total > 0:
+        if frontier_best_m >= 5000.0:
+            total = max(config.min_random_immigrants, int(round(total * 0.16)))
+        elif frontier_best_m >= 4000.0:
+            total = max(config.min_random_immigrants, int(round(total * 0.22)))
+        elif frontier_best_m >= 3000.0:
+            total = max(config.min_random_immigrants, int(round(total * 0.30)))
+        elif quality_pass_rate >= 0.60:
+            total = max(config.min_random_immigrants, int(round(total * 0.35)))
+        elif quality_pass_rate >= 0.40:
+            total = max(config.min_random_immigrants, int(round(total * 0.50)))
+        elif quality_pass_rate >= 0.25:
+            total = max(config.min_random_immigrants, int(round(total * 0.70)))
+        total = min(total, remaining_slots)
+    smart = int(round(total * config.smart_immigrant_fraction))
+    pure = total - smart
+    return {"total": total, "smart": smart, "pure": pure}
+
+
 def _next_population(
     *,
     ranked: list[dict[str, Any]],
+    best_rows: list[dict[str, Any]],
     snapshots: list[StateSnapshot],
     config: EvolutionSearchConfig,
     rng: np.random.Generator,
     action_names: list[str],
-) -> list[Candidate]:
+    created_generation: int,
+    survival_floor_m: float,
+    quality_pass_rate: float,
+    plateau: dict[str, Any] | None = None,
+) -> tuple[list[Candidate], dict[str, Any]]:
+    plateau = plateau or {}
+    plateau_active = bool(plateau.get("plateau_active", False))
+    frontier_best_m = max((float(row.get("best_progress_m", 0.0) or 0.0) for row in ranked), default=0.0)
+    late_frontier_active = frontier_best_m >= config.late_frontier_trigger_m
     elite_rows = _select_elite_rows(ranked, config)
+    selected_elite_count = len(elite_rows)
+    if plateau_active and elite_rows:
+        effective_plateau_elite_fraction = config.plateau_elite_fraction
+        if late_frontier_active:
+            effective_plateau_elite_fraction = max(effective_plateau_elite_fraction, 0.75)
+        plateau_elite_count = max(1, int(math.ceil(len(elite_rows) * effective_plateau_elite_fraction)))
+        elite_rows = elite_rows[:plateau_elite_count]
     elites = [
         Candidate(
             genome=genome_from_mapping(row["genome"]),
             snapshot_index=int(row["snapshot_index"]),
+            lineage={
+                "source": "elite_copy",
+                "created_generation": created_generation,
+                "parent": _row_reference(row),
+                "parent_generation": int(row["generation"]),
+                "parent_candidate_index": int(row["candidate_index"]),
+                "parent_seed": int(row["seed"]),
+                "previous_lineage": row.get("lineage", {}),
+            },
         )
         for row in elite_rows
     ]
@@ -1144,15 +1969,38 @@ def _next_population(
                     max_phase_progress_m=config.max_phase_progress_m,
                 ),
                 snapshot_index=int(rng.integers(0, len(snapshots))),
+                lineage={"source": "random_reseed", "created_generation": created_generation},
             )
         ]
+    parent_buckets, parent_summary = _parent_buckets(ranked, config, survival_floor_m=survival_floor_m)
     next_candidates = list(elites)
-    immigrant_count = min(config.random_immigrants, max(0, config.population - len(next_candidates)))
-    while len(next_candidates) < config.population - immigrant_count:
-        parent = elites[_rank_biased_index(len(elites), rng)]
+    immigrant_counts = _effective_immigrant_counts(
+        config,
+        generation=created_generation,
+        remaining_slots=max(0, config.population - len(next_candidates)),
+        quality_pass_rate=quality_pass_rate,
+        frontier_best_m=frontier_best_m,
+    )
+    reproduction_counts: Counter[str] = Counter({"elite_copy": len(next_candidates)})
+    source_bucket_counts: Counter[str] = Counter()
+    while len(next_candidates) < config.population - immigrant_counts["total"]:
+        source_bucket, parent_row = _sample_parent_row(parent_buckets, rng)
+        parent = Candidate(
+            genome=genome_from_mapping(parent_row["genome"]),
+            snapshot_index=int(parent_row["snapshot_index"]),
+            lineage=dict(parent_row.get("lineage", {})),
+        )
+        parent_genome = parent.genome
         genome = parent.genome
+        partner_reference: dict[str, Any] | None = None
+        crossover_used = False
         if len(elites) > 1 and rng.random() < config.crossover_rate:
-            other = elites[_rank_biased_index(len(elites), rng)]
+            partner_bucket, partner_row = _sample_parent_row(parent_buckets, rng)
+            other = Candidate(
+                genome=genome_from_mapping(partner_row["genome"]),
+                snapshot_index=int(partner_row["snapshot_index"]),
+                lineage=dict(partner_row.get("lineage", {})),
+            )
             genome = crossover_genomes(
                 genome,
                 other.genome,
@@ -1164,8 +2012,20 @@ def _next_population(
                 min_phase_progress_m=config.min_phase_progress_m,
                 max_phase_progress_m=config.max_phase_progress_m,
             )
-        if rng.random() < config.mutation_rate:
-            genome = mutate_genome(
+            partner_reference = {**_row_reference(partner_row), "source_bucket": partner_bucket}
+            crossover_used = True
+            reproduction_counts["crossover"] += 1
+        mutation_history: list[dict[str, Any]] = []
+        parent_is_frontier = (
+            float(parent_row.get("best_progress_m", 0.0) or 0.0)
+            >= max(config.frontier_parent_min_progress_m, survival_floor_m)
+        )
+        mutation_rate = 1.0 if plateau_active and parent_is_frontier else config.mutation_rate
+        if rng.random() < mutation_rate:
+            mutation_scale = 1.0
+            if plateau_active and parent_is_frontier:
+                mutation_scale = 0.35 if late_frontier_active else 0.75
+            genome, mutation_metadata = mutate_genome_with_metadata(
                 genome,
                 rng,
                 action_names=action_names,
@@ -1174,11 +2034,134 @@ def _next_population(
                 max_phases=config.max_phases,
                 min_phase_progress_m=config.min_phase_progress_m,
                 max_phase_progress_m=config.max_phase_progress_m,
+                mutation_scale=mutation_scale,
             )
+            mutation_history.append(mutation_metadata)
+            reproduction_counts["mutated_offspring"] += 1
+        if plateau_active and parent_is_frontier:
+            extra_mutations = min(config.plateau_extra_mutations, 1) if late_frontier_active else config.plateau_extra_mutations
+            for _ in range(extra_mutations):
+                genome, mutation_metadata = mutate_genome_with_metadata(
+                    genome,
+                    rng,
+                    action_names=action_names,
+                    min_phase_steps=config.min_phase_steps,
+                    max_phase_steps=config.max_phase_steps,
+                    max_phases=config.max_phases,
+                    min_phase_progress_m=config.min_phase_progress_m,
+                    max_phase_progress_m=config.max_phase_progress_m,
+                    mutation_scale=0.25 if late_frontier_active else 0.75,
+                )
+                mutation_history.append(mutation_metadata)
+                reproduction_counts["plateau_extra_mutation"] += 1
         snapshot_index = parent.snapshot_index
         if len(snapshots) > 1 and rng.random() < config.start_mutation_rate:
             snapshot_index = int(rng.integers(0, len(snapshots)))
-        next_candidates.append(Candidate(genome=genome, snapshot_index=snapshot_index))
+        distance = _genome_distance(parent_genome, genome)
+        source_bucket_counts[source_bucket] += 1
+        next_candidates.append(
+            Candidate(
+                genome=genome,
+                snapshot_index=snapshot_index,
+                lineage={
+                    "source": "offspring",
+                    "created_generation": created_generation,
+                    "source_bucket": source_bucket,
+                    "parent": _row_reference(parent_row),
+                    "parent_generation": int(parent_row["generation"]),
+                    "parent_candidate_index": int(parent_row["candidate_index"]),
+                    "parent_seed": int(parent_row["seed"]),
+                    "crossover_used": crossover_used,
+                    "crossover_partner": partner_reference,
+                    "crossover_partner_generation": partner_reference.get("generation") if partner_reference else None,
+                    "crossover_partner_candidate_index": (
+                        partner_reference.get("candidate_index") if partner_reference else None
+                    ),
+                    "crossover_partner_seed": partner_reference.get("seed") if partner_reference else None,
+                    "mutation": mutation_history[-1]
+                    if mutation_history
+                    else {"mutation_type": "none", "mutation_sigma": None, "reset_count": 0},
+                    "mutation_history": mutation_history,
+                    "mutation_type": mutation_history[-1].get("mutation_type") if mutation_history else "none",
+                    "mutation_sigma": mutation_history[-1].get("mutation_sigma") if mutation_history else None,
+                    "reset_count": sum(int(item.get("reset_count", 0) or 0) for item in mutation_history),
+                    "plateau_mode": plateau_active,
+                    "genome_distance_from_parent": distance,
+                    "previous_lineage": parent_row.get("lineage", {}),
+                },
+            )
+        )
+        reproduction_counts["offspring"] += 1
+
+    current_source_rows = sorted(
+        ranked,
+        key=lambda row: (
+            float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+            float(row.get("pace_kph", float("-inf")) or float("-inf")),
+            float(row.get("score", float("-inf"))),
+        ),
+        reverse=True,
+    )[: max(len(elite_rows), config.elite_count * 3, 8)]
+    if not current_source_rows:
+        current_source_rows = elite_rows or ranked
+    global_source_rows = sorted(
+        best_rows or current_source_rows,
+        key=lambda row: (
+            float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+            float(row.get("pace_kph", float("-inf")) or float("-inf")),
+            float(row.get("score", float("-inf"))),
+        ),
+        reverse=True,
+    )
+    for _ in range(immigrant_counts["smart"]):
+        if len(next_candidates) >= config.population:
+            break
+        use_current = bool(rng.random() < config.smart_immigrant_current_fraction) or not global_source_rows
+        source_rows = current_source_rows if use_current else global_source_rows
+        parent_row = source_rows[_rank_biased_index(len(source_rows), rng)]
+        parent_genome = genome_from_mapping(parent_row["genome"])
+        genome = parent_genome
+        mutation_rounds = 1 if late_frontier_active else 1 + int(rng.random() < 0.35)
+        mutation_history: list[dict[str, Any]] = []
+        for _round in range(mutation_rounds):
+            genome, mutation_metadata = mutate_genome_with_metadata(
+                genome,
+                rng,
+                action_names=action_names,
+                min_phase_steps=config.min_phase_steps,
+                max_phase_steps=config.max_phase_steps,
+                max_phases=config.max_phases,
+                min_phase_progress_m=config.min_phase_progress_m,
+                max_phase_progress_m=config.max_phase_progress_m,
+                mutation_scale=0.40 if late_frontier_active else 1.0,
+            )
+            mutation_history.append(mutation_metadata)
+        immigrant_type = "smart_current_elite" if use_current else "smart_global_elite"
+        next_candidates.append(
+            Candidate(
+                genome=genome,
+                snapshot_index=int(parent_row["snapshot_index"]),
+                lineage={
+                    "source": "smart_immigrant",
+                    "immigrant_type": immigrant_type,
+                    "created_generation": created_generation,
+                    "source_bucket": immigrant_type,
+                    "parent": _row_reference(parent_row),
+                    "parent_generation": int(parent_row["generation"]),
+                    "parent_candidate_index": int(parent_row["candidate_index"]),
+                    "parent_seed": int(parent_row["seed"]),
+                    "mutation_history": mutation_history,
+                    "mutation_type": mutation_history[-1].get("mutation_type") if mutation_history else "none",
+                    "mutation_sigma": mutation_history[-1].get("mutation_sigma") if mutation_history else None,
+                    "reset_count": sum(int(item.get("reset_count", 0) or 0) for item in mutation_history),
+                    "genome_distance_from_parent": _genome_distance(parent_genome, genome),
+                    "previous_lineage": parent_row.get("lineage", {}),
+                },
+            )
+        )
+        reproduction_counts["smart_immigrant"] += 1
+        source_bucket_counts[immigrant_type] += 1
+
     while len(next_candidates) < config.population:
         next_candidates.append(
             Candidate(
@@ -1194,13 +2177,42 @@ def _next_population(
                     max_phase_progress_m=config.max_phase_progress_m,
                 ),
                 snapshot_index=int(rng.integers(0, len(snapshots))),
+                lineage={
+                    "source": "pure_random_immigrant",
+                    "immigrant_type": "pure_random",
+                    "created_generation": created_generation,
+                    "source_bucket": "pure_random",
+                },
             )
         )
-    return next_candidates
+        reproduction_counts["pure_random_immigrant"] += 1
+        source_bucket_counts["pure_random"] += 1
+    summary = {
+        **parent_summary,
+        "created_generation": created_generation,
+        "plateau_mode": plateau_active,
+        "plateau_report": plateau,
+        "selected_elite_count": selected_elite_count,
+        "elite_copy_count": reproduction_counts["elite_copy"],
+        "offspring_count": reproduction_counts["offspring"],
+        "mutated_offspring_count": reproduction_counts["mutated_offspring"],
+        "plateau_extra_mutation_count": reproduction_counts["plateau_extra_mutation"],
+        "crossover_count": reproduction_counts["crossover"],
+        "smart_immigrant_count": reproduction_counts["smart_immigrant"],
+        "pure_random_immigrant_count": reproduction_counts["pure_random_immigrant"],
+        "configured_random_immigrants": config.random_immigrants,
+        "effective_immigrant_count": immigrant_counts["total"],
+        "immigrant_quality_pass_rate": quality_pass_rate,
+        "frontier_best_m": frontier_best_m,
+        "late_frontier_active": late_frontier_active,
+        "source_bucket_selection_counts": dict(source_bucket_counts),
+    }
+    return next_candidates, summary
 
 
 def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s: float) -> dict[str, Any]:
     termination_reasons = Counter(str(row["termination_reason"]) for row in ranked)
+    lineage_sources = Counter(str(row.get("lineage", {}).get("source", "unknown")) for row in ranked)
     completion_count = sum(1 for row in ranked if row["segment_complete"])
     milestone_count = sum(1 for row in ranked if row.get("target_reached", row["segment_complete"]))
     farthest_attempt = max(ranked, key=lambda row: float(row["best_progress_m"]), default=None)
@@ -1209,6 +2221,38 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
         if ranked
         else 0.0
     )
+    avg_pace_kph = (
+        sum(float(row.get("pace_kph", 0.0) or 0.0) for row in ranked) / max(1, len(ranked))
+        if ranked
+        else 0.0
+    )
+    top_decile_count = max(1, int(math.ceil(len(ranked) * 0.10))) if ranked else 0
+    top_decile_distance_rows = sorted(
+        ranked,
+        key=lambda row: float(row.get("best_progress_m", float("-inf")) or float("-inf")),
+        reverse=True,
+    )[:top_decile_count]
+    top_decile_pace_rows = sorted(
+        ranked,
+        key=lambda row: float(row.get("pace_kph", float("-inf")) or float("-inf")),
+        reverse=True,
+    )[:top_decile_count]
+    top_decile_distance_m = (
+        sum(float(row.get("best_progress_m", 0.0) or 0.0) for row in top_decile_distance_rows)
+        / max(1, len(top_decile_distance_rows))
+        if top_decile_distance_rows
+        else 0.0
+    )
+    top_decile_pace_kph = (
+        sum(float(row.get("pace_kph", 0.0) or 0.0) for row in top_decile_pace_rows)
+        / max(1, len(top_decile_pace_rows))
+        if top_decile_pace_rows
+        else 0.0
+    )
+    progress_threshold_counts = {
+        str(threshold): sum(1 for row in ranked if float(row.get("best_progress_m", 0.0) or 0.0) >= threshold)
+        for threshold in (100, 300, 450, 650, 1000, 1220, 1500, 2000, 2400, 3000, 4000, 5000, 5500, 5793)
+    }
     profile_leaders = {}
     if ranked:
         for profile in ranked[0].get("profile_scores", {}):
@@ -1230,12 +2274,17 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
         "farthest_progress_m": farthest_attempt["best_progress_m"] if farthest_attempt is not None else None,
         "generation_best_distance_m": farthest_attempt["best_progress_m"] if farthest_attempt is not None else None,
         "generation_average_distance_m": avg_progress_m,
+        "generation_average_pace_kph": avg_pace_kph,
+        "generation_top_decile_distance_m": top_decile_distance_m,
+        "generation_top_decile_pace_kph": top_decile_pace_kph,
+        "progress_threshold_counts": progress_threshold_counts,
         "best_remaining_m": ranked[0]["remaining_m"] if ranked else None,
         "completion_count": completion_count,
         "completion_rate": completion_count / max(1, len(ranked)),
         "milestone_count": milestone_count,
         "milestone_rate": milestone_count / max(1, len(ranked)),
         "termination_reasons": dict(termination_reasons),
+        "lineage_source_counts": dict(lineage_sources),
         "profile_leaders": profile_leaders,
         "best_attempt": ranked[0] if ranked else None,
         "farthest_attempt": farthest_attempt,
@@ -1369,6 +2418,7 @@ def _write_generation_genomes(output_dir: Path, generation: int, ranked: list[di
                 "best_progress_m": row["best_progress_m"],
                 "termination_reason": row["termination_reason"],
                 "genome": row["genome"],
+                "lineage": row.get("lineage", {}),
             }
             for rank, row in enumerate(ranked[:top_k])
         ],
@@ -1495,7 +2545,52 @@ def _resume_command(
         config.telemetry_selection,
         "--checkpoint-every-generations",
         str(config.checkpoint_every_generations),
+        "--survival-floor-stages-m",
+        ",".join(str(stage) for stage in config.survival_floor_stages_m),
+        "--survival-floor-pass-rate",
+        str(config.survival_floor_pass_rate),
+        "--parent-pool-size",
+        str(config.parent_pool_size),
+        "--min-random-immigrants",
+        str(config.min_random_immigrants),
+        "--smart-immigrant-fraction",
+        str(config.smart_immigrant_fraction),
+        "--smart-immigrant-current-fraction",
+        str(config.smart_immigrant_current_fraction),
+        "--frontier-focus-start-m",
+        str(config.frontier_focus_start_m),
+        "--frontier-focus-end-m",
+        str(config.frontier_focus_end_m),
+        "--frontier-parent-min-progress-m",
+        str(config.frontier_parent_min_progress_m),
+        "--plateau-generations",
+        str(config.plateau_generations),
+        "--plateau-distance-epsilon-m",
+        str(config.plateau_distance_epsilon_m),
+        "--plateau-average-improvement-m",
+        str(config.plateau_average_improvement_m),
+        "--plateau-elite-fraction",
+        str(config.plateau_elite_fraction),
+        "--plateau-extra-mutations",
+        str(config.plateau_extra_mutations),
+        "--late-frontier-trigger-m",
+        str(config.late_frontier_trigger_m),
     ]
+    if config.max_steps_schedule:
+        parts.extend(
+            [
+                "--max-steps-schedule",
+                ",".join(f"{generation}:{steps}" for generation, steps in config.max_steps_schedule),
+            ]
+        )
+    if not config.adaptive_survival_floor:
+        parts.append("--no-adaptive-survival-floor")
+    if not config.survival_floor_leader_jump:
+        parts.append("--no-survival-floor-leader-jump")
+    if not config.adaptive_immigrants:
+        parts.append("--no-adaptive-immigrants")
+    if not config.plateau_mode:
+        parts.append("--no-plateau-mode")
     if not gates.terminate_at_target_progress:
         parts.append("--no-target-termination")
     if config.progress_every_generation:
@@ -1557,6 +2652,7 @@ def _write_checkpoint(
     best_rows: list[dict[str, Any]],
     generation_summaries: list[dict[str, Any]],
     attempt_count: int,
+    survival_floor_index: int,
 ) -> None:
     checkpoint_path = output_dir / CHECKPOINT_NAME
     resume_command = _resume_command(
@@ -1588,6 +2684,7 @@ def _write_checkpoint(
         "best_rows": best_rows,
         "generation_summaries": generation_summaries,
         "attempt_count": attempt_count,
+        "survival_floor_index": survival_floor_index,
         "resume_command": resume_command,
     }
     _write_json_atomic(checkpoint_path, payload)
@@ -1626,6 +2723,7 @@ def _initial_population(
                 max_phase_progress_m=config.max_phase_progress_m,
             ),
             snapshot_index=int(rng.integers(0, len(snapshots))),
+            lineage={"source": "initial_random", "created_generation": 0},
         )
         for _ in range(config.population)
     ]
@@ -1806,12 +2904,7 @@ def run_evolution_search(
     )
     _validate_config(config)
     action_names = [name for name, _, _, _ in actions_for_action_set(config.action_set)]
-    sim_config = SimConfig(
-        max_steps=config.max_steps,
-        action_mode="continuous" if config.genome_type == "controller" else "discrete",
-        action_set=config.action_set,
-        observation_profile=config.observation_profile,
-    )
+    sim_config = _sim_config_for_generation(config, 0)
     snapshots = _load_snapshots(
         sim_config=sim_config,
         config=config,
@@ -1844,6 +2937,7 @@ def run_evolution_search(
     best_rows: list[dict[str, Any]] = []
     generation_summaries: list[dict[str, Any]] = []
     global_best_distance_m = 0.0
+    survival_floor_index = 0
     if resume is not None:
         checkpoint = _load_checkpoint(resume, expected_hash=config_hash, force=force_resume)
         start_generation = int(checkpoint["next_generation"])
@@ -1858,6 +2952,12 @@ def run_evolution_search(
                 for summary in generation_summaries
             ],
             default=0.0,
+        )
+        survival_floor_index = int(
+            checkpoint.get(
+                "survival_floor_index",
+                generation_summaries[-1].get("next_survival_floor_index", 0) if generation_summaries else 0,
+            )
         )
     else:
         attempts_path.write_text("", encoding="utf-8")
@@ -1879,16 +2979,19 @@ def run_evolution_search(
     try:
         for generation in range(start_generation, config.generations):
             started = time.perf_counter()
+            generation_sim_config = _sim_config_for_generation(config, generation)
             evaluated = _evaluate_population(
                 candidates=population,
                 snapshots=snapshots,
-                sim_config=sim_config,
+                sim_config=generation_sim_config,
                 gates=gates,
                 generation=generation,
                 seed=config.seed,
                 workers=resolved_workers,
                 worker_chunk_size=config.worker_chunk_size,
                 scoring_profiles=config.scoring_profiles,
+                frontier_focus_start_m=config.frontier_focus_start_m,
+                frontier_focus_end_m=config.frontier_focus_end_m,
                 capture_step_telemetry=config.telemetry_selection == "all",
                 stream_telemetry_dir=selected_dir if config.telemetry_selection == "all" else None,
                 executor=executor,
@@ -1903,42 +3006,89 @@ def run_evolution_search(
             attempt_count += len(ranked)
             _append_jsonl(attempts_path, ranked)
             summary = _generation_summary(generation, ranked, elapsed_s)
+            summary["max_steps"] = generation_sim_config.max_steps
+            survival_report = _survival_floor_report(ranked, config, active_index=survival_floor_index)
+            summary.update(survival_report)
+            plateau = _plateau_report(generation_summaries, summary, config)
+            summary.update(plateau)
             global_best_distance_m = max(
                 global_best_distance_m,
                 float(summary.get("generation_best_distance_m", 0.0) or 0.0),
             )
             summary["global_best_distance_m"] = global_best_distance_m
-            generation_summaries.append(summary)
-            _append_jsonl(generation_summary_path, [summary])
             best_rows = _merge_best_rows(best_rows, ranked, limit=best_limit)
             _write_json(output_dir / "best_so_far.json", best_rows[0] if best_rows else {})
             _write_generation_genomes(output_dir, generation, ranked, config.top_k)
 
+            if generation < config.generations - 1:
+                survival_floor_index = int(survival_report["next_survival_floor_index"])
+                base_stage_key = f"{float(config.survival_floor_stages_m[0]):.1f}"
+                leader_progress_m = float(survival_report.get("survival_floor_leader_progress_m", 0.0) or 0.0)
+                frontier_quality_floor_m = max(
+                    float(config.survival_floor_stages_m[0]),
+                    min(float(survival_report["next_survival_floor_m"]), max(450.0, leader_progress_m - 1000.0)),
+                )
+                frontier_quality_rate = sum(
+                    1
+                    for row in ranked
+                    if float(row.get("best_progress_m", 0.0) or 0.0) >= frontier_quality_floor_m
+                ) / max(1, len(ranked))
+                quality_pass_rate = max(
+                    float(survival_report["survival_floor_pass_rate"]),
+                    float(survival_report["survival_floor_stage_rates"].get(base_stage_key, 0.0)),
+                    frontier_quality_rate,
+                )
+                summary["frontier_quality_floor_m"] = frontier_quality_floor_m
+                summary["frontier_quality_pass_rate"] = frontier_quality_rate
+                population, reproduction_summary = _next_population(
+                    ranked=ranked,
+                    best_rows=best_rows,
+                    snapshots=snapshots,
+                    config=config,
+                    rng=rng,
+                    action_names=action_names,
+                    created_generation=generation + 1,
+                    survival_floor_m=float(survival_report["next_survival_floor_m"]),
+                    quality_pass_rate=quality_pass_rate,
+                    plateau=plateau,
+                )
+                summary["next_population"] = reproduction_summary
+
+            generation_summaries.append(summary)
+            _append_jsonl(generation_summary_path, [summary])
+
             if config.progress_every_generation:
                 best = ranked[0] if ranked else {}
                 farthest = summary.get("farthest_attempt") or {}
+                next_population_summary = summary.get("next_population", {})
                 print(
                     "evolution_generation "
                     f"generation={generation} population={len(ranked)} "
+                    f"max_steps={generation_sim_config.max_steps} "
                     f"leader_progress_m={float(best.get('best_progress_m', 0.0)):.3f} "
                     f"generation_best_distance_m={float(farthest.get('best_progress_m', 0.0)):.3f} "
                     f"generation_average_distance_m={float(summary.get('generation_average_distance_m', 0.0)):.3f} "
+                    f"generation_average_pace_kph={float(summary.get('generation_average_pace_kph', 0.0)):.3f} "
+                    f"top_decile_distance_m={float(summary.get('generation_top_decile_distance_m', 0.0)):.3f} "
+                    f"top_decile_pace_kph={float(summary.get('generation_top_decile_pace_kph', 0.0)):.3f} "
                     f"global_best_distance_m={global_best_distance_m:.3f} "
                     f"best_score={float(best.get('score', 0.0)):.3f} "
+                    f"survival_floor_m={float(summary.get('survival_floor_m', 0.0)):.1f} "
+                    f"survival_pass_rate={float(summary.get('survival_floor_pass_rate', 0.0)):.3f} "
+                    f"next_survival_floor_m={float(summary.get('next_survival_floor_m', 0.0)):.1f} "
+                    f"offspring={int(next_population_summary.get('offspring_count', 0) or 0)} "
+                    f"smart_immigrants={int(next_population_summary.get('smart_immigrant_count', 0) or 0)} "
+                    f"pure_randoms={int(next_population_summary.get('pure_random_immigrant_count', 0) or 0)} "
+                    f"plateau_mode={int(bool(summary.get('plateau_active', False)))} "
+                    f"gate_3000={int(summary.get('progress_threshold_counts', {}).get('3000', 0))} "
+                    f"gate_4000={int(summary.get('progress_threshold_counts', {}).get('4000', 0))} "
+                    f"gate_5000={int(summary.get('progress_threshold_counts', {}).get('5000', 0))} "
                     f"completion_rate={summary['completion_rate']:.3f} "
                     f"milestone_rate={summary['milestone_rate']:.3f} "
                     f"candidates_per_second={summary['candidates_per_second']:.3f}",
                     flush=True,
                 )
 
-            if generation < config.generations - 1:
-                population = _next_population(
-                    ranked=ranked,
-                    snapshots=snapshots,
-                    config=config,
-                    rng=rng,
-                    action_names=action_names,
-                )
             if (
                 config.checkpoint_every_generations > 0
                 and (generation + 1) % config.checkpoint_every_generations == 0
@@ -1959,6 +3109,7 @@ def run_evolution_search(
                     best_rows=best_rows,
                     generation_summaries=generation_summaries,
                     attempt_count=attempt_count,
+                    survival_floor_index=survival_floor_index,
                 )
             if (
                 stop_after_generations is not None
@@ -1981,6 +3132,7 @@ def run_evolution_search(
                     best_rows=best_rows,
                     generation_summaries=generation_summaries,
                     attempt_count=attempt_count,
+                    survival_floor_index=survival_floor_index,
                 )
                 _write_summary(
                     output_dir,
@@ -2015,16 +3167,19 @@ def run_evolution_search(
     top_rows_by_key = {_row_identity(row): row for row in top_rows}
     for rank, row in enumerate(telemetry_rows):
         snapshot = snapshots[int(row["snapshot_index"])]
+        row_sim_config = _sim_config_for_generation(config, int(row["generation"]))
         key = _row_identity(row)
         rows = captured_telemetry_by_key.get(key)
         sim: MonzaSim | None = None
         existing_telemetry = row.get("selected_telemetry")
         telemetry_path = Path(str(existing_telemetry)) if existing_telemetry is not None else None
         if telemetry_path is not None and telemetry_path.exists():
-            final_row = _last_jsonl_row(telemetry_path)
+            final_row = dict(row.get("final_row") or {})
+            if not final_row:
+                final_row = _last_jsonl_row(telemetry_path)
         else:
             rows, sim = _run_candidate(
-                sim_config=sim_config,
+                sim_config=row_sim_config,
                 snapshot=snapshot,
                 genome=genome_from_mapping(row["genome"]),
                 gates=gates,
@@ -2050,6 +3205,9 @@ def run_evolution_search(
                 "profile_scores": row.get("profile_scores", {}),
                 "best_progress_m": row["best_progress_m"],
                 "final_progress_m": final_row.get("monotonic_progress_m", row.get("final_progress_m")),
+                "final_speed_kph": final_row.get("speed_kph", row.get("final_speed_kph")),
+                "final_lateral_error_m": final_row.get("lateral_error_m", row.get("final_lateral_error_m")),
+                "final_heading_error_deg": final_row.get("heading_error_deg", row.get("final_heading_error_deg")),
                 "termination_reason": final_row.get("termination_reason", row.get("termination_reason")),
                 "path": str(telemetry_path),
             }
@@ -2132,6 +3290,7 @@ def run_evolution_search(
         best_rows=best_rows,
         generation_summaries=generation_summaries,
         attempt_count=attempt_count,
+        survival_floor_index=survival_floor_index,
     )
     return output_dir
 
@@ -2176,6 +3335,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--action-set", default="racing")
     parser.add_argument("--observation-profile", default="racing_v2")
     parser.add_argument("--max-steps", type=int, default=600)
+    parser.add_argument(
+        "--max-steps-schedule",
+        default="",
+        help="Optional comma-separated generation:max_steps schedule, e.g. 0:10000,5:15000,15:25000.",
+    )
     parser.add_argument("--population", type=int, default=256)
     parser.add_argument("--generations", type=int, default=20)
     parser.add_argument("--elite-count", type=int, default=16)
@@ -2198,6 +3362,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--telemetry-selection", choices=sorted(TELEMETRY_SELECTIONS), default="top")
     parser.add_argument("--checkpoint-every-generations", type=int, default=1)
     parser.add_argument("--progress-every-generation", action="store_true")
+    parser.add_argument("--no-adaptive-survival-floor", action="store_true")
+    parser.add_argument("--survival-floor-stages-m", default="450,1000,1220,1500,2000,2400,3000,4000,5000")
+    parser.add_argument("--survival-floor-pass-rate", type=float, default=0.30)
+    parser.add_argument("--no-survival-floor-leader-jump", action="store_true")
+    parser.add_argument("--parent-pool-size", type=int, default=0)
+    parser.add_argument("--no-adaptive-immigrants", action="store_true")
+    parser.add_argument("--min-random-immigrants", type=int, default=4)
+    parser.add_argument("--smart-immigrant-fraction", type=float, default=0.50)
+    parser.add_argument("--smart-immigrant-current-fraction", type=float, default=0.90)
+    parser.add_argument("--frontier-focus-start-m", type=float, default=2200.0)
+    parser.add_argument("--frontier-focus-end-m", type=float, default=2600.0)
+    parser.add_argument("--frontier-parent-min-progress-m", type=float, default=2000.0)
+    parser.add_argument("--late-frontier-trigger-m", type=float, default=4000.0)
+    parser.add_argument("--no-plateau-mode", action="store_true")
+    parser.add_argument("--plateau-generations", type=int, default=3)
+    parser.add_argument("--plateau-distance-epsilon-m", type=float, default=8.0)
+    parser.add_argument("--plateau-average-improvement-m", type=float, default=80.0)
+    parser.add_argument("--plateau-elite-fraction", type=float, default=0.50)
+    parser.add_argument("--plateau-extra-mutations", type=int, default=1)
     return parser.parse_args(argv)
 
 
@@ -2211,6 +3394,7 @@ def main(argv: list[str] | None = None) -> int:
         action_set=args.action_set,
         observation_profile=args.observation_profile,
         max_steps=max(1, args.max_steps),
+        max_steps_schedule=_parse_max_steps_schedule(args.max_steps_schedule),
         population=max(1, args.population),
         generations=max(1, args.generations),
         elite_count=max(1, args.elite_count),
@@ -2233,6 +3417,25 @@ def main(argv: list[str] | None = None) -> int:
         telemetry_selection=args.telemetry_selection,
         checkpoint_every_generations=max(0, args.checkpoint_every_generations),
         progress_every_generation=bool(args.progress_every_generation),
+        adaptive_survival_floor=not bool(args.no_adaptive_survival_floor),
+        survival_floor_stages_m=_parse_float_csv(args.survival_floor_stages_m),
+        survival_floor_pass_rate=float(np.clip(args.survival_floor_pass_rate, 0.0, 1.0)),
+        survival_floor_leader_jump=not bool(args.no_survival_floor_leader_jump),
+        parent_pool_size=max(0, args.parent_pool_size),
+        adaptive_immigrants=not bool(args.no_adaptive_immigrants),
+        min_random_immigrants=max(0, args.min_random_immigrants),
+        smart_immigrant_fraction=float(np.clip(args.smart_immigrant_fraction, 0.0, 1.0)),
+        smart_immigrant_current_fraction=float(np.clip(args.smart_immigrant_current_fraction, 0.0, 1.0)),
+        frontier_focus_start_m=args.frontier_focus_start_m,
+        frontier_focus_end_m=args.frontier_focus_end_m,
+        frontier_parent_min_progress_m=max(0.0, args.frontier_parent_min_progress_m),
+        late_frontier_trigger_m=max(0.0, args.late_frontier_trigger_m),
+        plateau_mode=not bool(args.no_plateau_mode),
+        plateau_generations=max(2, args.plateau_generations),
+        plateau_distance_epsilon_m=max(0.0, args.plateau_distance_epsilon_m),
+        plateau_average_improvement_m=max(0.0, args.plateau_average_improvement_m),
+        plateau_elite_fraction=float(np.clip(args.plateau_elite_fraction, 0.05, 1.0)),
+        plateau_extra_mutations=max(0, args.plateau_extra_mutations),
     )
     gates = EvolutionGates(
         target_progress_m=args.target_progress_m,

@@ -30,6 +30,10 @@ GHOST_COLORS = (
     (120, 180, 255),
 )
 ReplayGroupResult = Literal["complete", "skip", "quit"]
+_MIN_REPLAY_SPEED = 0.05
+_MAX_REPLAY_SPEED = 32.0
+_REPLAY_SPEED_STEP = 1.25
+_SKIP_REST_SENTINEL = 1_000_000
 
 
 @dataclass(slots=True)
@@ -39,6 +43,40 @@ class ReplayTrace:
     times: np.ndarray
     duration_s: float
     metadata: dict[str, Any]
+
+
+@dataclass(slots=True)
+class ReplayControls:
+    speed: float
+    queued_generation_skips: int = 0
+
+    def __post_init__(self) -> None:
+        self.speed = _clamp_replay_speed(self.speed)
+
+    def speed_up(self) -> None:
+        self.speed = _clamp_replay_speed(self.speed * _REPLAY_SPEED_STEP)
+
+    def speed_down(self) -> None:
+        self.speed = _clamp_replay_speed(self.speed / _REPLAY_SPEED_STEP)
+
+    def reset_speed(self) -> None:
+        self.speed = 1.0
+
+    def queue_generation_skip(self, count: int = 1) -> None:
+        self.queued_generation_skips = max(0, self.queued_generation_skips + count)
+
+    def skip_remaining_generations(self) -> None:
+        self.queued_generation_skips = _SKIP_REST_SENTINEL
+
+    def take_generation_skip(self) -> bool:
+        if self.queued_generation_skips <= 0:
+            return False
+        self.queued_generation_skips -= 1
+        return True
+
+
+def _clamp_replay_speed(speed: float) -> float:
+    return float(np.clip(speed, _MIN_REPLAY_SPEED, _MAX_REPLAY_SPEED))
 
 
 def _apply_row(sim: MonzaSim, row: dict[str, Any]) -> None:
@@ -259,12 +297,70 @@ def _trace_candidate_label(trace: ReplayTrace, index: int) -> str:
     return f"C{int(candidate_index):03d}"
 
 
+def _pygame_keys(pygame_module: Any, *names: str) -> tuple[int, ...]:
+    keys: list[int] = []
+    for name in names:
+        value = getattr(pygame_module, name, None)
+        if value is not None:
+            keys.append(int(value))
+    return tuple(keys)
+
+
+def _consume_named_keydown(renderer: PygameRenderer, *names: str) -> bool:
+    return renderer.consume_keydown(*_pygame_keys(renderer.pygame, *names))
+
+
+def _poll_replay_controls(
+    *,
+    renderer: PygameRenderer,
+    controls: ReplayControls,
+    allow_generation_skip: bool,
+) -> bool:
+    if not renderer.poll():
+        return False
+
+    if _consume_named_keydown(renderer, "K_RIGHTBRACKET", "K_EQUALS", "K_PLUS", "K_KP_PLUS"):
+        controls.speed_up()
+    if _consume_named_keydown(renderer, "K_LEFTBRACKET", "K_MINUS", "K_UNDERSCORE", "K_KP_MINUS"):
+        controls.speed_down()
+    if _consume_named_keydown(renderer, "K_0", "K_KP0", "K_BACKSPACE"):
+        controls.reset_speed()
+
+    if allow_generation_skip:
+        if _consume_named_keydown(renderer, "K_n", "K_SPACE"):
+            controls.queue_generation_skip()
+        if _consume_named_keydown(renderer, "K_PAGEDOWN"):
+            controls.queue_generation_skip(5)
+        if _consume_named_keydown(renderer, "K_END"):
+            controls.skip_remaining_generations()
+    return True
+
+
+def _control_overlay_lines(
+    controls: ReplayControls,
+    *,
+    realtime: bool,
+    allow_generation_skip: bool,
+) -> list[str]:
+    lines = []
+    if realtime:
+        lines.append(f"speed x{controls.speed:.2f}  [/] or +/- adjust  0 reset")
+    if allow_generation_skip:
+        skip_text = "N/Space skip gen  PgDn +5  End skip rest"
+        if controls.queued_generation_skips >= _SKIP_REST_SENTINEL:
+            skip_text += "  queued rest"
+        elif controls.queued_generation_skips > 0:
+            skip_text += f"  queued {controls.queued_generation_skips}"
+        lines.append(skip_text)
+    return lines
+
+
 def _render_trace_group(
     *,
     renderer: PygameRenderer,
     sim: MonzaSim,
     traces: Sequence[ReplayTrace],
-    speed: float,
+    controls: ReplayControls,
     realtime: bool,
     base_lines: Sequence[str],
     allow_skip: bool = False,
@@ -273,14 +369,21 @@ def _render_trace_group(
     duration_s = max(trace.duration_s for trace in traces)
     first_time_s = float(primary.times[0]) if len(primary.times) else 0.0
     max_steps = max(len(trace.steps) for trace in traces)
-    start_wall_s = time.perf_counter()
     if realtime:
+        last_wall_s = time.perf_counter()
+        replay_time_s = 0.0
         while True:
-            if not renderer.poll():
+            if not _poll_replay_controls(
+                renderer=renderer,
+                controls=controls,
+                allow_generation_skip=allow_skip,
+            ):
                 return "quit"
-            if allow_skip and renderer.consume_keydown(renderer.pygame.K_n, renderer.pygame.K_SPACE):
+            if allow_skip and controls.take_generation_skip():
                 return "skip"
-            replay_time_s = min((time.perf_counter() - start_wall_s) * speed, duration_s)
+            now_s = time.perf_counter()
+            replay_time_s = min(replay_time_s + (now_s - last_wall_s) * controls.speed, duration_s)
+            last_wall_s = now_s
             row = _row_at_time(primary, replay_time_s)
             _apply_row(sim, row)
             ghosts = [
@@ -294,17 +397,25 @@ def _render_trace_group(
                 extra_lines=[
                     *base_lines,
                     f"replay {replay_time_s:6.2f}s",
-                    f"speed x{speed:.2f}",
                     f"cars {len(traces)}",
+                    *_control_overlay_lines(
+                        controls,
+                        realtime=realtime,
+                        allow_generation_skip=allow_skip,
+                    ),
                 ],
             )
             if replay_time_s >= duration_s:
                 return "complete"
     else:
         for step_index in range(max_steps):
-            if not renderer.poll():
+            if not _poll_replay_controls(
+                renderer=renderer,
+                controls=controls,
+                allow_generation_skip=allow_skip,
+            ):
                 return "quit"
-            if allow_skip and renderer.consume_keydown(renderer.pygame.K_n, renderer.pygame.K_SPACE):
+            if allow_skip and controls.take_generation_skip():
                 return "skip"
             row = _row_at_index(primary, step_index)
             _apply_row(sim, row)
@@ -322,6 +433,11 @@ def _render_trace_group(
                     f"replay {replay_time_s:6.2f}s",
                     "untimed",
                     f"cars {len(traces)}",
+                    *_control_overlay_lines(
+                        controls,
+                        realtime=realtime,
+                        allow_generation_skip=allow_skip,
+                    ),
                 ],
             )
     return "complete"
@@ -331,17 +447,75 @@ def _pause_between_groups(
     *,
     renderer: PygameRenderer,
     sim: MonzaSim,
+    controls: ReplayControls,
     pause_s: float,
     lines: Sequence[str],
-) -> bool:
+) -> ReplayGroupResult:
     if pause_s <= 0.0:
-        return True
+        return "complete"
     start_wall_s = time.perf_counter()
     while time.perf_counter() - start_wall_s < pause_s:
-        if not renderer.poll():
-            return False
-        renderer.render(sim, human=True, extra_lines=list(lines))
-    return True
+        if not _poll_replay_controls(
+            renderer=renderer,
+            controls=controls,
+            allow_generation_skip=True,
+        ):
+            return "quit"
+        if controls.queued_generation_skips > 0:
+            return "skip"
+        renderer.render(
+            sim,
+            human=True,
+            extra_lines=[
+                *lines,
+                *_control_overlay_lines(
+                    controls,
+                    realtime=True,
+                    allow_generation_skip=True,
+                ),
+            ],
+        )
+    return "complete"
+
+
+def _load_trace_group_interactive(
+    *,
+    renderer: PygameRenderer,
+    sim: MonzaSim,
+    controls: ReplayControls,
+    group_paths: Sequence[tuple[Path, dict[str, Any]]],
+    base_lines: Sequence[str],
+) -> tuple[ReplayGroupResult, list[ReplayTrace]]:
+    traces: list[ReplayTrace] = []
+    total = len(group_paths)
+    for load_index, (path, metadata) in enumerate(group_paths, 1):
+        if controls.take_generation_skip():
+            return "skip", traces
+        if not _poll_replay_controls(
+            renderer=renderer,
+            controls=controls,
+            allow_generation_skip=True,
+        ):
+            return "quit", traces
+        if controls.take_generation_skip():
+            return "skip", traces
+        renderer.render(
+            sim,
+            human=True,
+            extra_lines=[
+                *base_lines,
+                f"loading trace {load_index}/{total}",
+                path.name,
+                *_control_overlay_lines(
+                    controls,
+                    realtime=True,
+                    allow_generation_skip=True,
+                ),
+            ],
+        )
+        traces.append(_load_trace(path, metadata=metadata))
+
+    return "complete", traces
 
 
 def run_replay_paths(
@@ -358,6 +532,7 @@ def run_replay_paths(
 ) -> int:
     if speed <= 0.0:
         raise ValueError("speed must be positive")
+    controls = ReplayControls(speed=speed)
     trace_paths = _resolve_replay_paths(paths, limit=limit, sort_by=sort_by)
     metadata_by_path = _metadata_for_inputs(paths)
     if by_generation and not headless:
@@ -373,8 +548,14 @@ def run_replay_paths(
             for display_index, (generation, group_paths) in enumerate(groups, 1):
                 if not group_paths:
                     continue
+                if controls.take_generation_skip():
+                    continue
                 generation_text = "-" if generation is None else str(generation)
-                if not renderer.poll():
+                if not _poll_replay_controls(
+                    renderer=renderer,
+                    controls=controls,
+                    allow_generation_skip=True,
+                ):
                     break
                 renderer.render(
                     sim,
@@ -382,39 +563,60 @@ def run_replay_paths(
                     extra_lines=[
                         f"loading generation {display_index}/{group_count} (raw {generation_text})",
                         f"loading traces {len(group_paths)}",
-                        "N/Space skip after playback starts",
+                        *_control_overlay_lines(
+                            controls,
+                            realtime=True,
+                            allow_generation_skip=True,
+                        ),
                     ],
                 )
-                traces = [_load_trace(path, metadata=metadata) for path, metadata in group_paths]
+                load_result, traces = _load_trace_group_interactive(
+                    renderer=renderer,
+                    sim=sim,
+                    controls=controls,
+                    group_paths=group_paths,
+                    base_lines=[
+                        f"loading generation {display_index}/{group_count} (raw {generation_text})",
+                        f"generation traces {len(group_paths)}",
+                    ],
+                )
+                if load_result == "quit":
+                    break
+                if load_result == "skip":
+                    continue
+                if not traces:
+                    continue
                 best_progress = max(_trace_best_progress(trace) for trace in traces)
                 keep_running = _render_trace_group(
                     renderer=renderer,
                     sim=sim,
                     traces=traces,
-                    speed=speed,
+                    controls=controls,
                     realtime=realtime,
                     allow_skip=True,
                     base_lines=[
                         f"generation {display_index}/{group_count} (raw {generation_text})",
                         f"generation cars {len(traces)}",
                         f"generation best {best_progress:7.1f} m",
-                        "N/Space skip generation",
                     ],
                 )
                 if keep_running == "quit":
                     break
                 if keep_running == "skip":
                     continue
-                if display_index < group_count and not _pause_between_groups(
-                    renderer=renderer,
-                    sim=sim,
-                    pause_s=generation_pause_s,
-                    lines=[
-                        f"finished generation {display_index}/{group_count}",
-                        f"next generation {display_index + 1}/{group_count}",
-                    ],
-                ):
-                    break
+                if display_index < group_count:
+                    pause_result = _pause_between_groups(
+                        renderer=renderer,
+                        sim=sim,
+                        controls=controls,
+                        pause_s=generation_pause_s,
+                        lines=[
+                            f"finished generation {display_index}/{group_count}",
+                            f"next generation {display_index + 1}/{group_count}",
+                        ],
+                    )
+                    if pause_result == "quit":
+                        break
         finally:
             renderer.close()
         return 0
@@ -445,7 +647,7 @@ def run_replay_paths(
             renderer=renderer,
             sim=sim,
             traces=traces,
-            speed=speed,
+            controls=controls,
             realtime=realtime,
             base_lines=[],
         )

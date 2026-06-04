@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import time
 from dataclasses import asdict, dataclass
@@ -323,5 +324,6 @@ class TelemetryWriter:
 
 
 def load_steps(path: Path) -> list[dict[str, Any]]:
-    with path.open("r", encoding="utf-8") as file:
+    opener = gzip.open if path.suffix == ".gz" else Path.open
+    with opener(path, "rt", encoding="utf-8") as file:
         return [json.loads(line) for line in file if line.strip()]

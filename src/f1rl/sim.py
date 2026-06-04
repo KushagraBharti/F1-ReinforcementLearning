@@ -528,8 +528,32 @@ class MonzaSim:
         _, lateral_error_m, heading_error, signed_lateral_error_m = self._track_errors()
         lookahead_errors = self._lookahead_heading_errors()
         target_speed_kph = self._target_speed_kph(lookahead_errors)
-        speed_kph = self.state.speed_mps * 3.6
         max_speed_kph = max(self.config.car.max_speed_mps * 3.6, 1e-6)
+        lookahead_target_speeds_kph = [
+            float(
+                np.clip(
+                    self.config.reward.speed_target_max_kph
+                    - self.config.reward.speed_target_heading_scale * abs(error) * 180.0,
+                    self.config.reward.speed_target_min_kph,
+                    self.config.car.max_speed_mps * 3.6,
+                )
+            )
+            for error in lookahead_errors
+        ]
+        near_target_speed_kph = lookahead_target_speeds_kph[0] if lookahead_target_speeds_kph else target_speed_kph
+        min_future_target_speed_kph = min([target_speed_kph, *lookahead_target_speeds_kph])
+        target_speed_drop_kph = max(0.0, near_target_speed_kph - min_future_target_speed_kph)
+        speed_kph = self.state.speed_mps * 3.6
+        future_brake_demand = float(
+            np.clip(
+                (speed_kph - min_future_target_speed_kph - self.config.reward.speed_target_deadzone_kph) / 220.0,
+                0.0,
+                1.0,
+            )
+        )
+        braking_gate_distance_m = distance_to_next_braking_gate(self.state.monotonic_progress_m)
+        brake_gate_proximity = float(1.0 - np.clip(braking_gate_distance_m / 900.0, 0.0, 1.0))
+        lookahead_abs_max = max((abs(value) for value in lookahead_errors), default=0.0)
         speed_error_norm = float(np.clip((speed_kph - target_speed_kph) / 220.0, -1.0, 1.0))
         brake_demand = float(
             np.clip(
@@ -552,6 +576,11 @@ class MonzaSim:
             "target_speed_norm": float(np.clip(target_speed_kph / max_speed_kph, 0.0, 1.0) * 2.0 - 1.0),
             "speed_error_norm": speed_error_norm,
             "brake_demand": brake_demand,
+            "future_brake_demand": future_brake_demand,
+            "target_speed_drop_norm": float(np.clip(target_speed_drop_kph / 180.0, 0.0, 1.0)),
+            "brake_gate_proximity": brake_gate_proximity,
+            "brake_gate_distance_norm": float(np.clip(braking_gate_distance_m / 1000.0, 0.0, 1.0) * 2.0 - 1.0),
+            "lookahead_abs_max": float(np.clip(lookahead_abs_max / np.pi, 0.0, 1.0)),
             "signed_lateral_error_norm": float(np.clip(signed_lateral_error_m / 30.0, -1.0, 1.0)),
             "heading_error_norm": float(np.clip(heading_error / np.pi, -1.0, 1.0)),
             "yaw_rate_norm": float(np.clip(self.state.yaw_rate_rps / 2.0, -1.0, 1.0)),
@@ -565,6 +594,10 @@ class MonzaSim:
             "signed_lateral_error_m": float(signed_lateral_error_m),
             "heading_error_deg": float(np.rad2deg(heading_error)),
             "target_speed_kph": float(target_speed_kph),
+            "near_target_speed_kph": float(near_target_speed_kph),
+            "min_future_target_speed_kph": float(min_future_target_speed_kph),
+            "target_speed_drop_kph": float(target_speed_drop_kph),
+            "braking_gate_distance_m": float(braking_gate_distance_m),
             "speed_kph": float(speed_kph),
         }
         for index in range(4):
