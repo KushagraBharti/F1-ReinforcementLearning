@@ -39,8 +39,10 @@ from f1rl.state_snapshot import (
 )
 
 GENOME_TYPES = frozenset({"phase", "progress_phase", "controller"})
+TELEMETRY_SELECTIONS = frozenset({"top", "leaders", "all"})
 SCORING_PROFILES = frozenset(
     {
+        "frontier",
         "max_progress",
         "clean_exit",
         "brake_zone",
@@ -103,6 +105,7 @@ class Candidate:
 @dataclass(frozen=True, slots=True)
 class EvolutionGates:
     target_progress_m: float
+    terminate_at_target_progress: bool = True
     target_min_speed_kph: float | None = None
     target_max_speed_kph: float | None = None
     target_max_lateral_error_m: float | None = None
@@ -141,6 +144,7 @@ class EvolutionSearchConfig:
     worker_chunk_size: int = 0
     genome_type: str = "phase"
     scoring_profiles: tuple[str, ...] = ("max_progress",)
+    telemetry_selection: str = "top"
     checkpoint_every_generations: int = 1
     progress_every_generation: bool = False
 
@@ -183,6 +187,15 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             file.write(json.dumps(row, default=_json_default) + "\n")
 
 
+def _last_jsonl_row(path: Path) -> dict[str, Any]:
+    last_row: dict[str, Any] = {}
+    with path.open("r", encoding="utf-8") as file:
+        for line in file:
+            if line.strip():
+                last_row = json.loads(line)
+    return last_row
+
+
 def _parse_csv(value: str | tuple[str, ...] | list[str]) -> tuple[str, ...]:
     if isinstance(value, tuple):
         return value
@@ -195,6 +208,9 @@ def _validate_config(config: EvolutionSearchConfig) -> None:
     if config.genome_type not in GENOME_TYPES:
         valid = ", ".join(sorted(GENOME_TYPES))
         raise ValueError(f"Unknown genome type {config.genome_type!r}; expected one of: {valid}")
+    if config.telemetry_selection not in TELEMETRY_SELECTIONS:
+        valid = ", ".join(sorted(TELEMETRY_SELECTIONS))
+        raise ValueError(f"Unknown telemetry selection {config.telemetry_selection!r}; expected one of: {valid}")
     unknown_profiles = set(config.scoring_profiles) - SCORING_PROFILES
     if unknown_profiles:
         valid = ", ".join(sorted(SCORING_PROFILES))
@@ -415,11 +431,18 @@ def mutate_genome(
                 max_phase_steps=max_phase_steps,
                 genome_type="controller",
             )
-        if rng.random() < 0.85:
-            weights += rng.normal(0.0, 0.30, len(weights))
+        roll = float(rng.random())
+        if roll < 0.52:
+            mask = rng.random(len(weights)) < 0.42
+            if not bool(mask.any()):
+                mask[int(rng.integers(0, len(weights)))] = True
+            weights[mask] += rng.normal(0.0, 0.58, int(mask.sum()))
+        elif roll < 0.82:
+            weights += rng.normal(0.0, 0.34, len(weights))
         else:
-            index = int(rng.integers(0, len(weights)))
-            weights[index] = float(rng.normal(0.0, 1.25))
+            reset_count = int(rng.integers(3, min(9, len(weights) + 1)))
+            indices = rng.choice(len(weights), size=reset_count, replace=False)
+            weights[indices] = rng.normal(0.0, 2.05, reset_count)
         return _normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(weights)))
 
     if genome.kind == "progress_phase":
@@ -537,8 +560,13 @@ def crossover_genomes(
         right_weights = np.asarray(right.controller_weights, dtype=np.float64)
         if len(left_weights) != len(right_weights):
             return left
-        mask = rng.random(len(left_weights)) < 0.5
-        weights = np.where(mask, left_weights, right_weights)
+        if rng.random() < 0.55:
+            mask = rng.random(len(left_weights)) < 0.5
+            weights = np.where(mask, left_weights, right_weights)
+        else:
+            alpha = rng.uniform(0.25, 0.75, len(left_weights))
+            weights = left_weights * alpha + right_weights * (1.0 - alpha)
+            weights += rng.normal(0.0, 0.08, len(weights))
         return _normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(weights)))
     if left.kind == "progress_phase":
         if not left.progress_phases:
@@ -640,9 +668,8 @@ def _default_start_snapshot(
 
 
 def _reset_options(snapshot: StateSnapshot, gates: EvolutionGates, *, collect_observation: bool) -> dict[str, Any]:
-    return {
+    options: dict[str, Any] = {
         "state_snapshot": snapshot_to_dict(snapshot),
-        "segment_length_m": max(gates.target_progress_m - snapshot.monotonic_progress_m, 1.0),
         "segment_target_min_speed_kph": gates.target_min_speed_kph,
         "segment_target_max_speed_kph": gates.target_max_speed_kph,
         "segment_target_max_lateral_error_m": gates.target_max_lateral_error_m,
@@ -658,6 +685,9 @@ def _reset_options(snapshot: StateSnapshot, gates: EvolutionGates, *, collect_ob
         "curriculum_stage": "evolution-search",
         "collect_observation": collect_observation,
     }
+    if gates.terminate_at_target_progress:
+        options["segment_length_m"] = max(gates.target_progress_m - snapshot.monotonic_progress_m, 1.0)
+    return options
 
 
 def _score_profile(
@@ -671,7 +701,11 @@ def _score_profile(
         return float("-inf")
     final = rows[-1]
     best_progress_m = max(float(row["monotonic_progress_m"]) for row in rows)
-    progress_to_target_m = min(best_progress_m, gates.target_progress_m) - start_progress_m
+    raw_progress_m = best_progress_m - start_progress_m
+    if gates.terminate_at_target_progress:
+        progress_to_target_m = min(best_progress_m, gates.target_progress_m) - start_progress_m
+    else:
+        progress_to_target_m = raw_progress_m
     remaining_m = max(0.0, gates.target_progress_m - best_progress_m)
     final_speed_kph = float(final.get("speed_kph", 0.0) or 0.0)
     final_lateral_error_m = abs(float(final.get("lateral_error_m", 0.0) or 0.0))
@@ -680,29 +714,55 @@ def _score_profile(
     final_steering = abs(float(final.get("steering", 0.0) or 0.0))
     missed_checkpoints = int(final.get("missed_checkpoint_count", 0) or 0)
     clean = not final.get("collided") and not final.get("off_track")
-    segment_complete = bool(final.get("segment_complete", False))
+    milestone_complete = best_progress_m >= gates.target_progress_m
+    segment_complete = bool(final.get("segment_complete", False)) or milestone_complete
     valid_finish = bool(final.get("completed_lap") or (final.get("valid_lap") and final.get("finish_crossed")))
     reason = str(final.get("termination_reason", "unknown"))
+    target_span_m = max(gates.target_progress_m - start_progress_m, 1.0)
+    progress_ratio = float(np.clip(min(raw_progress_m, target_span_m) / target_span_m, 0.0, 1.0))
+    frontier_m = max(0.0, progress_to_target_m - target_span_m * 0.70)
+    near_target_m = max(0.0, progress_to_target_m - target_span_m * 0.88)
+    beyond_target_m = max(0.0, best_progress_m - gates.target_progress_m)
+    stalled = reason == "max_steps" and final_speed_kph < 20.0
 
-    collision_penalty = 8_000.0 if profile == "risk_seeking" else 20_000.0
-    score = progress_to_target_m * 20.0 - remaining_m * 35.0
+    if profile == "frontier":
+        collision_penalty = 4_500.0
+    elif profile == "risk_seeking":
+        collision_penalty = 7_000.0
+    else:
+        collision_penalty = 24_000.0
+    score = progress_to_target_m * 34.0 - remaining_m * 36.0
+    score += frontier_m * 65.0 + near_target_m * 120.0 + beyond_target_m * 160.0
     if segment_complete:
-        score += 100_000.0
+        score += 160_000.0
     if valid_finish:
-        score += 250_000.0 if profile == "full_lap_validity" else 200_000.0
+        score += 300_000.0 if profile == "full_lap_validity" else 240_000.0
     if reason in {"collision", "off_track", "assist_virtual_corridor"}:
         score -= collision_penalty
     elif reason.startswith("segment_") and reason != "segment_complete":
         score -= 7_500.0
     elif reason == "no_progress":
         score -= 3_500.0
+    if stalled:
+        score -= 6_000.0
     if clean:
-        score += 1_500.0
+        score += 3_500.0 + progress_ratio * 3_000.0
+
+    if profile == "frontier":
+        score += best_progress_m * 12.0 + min(final_speed_kph, 360.0) * 18.0
+        score += frontier_m * 95.0 + near_target_m * 210.0 + beyond_target_m * 320.0
+        score -= final_lateral_error_m * 72.0
+        score -= final_heading_error_deg * 26.0
+        score -= final_yaw_rate_rps * 330.0
+        score -= final_steering * 300.0
+        score -= missed_checkpoints * 2_500.0
+        return float(score)
 
     if profile == "risk_seeking":
-        score += best_progress_m * 4.0 + min(final_speed_kph, 340.0) * 12.0
-        score -= final_lateral_error_m * 55.0
-        score -= final_heading_error_deg * 15.0
+        score += best_progress_m * 9.0 + min(final_speed_kph, 360.0) * 18.0
+        score += frontier_m * 70.0 + near_target_m * 150.0 + beyond_target_m * 220.0
+        score -= final_lateral_error_m * 52.0
+        score -= final_heading_error_deg * 18.0
         return float(score)
 
     if profile == "clean_exit":
@@ -802,6 +862,8 @@ def _run_candidate(
     gates: EvolutionGates,
     seed: int,
     collect_full_telemetry: bool,
+    keep_step_telemetry: bool = False,
+    stream_telemetry_path: Path | None = None,
     sim: MonzaSim | None = None,
 ) -> tuple[list[dict[str, Any]], MonzaSim]:
     active_sim = sim or MonzaSim(sim_config)
@@ -812,32 +874,60 @@ def _run_candidate(
     }
     rows: list[dict[str, Any]] = []
     start_progress_m = snapshot.monotonic_progress_m
-    for step_index in range(sim_config.max_steps):
-        if genome.kind == "controller":
-            features = active_sim.search_features(
-                segment_start_progress_m=start_progress_m,
-                segment_target_progress_m=gates.target_progress_m,
+    stream_file = None
+    tmp_stream_path: Path | None = None
+    completed = False
+    try:
+        if stream_telemetry_path is not None:
+            stream_telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_stream_path = stream_telemetry_path.with_name(f"{stream_telemetry_path.name}.tmp")
+            stream_file = tmp_stream_path.open("w", encoding="utf-8")
+        for step_index in range(sim_config.max_steps):
+            if genome.kind == "controller":
+                features = active_sim.search_features(
+                    segment_start_progress_m=start_progress_m,
+                    segment_target_progress_m=gates.target_progress_m,
+                )
+                throttle, brake, steer = _controller_controls(genome, features)
+                action_id = -2
+            elif genome.kind == "progress_phase":
+                progress_delta_m = max(0.0, active_sim.state.monotonic_progress_m - start_progress_m)
+                action_name = _action_for_progress_delta(genome, progress_delta_m)
+                action_id, throttle, brake, steer = action_specs[action_name]
+            else:
+                action_name = _action_for_step(genome, step_index)
+                action_id, throttle, brake, steer = action_specs[action_name]
+            result = active_sim.step_controls(
+                throttle=throttle,
+                brake=brake,
+                steer=steer,
+                action_id=action_id,
+                collect_observation=collect_full_telemetry,
+                collect_rays=collect_full_telemetry,
+                compute_reward=collect_full_telemetry,
             )
-            throttle, brake, steer = _controller_controls(genome, features)
-            action_id = -2
-        elif genome.kind == "progress_phase":
-            progress_delta_m = max(0.0, active_sim.state.monotonic_progress_m - start_progress_m)
-            action_name = _action_for_progress_delta(genome, progress_delta_m)
-            action_id, throttle, brake, steer = action_specs[action_name]
-        else:
-            action_name = _action_for_step(genome, step_index)
-            action_id, throttle, brake, steer = action_specs[action_name]
-        result = active_sim.step_controls(
-            throttle=throttle,
-            brake=brake,
-            steer=steer,
-            action_id=action_id,
-            collect_observation=collect_full_telemetry,
-            collect_rays=collect_full_telemetry,
-        )
-        rows.append(asdict(result.telemetry) if collect_full_telemetry else _compact_row(result.telemetry))
-        if result.terminated or result.truncated:
-            break
+            if stream_file is not None or collect_full_telemetry or keep_step_telemetry:
+                full_row = asdict(result.telemetry)
+                if stream_file is not None:
+                    stream_file.write(json.dumps(full_row, default=_json_default) + "\n")
+                if collect_full_telemetry or keep_step_telemetry:
+                    rows.append(full_row)
+                else:
+                    rows.append(_compact_row(result.telemetry))
+            else:
+                rows.append(_compact_row(result.telemetry))
+            if result.terminated or result.truncated:
+                break
+        completed = True
+    finally:
+        if stream_file is not None:
+            stream_file.close()
+        if tmp_stream_path is not None:
+            if completed:
+                assert stream_telemetry_path is not None
+                tmp_stream_path.replace(stream_telemetry_path)
+            elif tmp_stream_path.exists():
+                tmp_stream_path.unlink()
     return rows, active_sim
 
 
@@ -847,6 +937,8 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         snapshot_index=int(task["snapshot_index"]),
     )
     snapshot = snapshot_from_mapping(task["snapshot"])
+    stream_telemetry_path = task.get("stream_telemetry_path")
+    stream_path = Path(str(stream_telemetry_path)) if stream_telemetry_path is not None else None
     rows, _ = _run_candidate(
         sim_config=task["sim_config"],
         snapshot=snapshot,
@@ -854,6 +946,8 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         gates=task["gates"],
         seed=int(task["seed"]),
         collect_full_telemetry=False,
+        keep_step_telemetry=bool(task.get("capture_step_telemetry", False)) and stream_path is None,
+        stream_telemetry_path=stream_path,
         sim=sim,
     )
     profile_scores = _score_rows(
@@ -865,7 +959,9 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
     primary_profile = str(task["scoring_profiles"][0])
     final = rows[-1] if rows else {}
     best_progress_m = max([snapshot.monotonic_progress_m, *[float(row["monotonic_progress_m"]) for row in rows]])
-    return {
+    target_reached = best_progress_m >= task["gates"].target_progress_m
+    sim_segment_complete = bool(final.get("segment_complete", False))
+    result = {
         "candidate_index": int(task["candidate_index"]),
         "generation": int(task["generation"]),
         "seed": int(task["seed"]),
@@ -880,7 +976,9 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         "best_progress_m": best_progress_m,
         "final_progress_m": final.get("monotonic_progress_m", snapshot.monotonic_progress_m),
         "remaining_m": max(0.0, task["gates"].target_progress_m - best_progress_m),
-        "segment_complete": bool(final.get("segment_complete", False)),
+        "segment_complete": bool(sim_segment_complete or target_reached),
+        "target_reached": bool(target_reached),
+        "sim_segment_complete": bool(sim_segment_complete),
         "completed_lap": bool(final.get("completed_lap", False)),
         "valid_lap": bool(final.get("valid_lap", False)),
         "termination_reason": final.get("termination_reason", "empty"),
@@ -893,6 +991,12 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         "final_steering": final.get("steering"),
         "steps": len(rows),
     }
+    if bool(task.get("capture_step_telemetry", False)):
+        if stream_path is not None:
+            result["selected_telemetry"] = str(stream_path)
+        else:
+            result["captured_telemetry"] = rows
+    return result
 
 
 def _evaluate_task(task: dict[str, Any]) -> dict[str, Any]:
@@ -935,6 +1039,8 @@ def _evaluate_population(
     workers: int,
     worker_chunk_size: int,
     scoring_profiles: tuple[str, ...],
+    capture_step_telemetry: bool,
+    stream_telemetry_dir: Path | None = None,
     executor: ProcessPoolExecutor | None = None,
 ) -> list[dict[str, Any]]:
     tasks = [
@@ -948,6 +1054,13 @@ def _evaluate_population(
             "sim_config": sim_config,
             "gates": gates,
             "scoring_profiles": scoring_profiles,
+            "capture_step_telemetry": capture_step_telemetry,
+            "stream_telemetry_path": str(
+                stream_telemetry_dir
+                / f"evolution-all_candidates-gen-{generation:03d}-candidate-{index:05d}-steps.jsonl"
+            )
+            if capture_step_telemetry and stream_telemetry_dir is not None
+            else None,
         }
         for index, candidate in enumerate(candidates)
     ]
@@ -986,7 +1099,18 @@ def _select_elite_rows(ranked: list[dict[str, Any]], config: EvolutionSearchConf
         if len(selected) >= config.elite_count:
             break
         selected[(int(row["generation"]), int(row["candidate_index"]))] = row
-    return list(selected.values())[: max(1, min(config.elite_count, len(ranked)))]
+    rows = list(selected.values())
+    rows.sort(key=lambda row: float(row["score"]), reverse=True)
+    return rows[: max(1, min(config.elite_count, len(ranked)))]
+
+
+def _rank_biased_index(count: int, rng: np.random.Generator) -> int:
+    if count <= 1:
+        return 0
+    ranks = np.arange(count, 0, -1, dtype=np.float64)
+    weights = ranks**3.4
+    weights /= weights.sum()
+    return int(rng.choice(count, p=weights))
 
 
 def _next_population(
@@ -1025,10 +1149,10 @@ def _next_population(
     next_candidates = list(elites)
     immigrant_count = min(config.random_immigrants, max(0, config.population - len(next_candidates)))
     while len(next_candidates) < config.population - immigrant_count:
-        parent = elites[int(rng.integers(0, len(elites)))]
+        parent = elites[_rank_biased_index(len(elites), rng)]
         genome = parent.genome
         if len(elites) > 1 and rng.random() < config.crossover_rate:
-            other = elites[int(rng.integers(0, len(elites)))]
+            other = elites[_rank_biased_index(len(elites), rng)]
             genome = crossover_genomes(
                 genome,
                 other.genome,
@@ -1078,6 +1202,13 @@ def _next_population(
 def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s: float) -> dict[str, Any]:
     termination_reasons = Counter(str(row["termination_reason"]) for row in ranked)
     completion_count = sum(1 for row in ranked if row["segment_complete"])
+    milestone_count = sum(1 for row in ranked if row.get("target_reached", row["segment_complete"]))
+    farthest_attempt = max(ranked, key=lambda row: float(row["best_progress_m"]), default=None)
+    avg_progress_m = (
+        sum(float(row["best_progress_m"]) for row in ranked) / max(1, len(ranked))
+        if ranked
+        else 0.0
+    )
     profile_leaders = {}
     if ranked:
         for profile in ranked[0].get("profile_scores", {}):
@@ -1095,12 +1226,19 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
         "candidates_per_second": len(ranked) / max(elapsed_s, 1e-9),
         "best_score": ranked[0]["score"] if ranked else None,
         "best_progress_m": ranked[0]["best_progress_m"] if ranked else None,
+        "score_leader_progress_m": ranked[0]["best_progress_m"] if ranked else None,
+        "farthest_progress_m": farthest_attempt["best_progress_m"] if farthest_attempt is not None else None,
+        "generation_best_distance_m": farthest_attempt["best_progress_m"] if farthest_attempt is not None else None,
+        "generation_average_distance_m": avg_progress_m,
         "best_remaining_m": ranked[0]["remaining_m"] if ranked else None,
         "completion_count": completion_count,
         "completion_rate": completion_count / max(1, len(ranked)),
+        "milestone_count": milestone_count,
+        "milestone_rate": milestone_count / max(1, len(ranked)),
         "termination_reasons": dict(termination_reasons),
         "profile_leaders": profile_leaders,
         "best_attempt": ranked[0] if ranked else None,
+        "farthest_attempt": farthest_attempt,
     }
 
 
@@ -1125,6 +1263,98 @@ def _merge_best_rows(existing: list[dict[str, Any]], new_rows: list[dict[str, An
         if len(rows) >= limit:
             break
     return rows
+
+
+def _row_identity(row: dict[str, Any]) -> tuple[int, int, int]:
+    return int(row["generation"]), int(row["candidate_index"]), int(row["seed"])
+
+
+def _dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    selected: list[dict[str, Any]] = []
+    seen: set[tuple[int, int, int]] = set()
+    for row in rows:
+        key = _row_identity(row)
+        if key in seen:
+            continue
+        seen.add(key)
+        selected.append(row)
+    return selected
+
+
+def _load_attempt_rows(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as file:
+        for line in file:
+            if line.strip():
+                rows.append(json.loads(line))
+    return rows
+
+
+def _tagged_row(row: dict[str, Any], reason: str) -> dict[str, Any]:
+    tagged = dict(row)
+    tagged["telemetry_selection_reason"] = reason
+    return tagged
+
+
+def _safe_slug(value: str) -> str:
+    return "".join(char if char.isalnum() or char in ("-", "_") else "-" for char in value).strip("-") or "selected"
+
+
+def _best_by(rows: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    return max(rows, key=lambda row: float(row.get(key, float("-inf")) or float("-inf")))
+
+
+def _select_telemetry_rows(
+    *,
+    attempts_path: Path,
+    top_rows: list[dict[str, Any]],
+    latest_ranked: list[dict[str, Any]],
+    config: EvolutionSearchConfig,
+) -> list[dict[str, Any]]:
+    if config.telemetry_selection == "top":
+        return [_tagged_row(row, "top_score") for row in top_rows]
+
+    all_rows = _load_attempt_rows(attempts_path)
+    if not all_rows:
+        all_rows = latest_ranked
+    if config.telemetry_selection == "all":
+        return [_tagged_row(row, "all_candidates") for row in all_rows]
+
+    selected: list[dict[str, Any]] = [_tagged_row(row, "top_score") for row in top_rows]
+    for profile in config.scoring_profiles:
+        leader = max(
+            all_rows,
+            key=lambda row: float(row.get("profile_scores", {}).get(profile, float("-inf"))),
+            default=None,
+        )
+        if leader is not None:
+            selected.append(_tagged_row(leader, f"profile_leader:{profile}"))
+    for key, reason in (
+        ("best_progress_m", "farthest_best_progress"),
+        ("final_progress_m", "farthest_final_progress"),
+        ("final_speed_kph", "fastest_final_speed"),
+    ):
+        leader = _best_by(all_rows, key)
+        if leader is not None:
+            selected.append(_tagged_row(leader, reason))
+    moving_rows = [
+        row
+        for row in all_rows
+        if float(row.get("best_progress_m", 0.0) or 0.0) > float(row.get("start_progress_m", 0.0) or 0.0) + 5.0
+    ]
+    moving = _best_by(moving_rows, "best_progress_m")
+    if moving is not None:
+        selected.append(_tagged_row(moving, "best_moving_candidate"))
+    for reason in ("off_track", "collision", "no_progress"):
+        rows = [row for row in all_rows if str(row.get("termination_reason")) == reason]
+        leader = _best_by(rows, "best_progress_m")
+        if leader is not None:
+            selected.append(_tagged_row(leader, f"best_{reason}"))
+    return _dedupe_rows(selected)
 
 
 def _write_generation_genomes(output_dir: Path, generation: int, ranked: list[dict[str, Any]], top_k: int) -> None:
@@ -1261,9 +1491,13 @@ def _resume_command(
         config.genome_type,
         "--scoring-profiles",
         ",".join(config.scoring_profiles),
+        "--telemetry-selection",
+        config.telemetry_selection,
         "--checkpoint-every-generations",
         str(config.checkpoint_every_generations),
     ]
+    if not gates.terminate_at_target_progress:
+        parts.append("--no-target-termination")
     if config.progress_every_generation:
         parts.append("--progress-every-generation")
     if state_library is not None:
@@ -1609,6 +1843,7 @@ def run_evolution_search(
     attempt_count = 0
     best_rows: list[dict[str, Any]] = []
     generation_summaries: list[dict[str, Any]] = []
+    global_best_distance_m = 0.0
     if resume is not None:
         checkpoint = _load_checkpoint(resume, expected_hash=config_hash, force=force_resume)
         start_generation = int(checkpoint["next_generation"])
@@ -1617,6 +1852,13 @@ def run_evolution_search(
         best_rows = list(checkpoint.get("best_rows", []))
         generation_summaries = list(checkpoint.get("generation_summaries", []))
         attempt_count = int(checkpoint.get("attempt_count", start_generation * config.population))
+        global_best_distance_m = max(
+            [
+                float(summary.get("generation_best_distance_m", summary.get("farthest_progress_m", 0.0)) or 0.0)
+                for summary in generation_summaries
+            ],
+            default=0.0,
+        )
     else:
         attempts_path.write_text("", encoding="utf-8")
         generation_summary_path.write_text("", encoding="utf-8")
@@ -1628,6 +1870,7 @@ def run_evolution_search(
         )
 
     latest_ranked: list[dict[str, Any]] = []
+    captured_telemetry_by_key: dict[tuple[int, int, int], list[dict[str, Any]]] = {}
     best_limit = max(config.top_k * 5, config.elite_count * 2, 32)
     resolved_workers = _resolved_workers(config.workers)
     executor: ProcessPoolExecutor | None = None
@@ -1646,14 +1889,25 @@ def run_evolution_search(
                 workers=resolved_workers,
                 worker_chunk_size=config.worker_chunk_size,
                 scoring_profiles=config.scoring_profiles,
+                capture_step_telemetry=config.telemetry_selection == "all",
+                stream_telemetry_dir=selected_dir if config.telemetry_selection == "all" else None,
                 executor=executor,
             )
+            for row in evaluated:
+                captured = row.pop("captured_telemetry", None)
+                if captured is not None:
+                    captured_telemetry_by_key[_row_identity(row)] = captured
             elapsed_s = time.perf_counter() - started
             ranked = sorted(evaluated, key=lambda row: float(row["score"]), reverse=True)
             latest_ranked = ranked
             attempt_count += len(ranked)
             _append_jsonl(attempts_path, ranked)
             summary = _generation_summary(generation, ranked, elapsed_s)
+            global_best_distance_m = max(
+                global_best_distance_m,
+                float(summary.get("generation_best_distance_m", 0.0) or 0.0),
+            )
+            summary["global_best_distance_m"] = global_best_distance_m
             generation_summaries.append(summary)
             _append_jsonl(generation_summary_path, [summary])
             best_rows = _merge_best_rows(best_rows, ranked, limit=best_limit)
@@ -1662,12 +1916,17 @@ def run_evolution_search(
 
             if config.progress_every_generation:
                 best = ranked[0] if ranked else {}
+                farthest = summary.get("farthest_attempt") or {}
                 print(
                     "evolution_generation "
                     f"generation={generation} population={len(ranked)} "
-                    f"best_progress_m={float(best.get('best_progress_m', 0.0)):.3f} "
+                    f"leader_progress_m={float(best.get('best_progress_m', 0.0)):.3f} "
+                    f"generation_best_distance_m={float(farthest.get('best_progress_m', 0.0)):.3f} "
+                    f"generation_average_distance_m={float(summary.get('generation_average_distance_m', 0.0)):.3f} "
+                    f"global_best_distance_m={global_best_distance_m:.3f} "
                     f"best_score={float(best.get('score', 0.0)):.3f} "
                     f"completion_rate={summary['completion_rate']:.3f} "
+                    f"milestone_rate={summary['milestone_rate']:.3f} "
                     f"candidates_per_second={summary['candidates_per_second']:.3f}",
                     flush=True,
                 )
@@ -1744,24 +2003,80 @@ def run_evolution_search(
             executor.shutdown()
 
     top_rows = best_rows[: config.top_k]
+    top_row_keys = {_row_identity(row) for row in top_rows}
+    telemetry_rows = _select_telemetry_rows(
+        attempts_path=attempts_path,
+        top_rows=top_rows,
+        latest_ranked=latest_ranked,
+        config=config,
+    )
     elite_snapshots: list[StateSnapshot] = []
-    for rank, row in enumerate(top_rows):
+    telemetry_manifest: list[dict[str, Any]] = []
+    top_rows_by_key = {_row_identity(row): row for row in top_rows}
+    for rank, row in enumerate(telemetry_rows):
         snapshot = snapshots[int(row["snapshot_index"])]
-        rows, sim = _run_candidate(
-            sim_config=sim_config,
-            snapshot=snapshot,
-            genome=genome_from_mapping(row["genome"]),
-            gates=gates,
-            seed=int(row["seed"]),
-            collect_full_telemetry=True,
-        )
-        telemetry_path = selected_dir / (
-            f"evolution-rank-{rank:03d}-gen-{int(row['generation']):03d}-"
-            f"candidate-{int(row['candidate_index']):05d}-steps.jsonl"
-        )
-        _write_jsonl(telemetry_path, rows)
+        key = _row_identity(row)
+        rows = captured_telemetry_by_key.get(key)
+        sim: MonzaSim | None = None
+        existing_telemetry = row.get("selected_telemetry")
+        telemetry_path = Path(str(existing_telemetry)) if existing_telemetry is not None else None
+        if telemetry_path is not None and telemetry_path.exists():
+            final_row = _last_jsonl_row(telemetry_path)
+        else:
+            rows, sim = _run_candidate(
+                sim_config=sim_config,
+                snapshot=snapshot,
+                genome=genome_from_mapping(row["genome"]),
+                gates=gates,
+                seed=int(row["seed"]),
+                collect_full_telemetry=True,
+            )
+            reason = _safe_slug(str(row.get("telemetry_selection_reason", "selected")))
+            telemetry_path = selected_dir / (
+                f"evolution-{reason}-rank-{rank:03d}-gen-{int(row['generation']):03d}-"
+                f"candidate-{int(row['candidate_index']):05d}-steps.jsonl"
+            )
+            _write_jsonl(telemetry_path, rows)
+            final_row = rows[-1] if rows else {}
         row["selected_telemetry"] = str(telemetry_path)
-        elite_snapshots.append(snapshot_from_sim(sim, source="evolution_search", source_file=str(telemetry_path)))
+        telemetry_manifest.append(
+            {
+                "rank": rank,
+                "selection_reason": row.get("telemetry_selection_reason", "selected"),
+                "generation": row["generation"],
+                "candidate_index": row["candidate_index"],
+                "seed": row["seed"],
+                "score": row["score"],
+                "profile_scores": row.get("profile_scores", {}),
+                "best_progress_m": row["best_progress_m"],
+                "final_progress_m": final_row.get("monotonic_progress_m", row.get("final_progress_m")),
+                "termination_reason": final_row.get("termination_reason", row.get("termination_reason")),
+                "path": str(telemetry_path),
+            }
+        )
+        if key in top_rows_by_key:
+            top_rows_by_key[key]["selected_telemetry"] = str(telemetry_path)
+        if key in top_row_keys:
+            if sim is not None:
+                elite_snapshots.append(snapshot_from_sim(sim, source="evolution_search", source_file=str(telemetry_path)))
+            elif final_row:
+                elite_snapshots.append(
+                    snapshot_from_mapping(
+                        {
+                            **final_row,
+                            "source": "evolution_search",
+                            "source_file": str(telemetry_path),
+                        }
+                    )
+                )
+    _write_json(
+        selected_dir / "manifest.json",
+        {
+            "telemetry_selection": config.telemetry_selection,
+            "trace_count": len(telemetry_manifest),
+            "traces": telemetry_manifest,
+        },
+    )
 
     elite_library_path = output_dir / "elite_state_library.json"
     write_state_library(
@@ -1838,6 +2153,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--start-min-progress-m", type=float)
     parser.add_argument("--start-max-progress-m", type=float)
     parser.add_argument("--target-progress-m", type=float, default=MONZA_LENGTH_METERS)
+    parser.add_argument(
+        "--no-target-termination",
+        action="store_true",
+        help=(
+            "Treat --target-progress-m as a scoring/completion milestone only. "
+            "Do not install a simulator segment target that truncates candidates there."
+        ),
+    )
     parser.add_argument("--target-min-speed-kph", type=float)
     parser.add_argument("--target-max-speed-kph", type=float)
     parser.add_argument("--target-max-lateral-error-m", type=float)
@@ -1872,6 +2195,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--worker-chunk-size", type=int, default=0)
     parser.add_argument("--genome-type", choices=sorted(GENOME_TYPES), default="phase")
     parser.add_argument("--scoring-profiles", default="max_progress")
+    parser.add_argument("--telemetry-selection", choices=sorted(TELEMETRY_SELECTIONS), default="top")
     parser.add_argument("--checkpoint-every-generations", type=int, default=1)
     parser.add_argument("--progress-every-generation", action="store_true")
     return parser.parse_args(argv)
@@ -1906,11 +2230,13 @@ def main(argv: list[str] | None = None) -> int:
         worker_chunk_size=max(0, args.worker_chunk_size),
         genome_type=args.genome_type,
         scoring_profiles=_parse_csv(args.scoring_profiles),
+        telemetry_selection=args.telemetry_selection,
         checkpoint_every_generations=max(0, args.checkpoint_every_generations),
         progress_every_generation=bool(args.progress_every_generation),
     )
     gates = EvolutionGates(
         target_progress_m=args.target_progress_m,
+        terminate_at_target_progress=not bool(args.no_target_termination),
         target_min_speed_kph=args.target_min_speed_kph,
         target_max_speed_kph=args.target_max_speed_kph,
         target_max_lateral_error_m=args.target_max_lateral_error_m,

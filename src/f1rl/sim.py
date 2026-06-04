@@ -868,6 +868,7 @@ class MonzaSim:
         action_id: int = -1,
         collect_observation: bool = True,
         collect_rays: bool = True,
+        compute_reward: bool = True,
     ) -> SimStep:
         if self.terminated or self.truncated:
             raise RuntimeError("step() called after episode ended; call reset() first")
@@ -921,60 +922,70 @@ class MonzaSim:
         else:
             self.no_progress_steps = 0
 
-        components = {key: 0.0 for key in REWARD_COMPONENT_KEYS}
-        components["progress"] = progress_delta_m * self.config.reward.progress_scale
-        lateral_excess_m = max(0.0, abs(lateral_error_m) - self.config.reward.lateral_deadzone_m)
-        components["lateral"] = -self.config.reward.lateral_penalty_scale * lateral_excess_m
-        ray_distances_m = self.ray_distances_m()
-        min_ray_m = float(np.min(ray_distances_m)) if len(ray_distances_m) else self.config.reward.track_limit_safe_ray_m
-        track_limit_excess_m = max(0.0, self.config.reward.track_limit_safe_ray_m - min_ray_m)
-        speed_factor = max(1.0, (self.state.speed_mps * 3.6) / 100.0)
-        components["track_limit"] = -self.config.reward.track_limit_penalty_scale * track_limit_excess_m * speed_factor
         heading_error_deg = abs(float(np.rad2deg(heading_error)))
-        heading_excess_deg = max(0.0, heading_error_deg - self.config.reward.heading_deadzone_deg)
-        components["heading"] = -self.config.reward.heading_penalty_scale * heading_excess_deg * speed_factor
-        target_speed_kph = self._target_speed_kph(self._lookahead_heading_errors())
-        speed_target_excess_kph = max(
-            0.0,
-            self.state.speed_mps * 3.6 - target_speed_kph - self.config.reward.speed_target_deadzone_kph,
-        )
-        components["speed_target"] = -self.config.reward.speed_target_penalty_scale * speed_target_excess_kph
-        overspeed_ratio = speed_target_excess_kph / 100.0
-        components["overspeed_action"] = (
-            -self.config.reward.overspeed_throttle_penalty_scale * overspeed_ratio * throttle
-            + self.config.reward.overspeed_brake_reward_scale * overspeed_ratio * brake
-        )
-        target_steer = self._target_steer()
-        steering_target_error = max(0.0, abs(float(steer) - target_steer) - self.config.reward.steering_target_deadzone)
-        components["steering_target"] = (
-            -self.config.reward.steering_target_penalty_scale * steering_target_error * speed_factor
-        )
-        components.update(
-            self._scaffold_reward_components(
+        components = {key: 0.0 for key in REWARD_COMPONENT_KEYS}
+        if compute_reward:
+            components["progress"] = progress_delta_m * self.config.reward.progress_scale
+            lateral_excess_m = max(0.0, abs(lateral_error_m) - self.config.reward.lateral_deadzone_m)
+            components["lateral"] = -self.config.reward.lateral_penalty_scale * lateral_excess_m
+            ray_distances_m = self.ray_distances_m()
+            min_ray_m = (
+                float(np.min(ray_distances_m))
+                if len(ray_distances_m)
+                else self.config.reward.track_limit_safe_ray_m
+            )
+            track_limit_excess_m = max(0.0, self.config.reward.track_limit_safe_ray_m - min_ray_m)
+            speed_factor = max(1.0, (self.state.speed_mps * 3.6) / 100.0)
+            components["track_limit"] = -self.config.reward.track_limit_penalty_scale * track_limit_excess_m * speed_factor
+            heading_excess_deg = max(0.0, heading_error_deg - self.config.reward.heading_deadzone_deg)
+            components["heading"] = -self.config.reward.heading_penalty_scale * heading_excess_deg * speed_factor
+            target_speed_kph = self._target_speed_kph(self._lookahead_heading_errors())
+            speed_target_excess_kph = max(
+                0.0,
+                self.state.speed_mps * 3.6 - target_speed_kph - self.config.reward.speed_target_deadzone_kph,
+            )
+            components["speed_target"] = -self.config.reward.speed_target_penalty_scale * speed_target_excess_kph
+            overspeed_ratio = speed_target_excess_kph / 100.0
+            components["overspeed_action"] = (
+                -self.config.reward.overspeed_throttle_penalty_scale * overspeed_ratio * throttle
+                + self.config.reward.overspeed_brake_reward_scale * overspeed_ratio * brake
+            )
+            target_steer = self._target_steer()
+            steering_target_error = max(
+                0.0,
+                abs(float(steer) - target_steer) - self.config.reward.steering_target_deadzone,
+            )
+            components["steering_target"] = (
+                -self.config.reward.steering_target_penalty_scale * steering_target_error * speed_factor
+            )
+            components.update(
+                self._scaffold_reward_components(
+                    progress_m=self.state.monotonic_progress_m,
+                    speed_kph=self.state.speed_mps * 3.6,
+                    throttle=throttle,
+                    brake=brake,
+                    lateral_error_m=lateral_error_m,
+                    heading_error_deg=heading_error_deg,
+                    min_ray_m=min_ray_m,
+                    collided=collided,
+                    off_track=off_track,
+                )
+            )
+            assist_components, assist_termination_reason = self._assist_reward_components(
                 progress_m=self.state.monotonic_progress_m,
+                progress_reward=components["progress"],
+                lateral_error_m=lateral_error_m,
                 speed_kph=self.state.speed_mps * 3.6,
                 throttle=throttle,
                 brake=brake,
-                lateral_error_m=lateral_error_m,
-                heading_error_deg=heading_error_deg,
-                min_ray_m=min_ray_m,
-                collided=collided,
-                off_track=off_track,
+                steer=steer,
             )
-        )
-        assist_components, assist_termination_reason = self._assist_reward_components(
-            progress_m=self.state.monotonic_progress_m,
-            progress_reward=components["progress"],
-            lateral_error_m=lateral_error_m,
-            speed_kph=self.state.speed_mps * 3.6,
-            throttle=throttle,
-            brake=brake,
-            steer=steer,
-        )
-        components.update(assist_components)
-        if assist_termination_reason is not None:
-            self.terminated = True
-            self.termination_reason = assist_termination_reason
+            components.update(assist_components)
+            if assist_termination_reason is not None:
+                self.terminated = True
+                self.termination_reason = assist_termination_reason
+        else:
+            ray_distances_m = self.ray_distances_m() if collect_rays else np.empty(0, dtype=np.float32)
 
         speed_kph_after = self.state.speed_mps * 3.6
         if self.segment_require_release and not self.segment_release_observed:

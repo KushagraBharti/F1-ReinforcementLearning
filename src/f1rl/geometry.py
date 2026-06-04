@@ -71,25 +71,56 @@ def line_intersection(
 
 
 def segment_intersects_any(segment: np.ndarray, candidates: np.ndarray) -> bool:
+    if candidates.size == 0:
+        return False
     x1, y1, x2, y2 = [float(v) for v in segment]
-    for x3, y3, x4, y4 in candidates:
-        if line_intersection(x1, y1, x2, y2, float(x3), float(y3), float(x4), float(y4)):
-            return True
-    return False
+    segments = np.asarray(candidates, dtype=np.float64)
+    x3 = segments[:, 0]
+    y3 = segments[:, 1]
+    x4 = segments[:, 2]
+    y4 = segments[:, 3]
+    dx12 = x2 - x1
+    dy12 = y2 - y1
+    dx34 = x4 - x3
+    dy34 = y4 - y3
+    denom = dy34 * dx12 - dx34 * dy12
+    valid = np.abs(denom) >= 1e-9
+    if not np.any(valid):
+        return False
+    s = np.empty_like(denom)
+    t = np.empty_like(denom)
+    s[valid] = (dx34[valid] * (y1 - y3[valid]) - dy34[valid] * (x1 - x3[valid])) / denom[valid]
+    t[valid] = (dx12 * (y1 - y3[valid]) - dy12 * (x1 - x3[valid])) / denom[valid]
+    intersects = valid & (s >= 0.0) & (s <= 1.0) & (t >= 0.0) & (t <= 1.0)
+    return bool(np.any(intersects))
 
 
 def nearest_intersection_distance(ray: np.ndarray, segments: np.ndarray, max_distance: float) -> float:
+    if segments.size == 0:
+        return float(max_distance)
     x1, y1, x2, y2 = [float(v) for v in ray]
-    best = float(max_distance)
-    for x3, y3, x4, y4 in segments:
-        point = line_intersection(x1, y1, x2, y2, float(x3), float(y3), float(x4), float(y4))
-        if point is None:
-            continue
-        px, py = point
-        distance = float(np.hypot(px - x1, py - y1))
-        if distance < best:
-            best = distance
-    return best
+    candidates = np.asarray(segments, dtype=np.float64)
+    x3 = candidates[:, 0]
+    y3 = candidates[:, 1]
+    x4 = candidates[:, 2]
+    y4 = candidates[:, 3]
+    dx12 = x2 - x1
+    dy12 = y2 - y1
+    dx34 = x4 - x3
+    dy34 = y4 - y3
+    denom = dy34 * dx12 - dx34 * dy12
+    valid = np.abs(denom) >= 1e-9
+    if not np.any(valid):
+        return float(max_distance)
+    s = np.empty_like(denom)
+    t = np.empty_like(denom)
+    s[valid] = (dx34[valid] * (y1 - y3[valid]) - dy34[valid] * (x1 - x3[valid])) / denom[valid]
+    t[valid] = (dx12 * (y1 - y3[valid]) - dy12 * (x1 - x3[valid])) / denom[valid]
+    intersects = valid & (s >= 0.0) & (s <= 1.0) & (t >= 0.0) & (t <= 1.0)
+    if not np.any(intersects):
+        return float(max_distance)
+    distances = np.hypot(dx12 * s[intersects], dy12 * s[intersects])
+    return min(float(np.min(distances)), float(max_distance))
 
 
 def project_point_to_polyline(
@@ -110,39 +141,43 @@ def project_point_to_polyline(
 
     total = float(cumulative[-1])
     point = np.asarray(point, dtype=np.float32)
-    best_distance = float("inf")
-    best_score = float("inf")
-    best_progress = 0.0
-    best_heading = 0.0
-    best_projection = points[0].astype(np.float32)
     prev_mod = None if previous_progress is None else float(previous_progress % total)
+    starts = points[:-1].astype(np.float64, copy=False)
+    ends = points[1:].astype(np.float64, copy=False)
+    line = ends - starts
+    norm = np.einsum("ij,ij->i", line, line)
+    mask = norm > 1e-9
+    if prev_mod is not None and window is not None:
+        seg_mid = (cumulative[:-1].astype(np.float64, copy=False) + cumulative[1:].astype(np.float64, copy=False)) * 0.5
+        wrapped_delta = np.abs(((seg_mid - prev_mod + total * 0.5) % total) - total * 0.5)
+        mask &= wrapped_delta <= float(window)
+    if not np.any(mask):
+        mask = norm > 1e-9
+    if not np.any(mask):
+        return 0.0, float("inf"), 0.0, points[0].astype(np.float32)
 
-    for idx in range(points.shape[0] - 1):
-        if prev_mod is not None and window is not None:
-            seg_mid = float((cumulative[idx] + cumulative[idx + 1]) * 0.5)
-            wrapped_delta = abs(((seg_mid - prev_mod + total * 0.5) % total) - total * 0.5)
-            if wrapped_delta > window:
-                continue
-        start = points[idx]
-        end = points[idx + 1]
-        line = end - start
-        norm = float(np.dot(line, line))
-        if norm <= 1e-9:
-            continue
-        t = float(np.clip(np.dot(point - start, line) / norm, 0.0, 1.0))
-        projection = start + line * t
-        distance = float(np.linalg.norm(point - projection))
-        progress = float(cumulative[idx] + np.sqrt(norm) * t)
-        score = distance
-        if prev_mod is not None:
-            signed_delta = ((progress - prev_mod + total * 0.5) % total) - total * 0.5
-            score += max(-signed_delta, 0.0) * 0.05
-        if score < best_score:
-            best_score = score
-            best_distance = distance
-            best_progress = progress
-            best_heading = float(np.arctan2(-(end[1] - start[1]), end[0] - start[0]))
-            best_projection = projection.astype(np.float32)
+    active_starts = starts[mask]
+    active_ends = ends[mask]
+    active_line = line[mask]
+    active_norm = norm[mask]
+    active_cumulative = cumulative[:-1].astype(np.float64, copy=False)[mask]
+    offset = point.astype(np.float64, copy=False) - active_starts
+    t = np.clip(np.einsum("ij,ij->i", offset, active_line) / active_norm, 0.0, 1.0)
+    projections = active_starts + active_line * t[:, None]
+    deltas = point.astype(np.float64, copy=False) - projections
+    distances = np.sqrt(np.einsum("ij,ij->i", deltas, deltas))
+    progress = active_cumulative + np.sqrt(active_norm) * t
+    scores = distances.copy()
+    if prev_mod is not None:
+        signed_delta = ((progress - prev_mod + total * 0.5) % total) - total * 0.5
+        scores += np.maximum(-signed_delta, 0.0) * 0.05
+    best_index = int(np.argmin(scores))
+    best_progress = float(progress[best_index])
+    best_distance = float(distances[best_index])
+    best_projection = projections[best_index].astype(np.float32)
+    best_start = active_starts[best_index]
+    best_end = active_ends[best_index]
+    best_heading = float(np.arctan2(-(best_end[1] - best_start[1]), best_end[0] - best_start[0]))
     return best_progress % total, best_distance, best_heading, best_projection
 
 

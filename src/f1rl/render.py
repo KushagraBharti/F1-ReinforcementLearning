@@ -54,6 +54,7 @@ class PygameRenderer:
         pygame.display.set_caption("F1RL Monza")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("consolas", 16)
+        self._keydowns: set[int] = set()
         self.track_surface = self._load_to_window(IMAGES_DIR / "Monza_track_extra_wide_2.png")
         self.car_surface = self._load_car(config.car_image)
         self.car_off_surface = self._load_car(IMAGES_DIR / "ferrari_off.png")
@@ -121,12 +122,22 @@ class PygameRenderer:
             self.screen.blit(rotated, rect)
 
     def poll(self) -> bool:
+        self._keydowns.clear()
         for event in self.pygame.event.get():
             if event.type == self.pygame.QUIT:
                 return False
-            if event.type == self.pygame.KEYDOWN and event.key == self.pygame.K_ESCAPE:
-                return False
+            if event.type == self.pygame.KEYDOWN:
+                self._keydowns.add(int(event.key))
+                if event.key == self.pygame.K_ESCAPE:
+                    return False
         return True
+
+    def consume_keydown(self, *keys: int) -> bool:
+        for key in keys:
+            if key in self._keydowns:
+                self._keydowns.remove(key)
+                return True
+        return False
 
     def keyboard_action(self) -> int:
         keys = self.pygame.key.get_pressed()

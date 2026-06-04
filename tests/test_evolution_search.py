@@ -13,6 +13,7 @@ from f1rl.evolution_search import (
     ProgressPhaseGene,
     _action_for_progress_delta,
     _controller_controls,
+    _reset_options,
     _score_rows,
     genome_from_mapping,
     genome_to_dict,
@@ -139,6 +140,61 @@ def test_scoring_profiles_return_distinct_finite_scores() -> None:
     assert scores["brake_zone"] != scores["risk_seeking"]
 
 
+def test_no_target_termination_keeps_target_as_milestone_only() -> None:
+    sim = MonzaSim()
+    sim.reset(seed=1, options={"start_progress_m": 0.0, "start_speed_kph": 80.0})
+    snapshot = snapshot_from_sim(sim, source="unit")
+    gates = EvolutionGates(target_progress_m=1500.0, terminate_at_target_progress=False)
+
+    options = _reset_options(snapshot, gates, collect_observation=False)
+    closed_options = _reset_options(
+        snapshot,
+        EvolutionGates(target_progress_m=1500.0),
+        collect_observation=False,
+    )
+
+    assert "segment_length_m" not in options
+    assert closed_options["segment_length_m"] == 1500.0
+
+
+def test_open_distance_scoring_rewards_progress_past_milestone() -> None:
+    def row(progress_m: float):
+        return {
+            "monotonic_progress_m": progress_m,
+            "speed_kph": 250.0,
+            "lateral_error_m": 4.0,
+            "heading_error_deg": 5.0,
+            "yaw_rate_rps": 0.2,
+            "steering": 0.1,
+            "throttle": 0.6,
+            "brake": 0.0,
+            "missed_checkpoint_count": 0,
+            "segment_complete": False,
+            "completed_lap": False,
+            "valid_lap": True,
+            "finish_crossed": False,
+            "collided": False,
+            "off_track": False,
+            "termination_reason": "collision",
+        }
+
+    gates = EvolutionGates(target_progress_m=1500.0, terminate_at_target_progress=False)
+    milestone_score = _score_rows(
+        [row(1500.0)],
+        start_progress_m=0.0,
+        gates=gates,
+        scoring_profiles=("frontier",),
+    )["frontier"]
+    beyond_score = _score_rows(
+        [row(1800.0)],
+        start_progress_m=0.0,
+        gates=gates,
+        scoring_profiles=("frontier",),
+    )["frontier"]
+
+    assert beyond_score > milestone_score
+
+
 def test_evolution_search_writes_streams_checkpoint_bridge_telemetry_and_elite_library(tmp_path: Path) -> None:
     sim = MonzaSim()
     sim.reset(seed=1, options={"start_progress_m": 500.0, "start_speed_kph": 80.0})
@@ -187,6 +243,7 @@ def test_evolution_search_writes_streams_checkpoint_bridge_telemetry_and_elite_l
     assert elite_library_path.exists()
     assert len(load_state_library(elite_library_path)) == 2
     assert len(list((output_dir / "selected_telemetry").glob("*.jsonl"))) == 2
+    assert (output_dir / "selected_telemetry" / "manifest.json").exists()
 
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["kind"] == "elitist_evolutionary_search"
@@ -263,6 +320,7 @@ def test_evolution_search_can_resume_from_population_checkpoint(tmp_path: Path) 
     assert "--target-progress-m 5.0" in checkpoint["resume_command"]
     assert "--start-speed-kph 60.0" in checkpoint["resume_command"]
     assert checkpoint["config"]["action_set"] == "straight"
+    assert "--telemetry-selection top" in checkpoint["resume_command"]
 
     run_evolution_search(
         output_dir=output_dir,
@@ -274,6 +332,47 @@ def test_evolution_search_can_resume_from_population_checkpoint(tmp_path: Path) 
     final_summary = json.loads((output_dir / "evolution_summary.json").read_text(encoding="utf-8"))
     assert final_summary["complete"] is True
     assert final_summary["attempt_count"] == 8
+
+
+def test_evolution_search_can_save_all_candidate_telemetry_for_swarm_replay(tmp_path: Path) -> None:
+    output_dir = run_evolution_search(
+        output_dir=tmp_path / "swarm",
+        config=EvolutionSearchConfig(
+            action_set="straight",
+            observation_profile="base",
+            max_steps=8,
+            population=3,
+            generations=2,
+            elite_count=1,
+            random_immigrants=1,
+            min_phases=1,
+            max_phases=2,
+            min_phase_steps=2,
+            max_phase_steps=4,
+            seed=23,
+            top_k=1,
+            workers=2,
+            worker_chunk_size=1,
+            telemetry_selection="all",
+        ),
+        gates=EvolutionGates(target_progress_m=5.0),
+        start_speed_kph=60.0,
+    )
+
+    telemetry_dir = output_dir / "selected_telemetry"
+    manifest = json.loads((telemetry_dir / "manifest.json").read_text(encoding="utf-8"))
+
+    assert manifest["telemetry_selection"] == "all"
+    assert manifest["trace_count"] == 6
+    assert len(list(telemetry_dir.glob("*.jsonl"))) == 6
+    assert all(Path(row["path"]).exists() for row in manifest["traces"])
+    attempts = [
+        json.loads(line)
+        for line in (output_dir / "attempts.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(attempts) == 6
+    assert all(Path(row["selected_telemetry"]).exists() for row in attempts)
 
 
 def test_worker_chunked_evaluation_matches_serial_best(tmp_path: Path) -> None:
