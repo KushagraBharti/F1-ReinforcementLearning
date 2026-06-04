@@ -56,6 +56,13 @@ def test_distance_to_next_braking_gate_wraps_after_final_gate() -> None:
     assert distance_to_next_braking_gate(5270.0) == 1043.0
 
 
+def test_distance_to_next_braking_gate_tolerates_gate_roundoff() -> None:
+    assert distance_to_next_braking_gate(520.0) == 0.0
+    assert distance_to_next_braking_gate(520.0000003646167) == 0.0
+    assert distance_to_next_braking_gate(519.9999996) == 0.0
+    assert distance_to_next_braking_gate(520.01) > 1400.0
+
+
 def test_detect_first_bad_event_finds_throttle_during_brake_demand() -> None:
     steps = [
         _row(1, 480.0, speed_kph=250.0),

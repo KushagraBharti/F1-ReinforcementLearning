@@ -2,6 +2,10 @@
 
 Top-down 2D Monza simulator with telemetry, manual/scripted driving, Gymnasium/SB3 PPO, replay, benchmark/QC tools, and an evolution-first search path.
 
+<p align="center">
+  <img src="./pygame-window-gen49-fastest-89s-all-150-cars-slow.gif" alt="Monza simulator replay GIF" width="900" />
+</p>
+
 The current strategy is not blind full-lap PPO. It is:
 
 1. Discover viable section trajectories with elitist evolutionary search.

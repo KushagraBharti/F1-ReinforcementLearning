@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 from f1rl.config import MONZA_LENGTH_METERS
 
+BRAKING_GATE_EPSILON_M = 1e-3
+
 
 @dataclass(frozen=True, slots=True)
 class TrackSection:
@@ -39,12 +41,16 @@ def section_for_progress(progress_m: float) -> TrackSection:
     return MONZA_SECTIONS[-1]
 
 
-def distance_to_next_braking_gate(progress_m: float) -> float:
+def distance_to_next_braking_gate(progress_m: float, *, epsilon_m: float = BRAKING_GATE_EPSILON_M) -> float:
     gates = tuple(section.brake_start_m for section in MONZA_SECTIONS if section.brake_start_m is not None)
     if not gates:
         return MONZA_LENGTH_METERS
     lap_progress_m = progress_m % MONZA_LENGTH_METERS
+    epsilon_m = max(0.0, float(epsilon_m))
     for gate_m in gates:
-        if lap_progress_m <= gate_m:
+        if abs(lap_progress_m - gate_m) <= epsilon_m:
+            return 0.0
+    for gate_m in gates:
+        if lap_progress_m < gate_m:
             return float(gate_m - lap_progress_m)
     return float((MONZA_LENGTH_METERS - lap_progress_m) + gates[0])

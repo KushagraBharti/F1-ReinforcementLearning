@@ -2,6 +2,10 @@
 
 Date: 2026-06-04.
 
+## Goal-Agent Instruction
+
+Use this file as the operating goal prompt. Read it fully, then implement everything in it end-to-end with the smallest safe changes that preserve the current project architecture. The result should be working end-to-end: CPU reference paths still work, PPO/SB3 compatibility still works, evolution search works on the CPU backend, and the new PyTorch/CUDA batched evolution backend works behind explicit backend flags. Do not rewrite the app, do not break the CPU simulator, and do not skip ahead to GPU PPO. Build the GPU evolution backend carefully, prove parity against the CPU reference, preserve artifact/replay compatibility, run PPO and evolution tests/smokes, and keep validating until the backend is correct, tested, and usable for real evolution-search runs.
+
 This plan describes how to add a CUDA/PyTorch batched simulation backend to F1RL without rewriting or weakening the existing project architecture.
 
 The core decision is:
@@ -1526,3 +1530,7 @@ The GPU backend is the brute-force engine.
 Evolution gets GPU batching first because it naturally evaluates many independent controllers and can keep scoring on-device. PPO remains on the current SB3/Gymnasium path until the GPU backend is proven and the project is ready for a custom GPU-native rollout system.
 
 The first win is not a shiny CUDA rewrite. The first win is a trustworthy `GpuMonzaBatch` that can evaluate whole generations much faster while still replaying selected winners through the existing CPU simulator.
+
+## Completion Rule
+
+Do not stop at a partial backend, a sketch, or passing one tiny test. Keep going until everything in this file that is required for the GPU evolution backend has been implemented or explicitly marked as a later phase with a defensible reason. Smoke test it, parity test it, run the normal repo checks, run evolution-search CPU and GPU smokes, run PPO compatibility tests/smokes to prove the existing PPO path was not broken, run CPU-vs-GPU comparison searches, inspect artifacts, verify replay still works, review the code carefully, fix failures immediately, and update the relevant documentation. Stop only when the CPU backend still works, the PPO path still works, the GPU backend is correct enough to trust for evolution scoring with CPU replay verification, artifacts remain compatible, and the implementation has been thoroughly reviewed and validated end-to-end.

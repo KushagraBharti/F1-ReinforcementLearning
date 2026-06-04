@@ -40,8 +40,11 @@ from f1rl.state_snapshot import (
 )
 
 GENOME_TYPES = frozenset({"phase", "progress_phase", "controller"})
+EVOLUTION_BACKENDS = frozenset({"cpu", "gpu"})
 TELEMETRY_SELECTIONS = frozenset({"top", "leaders", "all"})
 TELEMETRY_COMPRESSIONS = frozenset({"none", "gzip"})
+GPU_DTYPES = frozenset({"float32", "float64"})
+GPU_TELEMETRY_MODES = frozenset({"selected", "top", "all-cpu-replay", "none"})
 SCORING_PROFILES = frozenset(
     {
         "frontier",
@@ -140,6 +143,7 @@ class EvolutionGates:
 
 @dataclass(frozen=True, slots=True)
 class EvolutionSearchConfig:
+    backend: str = "cpu"
     action_set: str = "racing"
     observation_profile: str = "racing_v2"
     max_steps: int = 600
@@ -187,6 +191,15 @@ class EvolutionSearchConfig:
     plateau_average_improvement_m: float = 80.0
     plateau_elite_fraction: float = 0.50
     plateau_extra_mutations: int = 1
+    gpu_device: str = "cuda"
+    gpu_dtype: str = "float32"
+    gpu_batch_size: int | None = None
+    gpu_verify_top_k: int = 4
+    gpu_verify_elite_multiplier: int = 2
+    gpu_telemetry_mode: str = "selected"
+    gpu_parity_check: bool = False
+    gpu_fallback_to_cpu: bool = False
+    gpu_compile: bool = False
 
 
 def _json_default(value: Any) -> Any:
@@ -292,6 +305,20 @@ def _parse_max_steps_schedule(value: str | tuple[tuple[int, int], ...] | list[tu
     return tuple(schedule)
 
 
+def _parse_gpu_batch_size(value: str | int | None) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return None if value <= 0 else value
+    text = value.strip().lower()
+    if text in {"", "auto"}:
+        return None
+    parsed = int(text)
+    if parsed <= 0:
+        raise ValueError("gpu batch size must be a positive integer or 'auto'")
+    return parsed
+
+
 def _max_steps_for_generation(config: EvolutionSearchConfig, generation: int) -> int:
     max_steps = int(config.max_steps)
     for start_generation, scheduled_steps in config.max_steps_schedule:
@@ -312,6 +339,9 @@ def _sim_config_for_generation(config: EvolutionSearchConfig, generation: int) -
 
 
 def _validate_config(config: EvolutionSearchConfig) -> None:
+    if config.backend not in EVOLUTION_BACKENDS:
+        valid = ", ".join(sorted(EVOLUTION_BACKENDS))
+        raise ValueError(f"Unknown evolution backend {config.backend!r}; expected one of: {valid}")
     if config.genome_type not in GENOME_TYPES:
         valid = ", ".join(sorted(GENOME_TYPES))
         raise ValueError(f"Unknown genome type {config.genome_type!r}; expected one of: {valid}")
@@ -321,6 +351,24 @@ def _validate_config(config: EvolutionSearchConfig) -> None:
     if config.telemetry_compression not in TELEMETRY_COMPRESSIONS:
         valid = ", ".join(sorted(TELEMETRY_COMPRESSIONS))
         raise ValueError(f"Unknown telemetry compression {config.telemetry_compression!r}; expected one of: {valid}")
+    if config.gpu_dtype not in GPU_DTYPES:
+        valid = ", ".join(sorted(GPU_DTYPES))
+        raise ValueError(f"Unknown GPU dtype {config.gpu_dtype!r}; expected one of: {valid}")
+    if config.gpu_telemetry_mode not in GPU_TELEMETRY_MODES:
+        valid = ", ".join(sorted(GPU_TELEMETRY_MODES))
+        raise ValueError(f"Unknown GPU telemetry mode {config.gpu_telemetry_mode!r}; expected one of: {valid}")
+    if config.gpu_batch_size is not None and config.gpu_batch_size <= 0:
+        raise ValueError("gpu_batch_size must be positive when set")
+    if config.gpu_verify_top_k < 0:
+        raise ValueError("gpu_verify_top_k must be >= 0")
+    if config.gpu_verify_elite_multiplier < 1:
+        raise ValueError("gpu_verify_elite_multiplier must be >= 1")
+    if config.backend == "gpu":
+        if config.telemetry_selection == "all" and config.gpu_telemetry_mode != "all-cpu-replay":
+            raise ValueError(
+                "--telemetry-selection all with --backend gpu requires "
+                "--gpu-telemetry-mode all-cpu-replay so all full telemetry is CPU-replayed explicitly."
+            )
     if config.max_steps_schedule:
         previous_generation = -1
         for generation, max_steps in config.max_steps_schedule:
@@ -1771,6 +1819,55 @@ def _evaluate_population(
             active_executor.shutdown()
 
 
+def _evaluate_population_gpu(
+    *,
+    candidates: list[Candidate],
+    snapshots: list[StateSnapshot],
+    sim_config: SimConfig,
+    gates: EvolutionGates,
+    generation: int,
+    seed: int,
+    scoring_profiles: tuple[str, ...],
+    frontier_focus_start_m: float,
+    frontier_focus_end_m: float,
+    capture_step_telemetry: bool,
+    stream_telemetry_dir: Path | None,
+    telemetry_compression: str,
+    config: EvolutionSearchConfig,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from f1rl.evolution_backend import GpuBackendSettings, GpuEvolutionBackend
+
+    backend = GpuEvolutionBackend(
+        settings=GpuBackendSettings(
+            device=config.gpu_device,
+            dtype=config.gpu_dtype,
+            batch_size=config.gpu_batch_size,
+            verify_top_k=config.gpu_verify_top_k,
+            verify_elite_multiplier=config.gpu_verify_elite_multiplier,
+            telemetry_mode=config.gpu_telemetry_mode,
+            parity_check=config.gpu_parity_check,
+            fallback_to_cpu=config.gpu_fallback_to_cpu,
+            compile_rollout=config.gpu_compile,
+        ),
+        feature_names=CONTROLLER_FEATURE_NAMES,
+        controller_output_count=CONTROLLER_OUTPUT_COUNT,
+    )
+    return backend.evaluate_population(
+        candidates=candidates,
+        snapshots=snapshots,
+        sim_config=sim_config,
+        gates=gates,
+        generation=generation,
+        seed=seed,
+        scoring_profiles=scoring_profiles,
+        frontier_focus_start_m=frontier_focus_start_m,
+        frontier_focus_end_m=frontier_focus_end_m,
+        capture_step_telemetry=capture_step_telemetry,
+        stream_telemetry_dir=stream_telemetry_dir,
+        telemetry_compression=telemetry_compression,
+    )
+
+
 def _select_elite_rows(ranked: list[dict[str, Any]], config: EvolutionSearchConfig) -> list[dict[str, Any]]:
     if not ranked:
         return []
@@ -2734,6 +2831,8 @@ def _resume_command(
         _quote_cli(checkpoint_path),
         "--output-dir",
         _quote_cli(output_dir),
+        "--backend",
+        config.backend,
         "--target-progress-m",
         str(gates.target_progress_m),
         "--action-set",
@@ -2817,6 +2916,29 @@ def _resume_command(
         "--late-frontier-trigger-m",
         str(config.late_frontier_trigger_m),
     ]
+    if config.backend == "gpu":
+        parts.extend(
+            [
+                "--gpu-device",
+                config.gpu_device,
+                "--gpu-dtype",
+                config.gpu_dtype,
+                "--gpu-batch-size",
+                str(config.gpu_batch_size) if config.gpu_batch_size is not None else "auto",
+                "--gpu-verify-top-k",
+                str(config.gpu_verify_top_k),
+                "--gpu-verify-elite-multiplier",
+                str(config.gpu_verify_elite_multiplier),
+                "--gpu-telemetry-mode",
+                config.gpu_telemetry_mode,
+            ]
+        )
+        if config.gpu_parity_check:
+            parts.append("--gpu-parity-check")
+        if config.gpu_fallback_to_cpu:
+            parts.append("--gpu-fallback-to-cpu")
+        if config.gpu_compile:
+            parts.append("--gpu-compile")
     if config.max_steps_schedule:
         parts.extend(
             [
@@ -3222,29 +3344,71 @@ def run_evolution_search(
     best_limit = max(config.top_k * 5, config.elite_count * 2, 32)
     resolved_workers = _resolved_workers(config.workers)
     executor: ProcessPoolExecutor | None = None
-    if resolved_workers > 1:
+    use_gpu_backend = config.backend == "gpu"
+    if not use_gpu_backend and resolved_workers > 1:
         executor = ProcessPoolExecutor(max_workers=resolved_workers)
     try:
         for generation in range(start_generation, config.generations):
             started = time.perf_counter()
             generation_sim_config = _sim_config_for_generation(config, generation)
-            evaluated = _evaluate_population(
-                candidates=population,
-                snapshots=snapshots,
-                sim_config=generation_sim_config,
-                gates=gates,
-                generation=generation,
-                seed=config.seed,
-                workers=resolved_workers,
-                worker_chunk_size=config.worker_chunk_size,
-                scoring_profiles=config.scoring_profiles,
-                frontier_focus_start_m=config.frontier_focus_start_m,
-                frontier_focus_end_m=config.frontier_focus_end_m,
-                capture_step_telemetry=config.telemetry_selection == "all",
-                stream_telemetry_dir=all_candidate_telemetry_dir if config.telemetry_selection == "all" else None,
-                telemetry_compression=config.telemetry_compression,
-                executor=executor,
-            )
+            backend_metrics: dict[str, Any] = {"backend": "cpu"}
+            if use_gpu_backend:
+                try:
+                    evaluated, backend_metrics = _evaluate_population_gpu(
+                        candidates=population,
+                        snapshots=snapshots,
+                        sim_config=generation_sim_config,
+                        gates=gates,
+                        generation=generation,
+                        seed=config.seed,
+                        scoring_profiles=config.scoring_profiles,
+                        frontier_focus_start_m=config.frontier_focus_start_m,
+                        frontier_focus_end_m=config.frontier_focus_end_m,
+                        capture_step_telemetry=config.telemetry_selection == "all",
+                        stream_telemetry_dir=all_candidate_telemetry_dir if config.telemetry_selection == "all" else None,
+                        telemetry_compression=config.telemetry_compression,
+                        config=config,
+                    )
+                except Exception as exc:
+                    if not config.gpu_fallback_to_cpu:
+                        raise
+                    print(f"evolution_backend_fallback reason={type(exc).__name__}:{exc}", flush=True)
+                    evaluated = _evaluate_population(
+                        candidates=population,
+                        snapshots=snapshots,
+                        sim_config=generation_sim_config,
+                        gates=gates,
+                        generation=generation,
+                        seed=config.seed,
+                        workers=resolved_workers,
+                        worker_chunk_size=config.worker_chunk_size,
+                        scoring_profiles=config.scoring_profiles,
+                        frontier_focus_start_m=config.frontier_focus_start_m,
+                        frontier_focus_end_m=config.frontier_focus_end_m,
+                        capture_step_telemetry=config.telemetry_selection == "all",
+                        stream_telemetry_dir=all_candidate_telemetry_dir if config.telemetry_selection == "all" else None,
+                        telemetry_compression=config.telemetry_compression,
+                        executor=executor,
+                    )
+                    backend_metrics = {"backend": "cpu", "gpu_fallback_reason": f"{type(exc).__name__}: {exc}"}
+            else:
+                evaluated = _evaluate_population(
+                    candidates=population,
+                    snapshots=snapshots,
+                    sim_config=generation_sim_config,
+                    gates=gates,
+                    generation=generation,
+                    seed=config.seed,
+                    workers=resolved_workers,
+                    worker_chunk_size=config.worker_chunk_size,
+                    scoring_profiles=config.scoring_profiles,
+                    frontier_focus_start_m=config.frontier_focus_start_m,
+                    frontier_focus_end_m=config.frontier_focus_end_m,
+                    capture_step_telemetry=config.telemetry_selection == "all",
+                    stream_telemetry_dir=all_candidate_telemetry_dir if config.telemetry_selection == "all" else None,
+                    telemetry_compression=config.telemetry_compression,
+                    executor=executor,
+                )
             for row in evaluated:
                 captured = row.pop("captured_telemetry", None)
                 if captured is not None:
@@ -3256,6 +3420,7 @@ def run_evolution_search(
             _append_jsonl(attempts_path, ranked)
             summary = _generation_summary(generation, ranked, elapsed_s)
             summary["max_steps"] = generation_sim_config.max_steps
+            summary.update(backend_metrics)
             survival_report = _survival_floor_report(ranked, config, active_index=survival_floor_index)
             summary.update(survival_report)
             plateau = _plateau_report(generation_summaries, summary, config)
@@ -3411,12 +3576,15 @@ def run_evolution_search(
 
     top_rows = best_rows[: config.top_k]
     top_row_keys = {_row_identity(row) for row in top_rows}
-    telemetry_rows = _select_telemetry_rows(
-        attempts_path=attempts_path,
-        top_rows=top_rows,
-        latest_ranked=latest_ranked,
-        config=config,
-    )
+    if config.backend == "gpu" and config.gpu_telemetry_mode == "none":
+        telemetry_rows = []
+    else:
+        telemetry_rows = _select_telemetry_rows(
+            attempts_path=attempts_path,
+            top_rows=top_rows,
+            latest_ranked=latest_ranked,
+            config=config,
+        )
     elite_snapshots: list[StateSnapshot] = []
     telemetry_manifest: list[dict[str, Any]] = []
     top_rows_by_key = {_row_identity(row): row for row in top_rows}
@@ -3443,7 +3611,13 @@ def run_evolution_search(
             )
             reason = _safe_slug(str(row.get("telemetry_selection_reason", "selected")))
             telemetry_suffix = _telemetry_file_suffix(config.telemetry_compression)
-            telemetry_path = selected_dir / (
+            target_telemetry_dir = (
+                all_candidate_telemetry_dir
+                if config.telemetry_selection == "all" and all_candidate_telemetry_dir is not None
+                else selected_dir
+            )
+            target_telemetry_dir.mkdir(parents=True, exist_ok=True)
+            telemetry_path = target_telemetry_dir / (
                 f"evolution-{reason}-rank-{rank:03d}-gen-{int(row['generation']):03d}-"
                 f"candidate-{int(row['candidate_index']):05d}-steps{telemetry_suffix}"
             )
@@ -3488,6 +3662,8 @@ def run_evolution_search(
         {
             "telemetry_selection": config.telemetry_selection,
             "telemetry_compression": config.telemetry_compression,
+            "backend": config.backend,
+            "gpu_telemetry_mode": config.gpu_telemetry_mode if config.backend == "gpu" else None,
             "all_candidate_telemetry_dir": str(all_candidate_telemetry_dir)
             if config.telemetry_selection == "all"
             else None,
@@ -3592,6 +3768,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segment-release-max-speed-kph", type=float, default=210.0)
     parser.add_argument("--segment-release-max-brake", type=float, default=0.1)
     parser.add_argument("--segment-release-max-throttle", type=float, default=0.1)
+    parser.add_argument("--backend", choices=sorted(EVOLUTION_BACKENDS), default="cpu")
+    parser.add_argument("--gpu-device", default="cuda")
+    parser.add_argument("--gpu-dtype", choices=sorted(GPU_DTYPES), default="float32")
+    parser.add_argument("--gpu-batch-size", default="auto")
+    parser.add_argument("--gpu-verify-top-k", type=int, default=4)
+    parser.add_argument("--gpu-verify-elite-multiplier", type=int, default=2)
+    parser.add_argument("--gpu-telemetry-mode", choices=sorted(GPU_TELEMETRY_MODES), default="selected")
+    parser.add_argument("--gpu-parity-check", action="store_true")
+    parser.add_argument("--gpu-fallback-to-cpu", action="store_true")
+    parser.add_argument("--gpu-compile", action="store_true")
     parser.add_argument("--action-set", default="racing")
     parser.add_argument("--observation-profile", default="racing_v2")
     parser.add_argument("--max-steps", type=int, default=600)
@@ -3657,6 +3843,7 @@ def main(argv: list[str] | None = None) -> int:
     if output_dir is None and resume_path is not None:
         output_dir = _checkpoint_path(resume_path).parent
     config = EvolutionSearchConfig(
+        backend=args.backend,
         action_set=args.action_set,
         observation_profile=args.observation_profile,
         max_steps=max(1, args.max_steps),
@@ -3704,6 +3891,15 @@ def main(argv: list[str] | None = None) -> int:
         plateau_average_improvement_m=max(0.0, args.plateau_average_improvement_m),
         plateau_elite_fraction=float(np.clip(args.plateau_elite_fraction, 0.05, 1.0)),
         plateau_extra_mutations=max(0, args.plateau_extra_mutations),
+        gpu_device=args.gpu_device,
+        gpu_dtype=args.gpu_dtype,
+        gpu_batch_size=_parse_gpu_batch_size(args.gpu_batch_size),
+        gpu_verify_top_k=max(0, args.gpu_verify_top_k),
+        gpu_verify_elite_multiplier=max(1, args.gpu_verify_elite_multiplier),
+        gpu_telemetry_mode=args.gpu_telemetry_mode,
+        gpu_parity_check=bool(args.gpu_parity_check),
+        gpu_fallback_to_cpu=bool(args.gpu_fallback_to_cpu),
+        gpu_compile=bool(args.gpu_compile),
     )
     gates = EvolutionGates(
         target_progress_m=args.target_progress_m,
