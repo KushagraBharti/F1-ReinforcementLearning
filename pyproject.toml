@@ -46,6 +46,7 @@ f1-state-library = "f1rl.state_library:main"
 f1-elite-search = "f1rl.elite_search:main"
 f1-action-search = "f1rl.action_search:main"
 f1-evolution-search = "f1rl.evolution_search:main"
+f1-evolution-ladder = "f1rl.evolution_ladder:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/f1rl"]

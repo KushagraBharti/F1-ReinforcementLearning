@@ -1,62 +1,103 @@
 # AGENTS.md
 
 ## Mission
-This repository is a simplified top-down 2D Monza driving simulator and RL project. The old complex implementation is archived under `archive/legacy-20260424/`; active work should preserve the small explicit path: track geometry -> car physics -> shared simulator -> manual/scripted -> telemetry -> Gymnasium -> PPO -> eval/replay.
 
-## Non-negotiable working style
-- Operate autonomously in milestone loops:
-  1) inspect
-  2) plan
-  3) implement
-  4) run validations
-  5) fix failures
-  6) update docs/status
-  7) repeat
-- Do not leave placeholders or TODOs for core functionality.
-- If a validation fails, fix it before moving on.
-- Prefer small, scoped diffs with explicit validation after each milestone.
-- Keep a running audit log in `Documentation.md`.
+This repo is a simplified top-down 2D Monza driving simulator and learning project.
 
-## Required deliverables
-- Modern Python project structure with `pyproject.toml` (uv-managed) and `uv.lock`
-- Working manual gameplay mode (keyboard control)
-- Working RL training entrypoint using Stable-Baselines3 PPO; no active Ray/RLlib path
-- Working agent inference/render entrypoint
-- Smoke tests and unit tests
-- Clear README with setup, run, train, and troubleshooting
-- Logging + checkpoints + basic artifacts from a smoke training run
-- Reproducible commands for all workflows
+Keep the runtime path explicit:
 
-## Tech expectations
-- Use Python 3.11+
-- Use `uv` for dependency management (`uv sync --active --all-extras --all-packages`)
-- Prefer Gymnasium-compatible environment APIs
-- Use PyTorch through Stable-Baselines3 for PPO
-- Keep simulator/renderer/telemetry CPU-bound; use CUDA for PyTorch policy training/inference when available
-- Keep rendering and training logic decoupled
-- Persist per-step JSONL telemetry and episode summaries
+`track geometry -> car physics -> shared simulator -> manual/scripted -> telemetry -> Gymnasium/SB3 PPO -> eval/replay`
 
-## Validation requirements
-- Environment API checks (Gymnasium env checker)
-- Manual play smoke test
-- Fast headless smoke rollout
-- RL training smoke test (very short)
-- Checkpoint save/load smoke test
-- Inference rollout smoke test
-- Lint + tests + type checks where practical
+The current learning strategy is evolution-first discovery, then PPO transfer:
 
-## Documentation requirements
-Maintain these files during the run:
-- `Prompt.md` (spec)
-- `Plan.md` (milestones + acceptance criteria + commands)
-- `Implement.md` (runbook)
-- `Documentation.md` (live status, decisions, validations, commands, issues)
+1. Use elitist evolutionary search to discover viable driving trajectories and elite state libraries.
+2. Use the evolution ladder to alternate full-lap probes with focused segment search.
+3. Use PPO curriculum to learn from those search-discovered states.
+4. Promote only honest normal-start PPO results.
 
-## Internet use
-Use live web search to verify current APIs/versions for:
-- Gymnasium
-- Pygame
-- uv
-- Stable-Baselines3
-- Any replaced/deprecated packages
-Document major API migrations in `Documentation.md`.
+Final target remains a valid normal-start Monza PPO lap near `<=80.0s`.
+
+## Active Docs
+
+Read these first:
+
+- `README.md`
+- `EvolutionSearchPlan.md`
+- `EvolutionGoal.md`
+- `Documentation.md`
+
+Only read archived docs, old plans, transcripts, or artifact reports when a task explicitly needs historical detail.
+
+Archived/old material lives under:
+
+- `archive/`
+- `artifacts/`
+- `transcripts/`
+
+Do not bulk-read those folders by default.
+
+`archive/` and `artifacts/` are ignored by `rg` through `.rgignore` to keep default searches useful. Use `rg --no-ignore` only when historical artifacts are explicitly needed.
+
+## Current Non-Negotiables
+
+- Do not resume the old PPO micro-engineering loop.
+- Do not add one-off action sets, gates, or schedule presets unless they are clearly reusable or a short diagnostic.
+- Do not treat local segment success as final success.
+- Do not treat evolutionary/search/scripted trajectories as final PPO success.
+- Do not initialize final scratch PPO policy weights from ghost/scripted/imitation/evolutionary policies.
+- Do use evolutionary search to discover trajectories, states, action primitives, and curriculum targets.
+- Do use `f1rl.evolution_ladder` for repeatable Yosh-style search ladders instead of hand-inventing every rung.
+- Do use PPO only after search has found behavior worth learning.
+- Do keep artifacts and validation explicit.
+- Treat `action_search.py` and `elite_search.py` as legacy diagnostics. They are not the main path.
+
+## Work Loop
+
+Operate autonomously:
+
+1. Inspect.
+2. Form a short plan.
+3. Implement.
+4. Validate.
+5. Fix failures.
+6. Update `Documentation.md`.
+7. Repeat.
+
+If validation fails, fix it before moving on.
+
+## Tech Expectations
+
+- Python `>=3.11,<3.13`.
+- Use `uv`.
+- Simulator, renderer, geometry, and telemetry stay CPU-bound unless deliberately redesigned.
+- PyTorch/SB3 PPO training uses CUDA when available and requested.
+- Keep rendering and training decoupled.
+- Persist per-step JSONL telemetry and episode summaries.
+
+## Validation
+
+Use the smallest validation that proves the change, then broaden when needed.
+
+Common checks:
+
+```powershell
+uv run --no-sync ruff check .
+uv run --no-sync pytest -q
+uv run --no-sync pyright src/f1rl
+```
+
+For evolutionary search changes, also run a tiny CLI smoke:
+
+```powershell
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1
+```
+
+For ladder changes, also run a smoke ladder:
+
+```powershell
+uv run --no-sync python -m f1rl.evolution_ladder --scale smoke --workers 1 --full-probe-mode none --genome-type phase --action-set straight --observation-profile base
+```
+
+## Documentation Rule
+
+`Documentation.md` is now a concise live status file. Do not turn it back into a giant transcript. Archive long logs under `archive/plans/` or keep them as artifacts.

@@ -518,6 +518,59 @@ class MonzaSim:
             float(in_band),
         ]
 
+    def search_features(
+        self,
+        *,
+        segment_start_progress_m: float | None = None,
+        segment_target_progress_m: float | None = None,
+    ) -> dict[str, float]:
+        """Normalized features for non-PPO search controllers."""
+        _, lateral_error_m, heading_error, signed_lateral_error_m = self._track_errors()
+        lookahead_errors = self._lookahead_heading_errors()
+        target_speed_kph = self._target_speed_kph(lookahead_errors)
+        speed_kph = self.state.speed_mps * 3.6
+        max_speed_kph = max(self.config.car.max_speed_mps * 3.6, 1e-6)
+        speed_error_norm = float(np.clip((speed_kph - target_speed_kph) / 220.0, -1.0, 1.0))
+        brake_demand = float(
+            np.clip(
+                (speed_kph - target_speed_kph - self.config.reward.speed_target_deadzone_kph) / 220.0,
+                0.0,
+                1.0,
+            )
+        )
+        if segment_start_progress_m is not None and segment_target_progress_m is not None:
+            segment_span_m = max(float(segment_target_progress_m) - float(segment_start_progress_m), 1e-6)
+            segment_progress_ratio = float(
+                np.clip((self.state.monotonic_progress_m - float(segment_start_progress_m)) / segment_span_m, 0.0, 1.0)
+            )
+        else:
+            segment_progress_ratio = float((self.state.monotonic_progress_m % self.track.length_m) / self.track.length_m)
+        curvature = self.state.yaw_rate_rps / max(self.state.speed_mps, 1e-6)
+        features = {
+            "bias": 1.0,
+            "speed_norm": float(np.clip(speed_kph / max_speed_kph, 0.0, 1.0)),
+            "target_speed_norm": float(np.clip(target_speed_kph / max_speed_kph, 0.0, 1.0) * 2.0 - 1.0),
+            "speed_error_norm": speed_error_norm,
+            "brake_demand": brake_demand,
+            "signed_lateral_error_norm": float(np.clip(signed_lateral_error_m / 30.0, -1.0, 1.0)),
+            "heading_error_norm": float(np.clip(heading_error / np.pi, -1.0, 1.0)),
+            "yaw_rate_norm": float(np.clip(self.state.yaw_rate_rps / 2.0, -1.0, 1.0)),
+            "curvature_norm": float(np.clip(curvature / 0.08, -1.0, 1.0)),
+            "target_steer": float(self._target_steer()),
+            "last_throttle": float(np.clip(self.last_throttle, 0.0, 1.0)),
+            "last_brake": float(np.clip(self.last_brake, 0.0, 1.0)),
+            "last_steer": float(np.clip(self.last_steer, -1.0, 1.0)),
+            "segment_progress_ratio": segment_progress_ratio * 2.0 - 1.0,
+            "lateral_error_m": float(lateral_error_m),
+            "signed_lateral_error_m": float(signed_lateral_error_m),
+            "heading_error_deg": float(np.rad2deg(heading_error)),
+            "target_speed_kph": float(target_speed_kph),
+            "speed_kph": float(speed_kph),
+        }
+        for index in range(4):
+            features[f"lookahead_{index}"] = float(lookahead_errors[index]) if index < len(lookahead_errors) else 0.0
+        return features
+
     def _scaffold_reward_components(
         self,
         *,

@@ -6,3 +6,4 @@ __pycache__/
 .pyright/
 
 ray_results/
+artifacts/
