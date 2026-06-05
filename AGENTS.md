@@ -25,6 +25,11 @@ Read these first:
 - `Documentation.md`
 - `AGENTS.md`
 
+For learned-policy work, also read:
+
+- `docs/CurrentPhysicsLearnedPolicyPlan.md`
+- `docs/PhysicsV2LearnedPolicyPlan.md`
+
 Archived/old material lives under:
 
 - `archive/`

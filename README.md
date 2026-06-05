@@ -62,6 +62,11 @@ The current practical path is:
 
 PPO is still real and useful as infrastructure, but blind PPO is not the current lead path.
 
+Detailed learned-policy goal docs:
+
+- `docs/CurrentPhysicsLearnedPolicyPlan.md`
+- `docs/PhysicsV2LearnedPolicyPlan.md`
+
 ## Setup
 
 ```powershell

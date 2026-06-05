@@ -125,6 +125,11 @@ The next learned-policy path should use the ES result instead of ignoring it:
 
 Do not train from only the single fastest lap. The useful dataset is a curated library of verified behavior and near-miss behavior.
 
+Detailed goal docs:
+
+- `docs/CurrentPhysicsLearnedPolicyPlan.md`: current physics v1 ES data -> transition dataset -> BC -> SAC -> learned policy.
+- `docs/PhysicsV2LearnedPolicyPlan.md`: FastF1-calibrated physics v2 -> GPU ES v2 -> v2 dataset -> SAC learned policy v2.
+
 ## Important Commands
 
 Replay the current best selected telemetry:
