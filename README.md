@@ -1,8 +1,8 @@
 # F1 Reinforcement Learning
 
-Top-down 2D Monza simulator, replay system, PPO training harness, and evolutionary search platform.
+Top-down 2D Monza simulator, replay system, PPO training harness, evolutionary search platform, and learned-policy pipeline.
 
-The project started as a Gymnasium/SB3 PPO driving experiment. PPO infrastructure works, but the strongest result now comes from GPU evolutionary search over continuous driving controllers, with CPU replay verification as the promotion oracle.
+The project started as a Gymnasium/SB3 PPO driving experiment. PPO infrastructure works, but the strongest result now comes from verified GPU evolutionary search data distilled and fine-tuned into a learned SAC policy, with CPU `MonzaSim` as the promotion oracle.
 
 <p align="center">
   <img src="./pygame-window-gen49-fastest-89s-all-150-cars-slow.gif" alt="89 second evolved Monza lap replay" width="900" />
@@ -14,9 +14,30 @@ The project started as a Gymnasium/SB3 PPO driving experiment. PPO infrastructur
 
 ## Current Result
 
-Best current evolved lap:
+Promoted learned-policy lap:
 
-- Source run: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
+- Policy archive: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-learned-20260605.tar.zst`
+- Original policy path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\best_policy.pt`
+- Training path: verified ES source dataset -> BC checkpoint -> project-native PyTorch SAC checkpoint
+- Dataset archive: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-datasets-20260605.tar.zst`
+- BC checkpoint path inside archive: `artifacts\learned\v1-bc-lpv1-sac79p750-broad16\best_policy.pt`
+- SAC checkpoint path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\best_policy.pt`
+- CPU oracle eval path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\promotion_cpu_eval\eval_summary.json`
+- CPU `MonzaSim` result: `3/3` valid normal-start laps, fastest `79.750s`
+- Local replay telemetry: `artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry`
+- Local 1000-car policy swarm: `artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000`
+
+Best evolved source lap used by the learned-policy path:
+
+- Source archive: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-runs-20260605.tar.zst`
+- Source run path inside archive: `artifacts\runs\actor-injected-lpv1-sac80p050-push-20260605-0910`
+- Fastest CPU-replayed valid source lap: `79.750s`
+- Source candidate: generation `0`, candidate `334`
+
+Previous broad evolved lap:
+
+- Full source archive: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\gpu-es-2000x150-full-12000-traces-20260605.tar.zst`
+- Original source run path inside run archive: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
 - Search scale: `2000` population x `150` generations = `300,000` candidates
 - Backend: GPU fused evolutionary search
 - Max steps: `25000`
@@ -26,10 +47,9 @@ Best current evolved lap:
 - CPU verification result: `lap_complete`
 - CPU/GPU reason mismatches: `0`
 - CPU/GPU valid-lap mismatches: `0`
-- Selected replay telemetry:
-  `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+- Local curated replay telemetry: `artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150`
 
-The previous major milestone was a CPU-evolution result around `89s`. GPU ES moved the project from "valid evolved lap" to "near target evolved lap."
+Earlier milestones were a CPU-evolution result around `89s` and the broad GPU ES `81.233s` result.
 
 ## What Exists
 
@@ -40,6 +60,11 @@ The previous major milestone was a CPU-evolution result around `89s`. GPU ES mov
 - `src/f1rl/evolution_search.py`: CPU/GPU evolutionary search.
 - `src/f1rl/evolution_postcheck.py`: deferred CPU replay/rerank verification for GPU search.
 - `src/f1rl/evolution_ladder.py`: repeatable search ladder runner.
+- `src/f1rl/es_dataset.py`: CPU-replayed ES transition dataset export and QA.
+- `src/f1rl/bc_train.py`: behavior cloning for learned policy actors.
+- `src/f1rl/sac_train.py`: project-native PyTorch SAC fine-tuning.
+- `src/f1rl/policy_eval.py`: deterministic CPU learned-policy oracle eval.
+- `src/f1rl/policy_swarm_eval.py`: checkpoint swarm telemetry export.
 - `src/f1rl/replay.py`: pygame/headless replay for telemetry.
 - `src/f1rl/telemetry.py`: telemetry schema, summaries, and loading.
 
@@ -91,13 +116,47 @@ uv run --no-sync python -m f1rl.manual
 Replay selected telemetry:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top"
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry"
 ```
 
 Headless replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry" --headless --limit 1
+```
+
+Curated CPU ES replay:
+
+```powershell
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\full-generation-reel-20260605\cpu-es-150x60" --by-generation --generation-limit 150 --sort score --speed 2
+```
+
+Curated GPU ES replay:
+
+```powershell
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150" --by-generation --generation-limit 150 --sort score --speed 2
+```
+
+The reproduction commands below expect the archived `artifacts\runs`, `artifacts\datasets`, and `artifacts\learned` folders to be restored from `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605` first. The replay commands above work from the current local highlight set.
+
+Learned-policy dataset export:
+
+```powershell
+uv run --no-sync python -m f1rl.es_dataset export --run-dir artifacts\runs\actor-injected-lpv1-sac80p050-push-20260605-0910 --output-dir artifacts\datasets\v1-es-policy-dataset-learned-v1-sac79p750-broad-16 --observation-profile learned_policy_v1 --physics-model v1 --max-candidates 16 --max-per-generation 16 --balanced-buckets
+```
+
+BC -> SAC -> CPU oracle:
+
+```powershell
+uv run --no-sync python -m f1rl.bc_train --dataset artifacts\datasets\v1-es-policy-dataset-learned-v1-sac79p750-broad-16 --output-dir artifacts\learned\v1-bc-lpv1-sac79p750-broad16 --device cuda --resume artifacts\learned\v1-controller-distill-sac79p750-best-source0\policy.pt --control-mode dominance
+uv run --no-sync python -m f1rl.sac_train --dataset artifacts\datasets\v1-es-policy-dataset-learned-v1-sac79p750-broad-16 --bc-checkpoint artifacts\learned\v1-bc-lpv1-sac79p750-broad16\best_policy.pt --output-dir artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1 --device cuda --control-mode dominance
+uv run --no-sync python -m f1rl.policy_eval --policy artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\best_policy.pt --output-dir artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\promotion_cpu_eval --episodes 3 --max-steps 25000 --observation-profile learned_policy_v1 --write-telemetry gzip
+```
+
+Policy swarm replay:
+
+```powershell
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
 ```
 
 Evolution search help:
@@ -157,12 +216,27 @@ Use focused checks first when changing a small area, then broaden to the full se
 - `assets/`, `imgs/`: visual assets and track images.
 - `archive/`: historical plans, old docs, old media, and legacy snapshots.
 - `artifacts/`: ignored local artifact root.
-- `artifacts/runs/`: large local search, eval, replay, and training runs.
-- `artifacts/datasets/`: learned-policy transition datasets.
-- `artifacts/learned/`: BC/SAC policy checkpoints and eval outputs.
-- `artifacts/calibration/`: calibration outputs.
-- `artifacts/fastf1-cache/`: FastF1 cache data.
-- `artifacts/legacy-local/`: older repo-local artifacts kept out of the root artifact namespace.
+- `artifacts/highlights/`: current local curated replay telemetry and GIFs.
+- `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\`: compressed cold storage for bulk RL1 runs, datasets, checkpoints, and full GPU ES telemetry.
+
+After the RL1 cleanup pass, the local repo intentionally keeps only curated highlight artifacts. New runs should still write under `artifacts/runs/`, datasets under `artifacts/datasets/`, learned checkpoints under `artifacts/learned/`, calibration output under `artifacts/calibration/`, and FastF1 cache data under `artifacts/fastf1-cache/`; compress and offload bulk outputs when they are no longer actively being debugged.
+
+Current local highlight storage:
+
+| Set | Local path | Files | Size |
+|---|---|---:|---:|
+| CPU ES telemetry | `artifacts\highlights\full-generation-reel-20260605\cpu-es-150x60` | 907 | `0.43 GB` |
+| GPU ES telemetry | `artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150` | 907 | `0.65 GB` |
+| RL telemetry | `artifacts\highlights\learned-policy-replays-20260605\telemetry` | 1005 | `1.55 GB` |
+| All local highlights | `artifacts\highlights` | 2830 | `2.70 GB` |
+
+Important D archives:
+
+- Full GPU ES `12k` traces: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\gpu-es-2000x150-full-12000-traces-20260605.tar.zst`
+- Current reduced local highlights: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-highlights-20260605-local-reduced-gpu-es.tar.zst`
+- Bulk runs: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-runs-20260605.tar.zst`
+- Learned checkpoints/evals: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-learned-20260605.tar.zst`
+- Datasets: `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\artifacts-datasets-20260605.tar.zst`
 
 Root markdown is intentionally minimal:
 
@@ -174,7 +248,8 @@ Older markdown plans and writeups are archived under `archive/repo-cleanup-20260
 
 ## Current Caveats
 
-- The `81.233s` result is an evolved controller result, not a PPO result.
+- The `79.750s` headline result is a learned SAC checkpoint verified by CPU `MonzaSim`, not a PPO result.
+- The `79.750s` ES source remains search data; learned-policy promotion uses the SAC checkpoint and CPU eval summary above.
 - CPU PPO has not completed a valid normal-start lap.
 - GPU PPO is implemented and smoke-tested, not learning-proven.
 - Raw GPU search winners are not trusted until CPU postcheck/rerank passes.

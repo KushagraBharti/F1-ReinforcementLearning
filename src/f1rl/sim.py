@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from f1rl.config import (
+    LEARNED_POLICY_V1_FEATURES,
     SimConfig,
     action_to_controls,
     actions_for_action_set,
@@ -84,9 +85,9 @@ class MonzaSim:
 
     @property
     def observation_dim(self) -> int:
-        brake_profiles = {"brake", "guidance", "racing", "racing_release", "racing_v2"}
-        guidance_profiles = {"guidance", "racing", "racing_release", "racing_v2"}
-        racing_profiles = {"racing", "racing_release", "racing_v2"}
+        brake_profiles = {"brake", "guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"}
+        guidance_profiles = {"guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"}
+        racing_profiles = {"racing", "racing_release", "racing_v2", "learned_policy_v1"}
         brake_features = 3 if self.config.observation_profile in brake_profiles else 0
         guidance_features = 2 if self.config.observation_profile in guidance_profiles else 0
         racing_features = 0
@@ -94,8 +95,9 @@ class MonzaSim:
             racing_features = 1 + 2 + len(self.config.lookahead_m) + 1
         if self.config.observation_profile == "racing_release":
             racing_features += 4
-        if self.config.observation_profile == "racing_v2":
+        if self.config.observation_profile in {"racing_v2", "learned_policy_v1"}:
             racing_features += 4
+        learned_features = len(LEARNED_POLICY_V1_FEATURES) if self.config.observation_profile == "learned_policy_v1" else 0
         return (
             7
             + len(self.sensor_angles)
@@ -103,6 +105,7 @@ class MonzaSim:
             + brake_features
             + guidance_features
             + racing_features
+            + learned_features
         )
 
     @property
@@ -496,6 +499,10 @@ class MonzaSim:
             float(phase),
         ]
 
+    def _learned_policy_v1_observation_features(self) -> list[float]:
+        features = self.search_features()
+        return [float(np.clip(features[name], -1.0, 1.0)) for name in LEARNED_POLICY_V1_FEATURES]
+
     def _release_observation_features(self) -> list[float]:
         speed_kph = self.state.speed_mps * 3.6
         max_speed_kph = max(self.config.car.max_speed_mps * 3.6, 1e-6)
@@ -809,16 +816,19 @@ class MonzaSim:
         brake_features: list[float] = []
         guidance_features: list[float] = []
         racing_features: list[float] = []
-        if self.config.observation_profile in {"brake", "guidance", "racing", "racing_release", "racing_v2"}:
+        if self.config.observation_profile in {"brake", "guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"}:
             brake_features = self._brake_observation_features(self._target_speed_kph(lookahead_errors))
-        if self.config.observation_profile in {"guidance", "racing", "racing_release", "racing_v2"}:
+        if self.config.observation_profile in {"guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"}:
             guidance_features = self._guidance_observation_features(self._target_steer())
-        if self.config.observation_profile in {"racing", "racing_release", "racing_v2"}:
+        if self.config.observation_profile in {"racing", "racing_release", "racing_v2", "learned_policy_v1"}:
             racing_features = self._racing_observation_features(signed_lateral_error_m, lookahead_errors)
         if self.config.observation_profile == "racing_release":
             racing_features = [*racing_features, *self._release_observation_features()]
-        if self.config.observation_profile == "racing_v2":
+        if self.config.observation_profile in {"racing_v2", "learned_policy_v1"}:
             racing_features = [*racing_features, *self._section_brake_observation_features()]
+        learned_features: list[float] = []
+        if self.config.observation_profile == "learned_policy_v1":
+            learned_features = self._learned_policy_v1_observation_features()
         obs = np.asarray(
             [
                 self.state.speed_mps / self.config.car.max_speed_mps,
@@ -833,6 +843,7 @@ class MonzaSim:
                 *brake_features,
                 *guidance_features,
                 *racing_features,
+                *learned_features,
             ],
             dtype=np.float32,
         )

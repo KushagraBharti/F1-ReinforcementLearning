@@ -367,7 +367,32 @@ SteerSpec = tuple[str, float]
 DEFAULT_ACTION_SET = "legacy"
 ACTION_MODES = frozenset({"continuous", "discrete", "multidiscrete"})
 CONTINUOUS_ACTION_SCHEMES = frozenset({"drive_brake", "exclusive_throttle_bias", "throttle_bias"})
-OBSERVATION_PROFILES = frozenset({"base", "brake", "guidance", "racing", "racing_release", "racing_v2"})
+OBSERVATION_PROFILES = frozenset({"base", "brake", "guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"})
+LEARNED_POLICY_V1_FEATURES: tuple[str, ...] = (
+    "bias",
+    "speed_norm",
+    "target_speed_norm",
+    "speed_error_norm",
+    "brake_demand",
+    "future_brake_demand",
+    "target_speed_drop_norm",
+    "brake_gate_proximity",
+    "brake_gate_distance_norm",
+    "lookahead_abs_max",
+    "signed_lateral_error_norm",
+    "heading_error_norm",
+    "yaw_rate_norm",
+    "curvature_norm",
+    "target_steer",
+    "last_throttle",
+    "last_brake",
+    "last_steer",
+    "segment_progress_ratio",
+    "lookahead_0",
+    "lookahead_1",
+    "lookahead_2",
+    "lookahead_3",
+)
 
 LEGACY_DISCRETE_ACTIONS: tuple[ActionSpec, ...] = (
     ("coast", 0.0, 0.0, 0.0),

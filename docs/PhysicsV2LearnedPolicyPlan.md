@@ -32,24 +32,54 @@ The v2 project is a separate benchmark category:
 
 Do not mix success claims across categories.
 
+## Operating Plan
+
+The future goal agent should execute the v2 work in this order:
+
+1. Implement physics v2 in CPU and GPU together. CPU remains the oracle, but GPU parity work should be developed alongside CPU changes so the two models do not drift.
+2. Calibrate physics v2 against FastF1 Monza telemetry as closely as practical. Calibration must produce reports with explicit error terms, not just visual confidence.
+3. Add and run CPU/GPU parity tests until v2 behavior is aligned enough for search. Fix real mismatches instead of hiding them with weak tolerances.
+4. Stop for human handoff after calibrated CPU/GPU v2 is implemented. The user should run manual mode and confirm that v2 driving feel is plausible before large search or learning starts.
+5. Establish the fastest scripted/reference v2 lap after calibration. This lap defines the benchmark threshold for search and learning.
+6. Run staged GPU ES under v2, CPU-verified, starting small and scaling only when metrics, telemetry, and storage are healthy.
+7. Tune search algorithms, scoring, bottleneck handling, reward shaping, dataset selection, BC, SAC, and rollout collection as needed. After the scripted threshold is established, do not keep changing physics to make learning easier unless a calibration defect is found and documented.
+8. Reach GPU ES target: CPU-verified v2 lap time at or below `scripted_threshold + 7s`.
+9. Reach GPU RL target: CPU-verified learned v2 policy at or below `scripted_threshold`.
+10. Create curated v2 highlights for GPU ES and GPU RL, around `1000` local replay traces total, stratified across generations/checkpoints and performance bands.
+11. Export GIFs from the exact pygame replay renderer at `4x` speed, with no approximate custom rendering.
+12. Compress/offload all non-highlight bulk artifacts to external storage.
+13. Final sanity check, docs update, commit, and push.
+
+The agent should not interpret this as a single straight-line training script. It should repeatedly inspect telemetry, identify bottlenecks, adjust algorithms and reward/scoring/data selection, validate, and continue until the explicit v2 ES and v2 RL targets are reached or a concrete blocker is documented.
+
 ## Final Success Criteria
 
 Mark this goal complete only when all of these are true:
 
-1. Simulator versioning exists and every run/dataset/policy artifact records `physics_model`.
+1. Simulator versioning exists and every run/dataset/policy/replay artifact records `physics_model`.
 2. `physics_model=v1` preserves existing current-physics behavior and tests.
 3. `physics_model=v2` exists in CPU `MonzaSim` and is selected explicitly.
-4. Physics v2 is calibrated against FastF1 Monza telemetry targets.
-5. CPU v2 has focused unit tests for each new physics component.
-6. GPU v2 matches CPU v2 behaviorally across randomized parity batteries before any large ES run.
-7. GPU v2 ES can run at meaningful scale using the same speed-first/search-first architecture.
-8. V2 ES winners are CPU postchecked/reranked under CPU v2.
-9. A v2 transition dataset is exported only from CPU-verified v2 trajectories.
-10. A learned v2 policy is trained with BC plus SAC.
-11. V2 policy evaluation uses CPU v2 as the promotion oracle.
-12. A replay mode exists for v2 policy checkpoint swarms so the user can visually inspect many cars improving over checkpoints.
-13. Documentation clearly separates v1 and v2 results.
-14. Full validation passes:
+4. Physics v2 exists in GPU batch/fused paths and is selected explicitly.
+5. CPU and GPU v2 are developed as one contract, with shared parameters, shared calibration ids, and explicit parity tests.
+6. Physics v2 is calibrated against FastF1 Monza telemetry targets and produces a calibration report with separate error terms.
+7. CPU v2 has focused unit tests for each new physics component.
+8. GPU v2 matches CPU v2 behaviorally across randomized parity batteries before any large ES run.
+9. Manual mode works under v2 and the user has a handoff point to drive and approve the physics feel before learning/search scales up.
+10. A fastest scripted/reference v2 lap is established after calibration and recorded as the benchmark threshold.
+11. GPU v2 ES runs through staged scale-up, from small smoke runs toward meaningful production runs such as `1000 x 75`, with compressed telemetry and controlled storage.
+12. V2 ES winners are CPU postchecked/reranked under CPU v2.
+13. V2 ES reaches `scripted_threshold + 7s` or better under CPU v2 verification.
+14. A v2 transition dataset is exported only from CPU-verified v2 trajectories.
+15. A learned v2 policy is trained with BC plus SAC.
+16. V2 policy evaluation uses CPU v2 as the promotion oracle.
+17. V2 learned policy reaches `scripted_threshold` or better under CPU v2 verification.
+18. Replay mode exists for v2 policy checkpoint swarms so the user can visually inspect many cars improving over checkpoints.
+19. Curated v2 GPU ES and GPU RL highlights exist locally, around `1000` replay traces total, stratified across generations/checkpoints and performance bands.
+20. V2 GIFs are exported from the exact pygame replay renderer at `4x` speed.
+21. Bulk non-highlight artifacts are compressed/offloaded to external storage, and local highlights remain replayable.
+22. Documentation clearly separates v1 and v2 results.
+23. Final sanity checks, documentation updates, commit, and push are complete.
+24. Full validation passes:
 
 ```powershell
 uv run --no-sync ruff check .
@@ -63,10 +93,14 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 - Do not silently change current v1 physics.
 - Do not train v2 policies from v1 ES telemetry.
 - Do not compare v1 and v2 lap times as if they are the same benchmark.
+- Do not implement CPU v2 and GPU v2 as separate drifting models. They must share one documented physics contract, one parameter set, and one calibration id.
 - Do not scale GPU v2 ES before CPU/GPU v2 parity passes.
 - Do not trust raw GPU v2 winners without CPU v2 postcheck/rerank.
+- Do not start large ES/RL runs before the manual handoff point is complete.
+- Do not change calibrated physics after the scripted benchmark threshold is recorded unless a real calibration/parity bug is found, fixed, and documented.
 - Do not drop replay compatibility.
 - Do not remove CPU PPO, CPU ES, GPU ES, GPU PPO, telemetry, replay, or postcheck paths.
+- Do not let v2 generate another uncontrolled local artifact pile. Bulk telemetry/checkpoints must be compressed early and offloaded after curation.
 - Do not add heavy dependencies without a clear reason and a small smoke proving they work.
 - Do not declare realism based only on feeling. Use FastF1 calibration reports and measurable error bands.
 
@@ -756,7 +790,7 @@ Calibration report must include:
 
 ## V2 ES Strategy
 
-After CPU v2 and GPU v2 parity pass, rerun ES from scratch.
+After calibrated CPU v2, GPU v2 parity, manual handoff, and scripted benchmark threshold recording pass, rerun ES from scratch.
 
 Do not seed v2 ES from v1 ES as truth. Optional v1-inspired genomes can be used only as labeled warm-start proposals after v2 random/search baselines exist.
 
@@ -765,11 +799,15 @@ Recommended initial sequence:
 1. Tiny v2 GPU ES smoke.
 2. 1000 x 5 v2 production smoke.
 3. Deferred CPU v2 postcheck.
-4. 1000 x 75 v2 run.
+4. 1000 x 10 staged run with compressed telemetry and generation metrics.
 5. Deferred CPU v2 postcheck/rerank.
-6. Inspect replay.
-7. Tune scoring/selection for v2.
-8. Scale only after storage and postcheck are healthy.
+6. Inspect replay, telemetry, gate failures, section bottlenecks, and storage footprint.
+7. Tune scoring/selection/mutation/crossover only from evidence.
+8. Scale through intermediate runs such as 1000 x 25 and 1000 x 50.
+9. Run 1000 x 75 or larger only after postcheck, replay, and storage are healthy.
+10. Stop the ES phase only when a CPU-verified winner reaches `scripted_threshold + 7s` or better.
+
+Every staged ES run should write compressed telemetry by default. Keep enough candidate traces for debugging, reranking, bottleneck analysis, and replay curation, but avoid uncompressed full-run dumps unless there is a narrow debugging reason and a cleanup plan.
 
 V2 scoring should initially reuse current speed-focused profiles:
 
@@ -783,6 +821,16 @@ V2 scoring should initially reuse current speed-focused profiles:
 - `max_progress`
 
 Then adjust only with evidence from v2 bottlenecks.
+
+Likely v2 bottleneck work includes:
+
+- braking-zone reward terms if cars are late-braking into invalid exits;
+- section-specific progress/pace gates if evolution stalls before Ascari or Parabolica;
+- traction/lock penalties if v2 tire physics encourages unrealistic steering while fully braking;
+- line diversity pressure if all elites collapse into one fragile exploit;
+- staged start positions only as diagnostics or curriculum, not as final proof;
+- CPU rerank pool sizing if GPU winners are close but noisy;
+- selected-telemetry sampling rules that preserve best, farthest, cleanest, and failure-mode examples.
 
 Required v2 postcheck:
 
@@ -862,7 +910,19 @@ SAC:
 - initialize from v2 BC;
 - evaluate under CPU v2;
 - produce checkpoint swarm replays;
-- compare to v2 ES, not v1 ES only.
+- compare to the v2 scripted threshold and v2 ES, not v1 ES only.
+
+The v2 learned-policy phase should copy the successful v1 operating style, not the old blind PPO loop:
+
+- begin with a small dataset/export smoke and a BC overfit probe;
+- use short CPU oracle evals for early diagnostics;
+- save expensive multi-episode CPU promotion checks for promising checkpoints;
+- keep SAC training on CUDA when available;
+- preserve compressed replay telemetry for evals and checkpoint swarms;
+- tune observation profile, reward terms, replay-buffer mix, eval cadence, and actor initialization from measured failures;
+- iterate until a CPU-verified learned policy reaches `scripted_threshold` or better.
+
+If RL lags ES, the implementing agent should inspect whether the issue is dataset coverage, observation features, reward shape, action distribution, SAC stability, termination distribution, or CPU/GPU mismatch. Do not respond by changing physics unless calibration/parity evidence says the physics is wrong.
 
 ## V2 Policy Swarm Replay Requirement
 
@@ -878,6 +938,19 @@ Implement checkpoint-based swarm replay for v2 as well:
 - preserve replay compatibility with existing `f1rl.replay` where possible.
 
 This should look like the ES multi-car replay, but the grouping axis is policy checkpoint instead of ES generation.
+
+Final local highlight curation should keep about `1000` replay traces total across v2 GPU ES and v2 GPU RL. Use a stratified strategy like the current RL1 highlight cleanup:
+
+- early, middle, and late generations/checkpoints;
+- best-performance band;
+- upper-mid band;
+- median band;
+- lower-progress/failure-mode band;
+- selected fastest valid / farthest / cleanest exemplars.
+
+The full uncurated run can live only in compressed external storage. The local repo should keep the curated v2 highlight telemetry and GIFs replayable without restoring the bulk archive.
+
+GIF export must use the exact pygame renderer path that the replay command opens. Approximate matplotlib/OpenCV reconstructions are not acceptable for the final deliverable. The GIF speed target is `4x`, with enough frames to inspect line, braking, crashes, and lap completion.
 
 ## PPO Under V2
 
@@ -944,7 +1017,27 @@ Validation:
 - v2 smoke lap with manual/scripted controls;
 - calibration report generated.
 
-### Phase 3: CPU V2 Calibration
+### Phase 3: GPU V2 Parity Contract
+
+Tasks:
+
+- implement the same v2 parameters and formulas in GPU batch/fused paths while CPU v2 is being finalized;
+- keep CPU v2 as oracle but avoid waiting until the end to discover GPU divergence;
+- add shared parameter serialization for CPU/GPU;
+- add randomized parity battery;
+- add edge-case tests;
+- add postcheck safeguards.
+
+Required parity battery:
+
+- 100 to 1000 random start states;
+- multiple fixed action tapes;
+- controller, phase, and progress-phase genomes;
+- short, medium, and long rollouts;
+- collision/off-track/checkpoint/lap-complete edge cases;
+- CPU vs GPU final state, termination, and score deltas.
+
+### Phase 4: V2 Calibration And Manual Handoff
 
 Tasks:
 
@@ -964,24 +1057,24 @@ Suggested calibration gates:
 
 Do not require learned policy or ES to immediately match FastF1 exactly before physics is usable. Require the simulator capability envelope to be plausible and measured.
 
-### Phase 4: GPU V2 Parity
+Manual handoff gate:
+
+- manual mode can run with `physics_model=v2`;
+- basic throttle/brake/steer behavior feels plausible enough for a human smoke;
+- calibration report is available for review;
+- CPU/GPU parity status is summarized;
+- the user has a chance to drive v2 before ES/RL scale-up.
+
+### Phase 4.5: Scripted V2 Benchmark
 
 Tasks:
 
-- implement PyTorch batch v2;
-- implement Warp/fused v2 only after PyTorch parity;
-- add randomized parity battery;
-- add edge-case tests;
-- add postcheck safeguards.
+- establish the fastest scripted/reference v2 lap after calibration and manual handoff;
+- record lap time, sector times, speed trace, braking zones, and telemetry summary;
+- save replayable scripted telemetry;
+- write benchmark metadata with physics version and calibration id.
 
-Required parity battery:
-
-- 100 to 1000 random start states;
-- multiple fixed action tapes;
-- controller, phase, and progress-phase genomes;
-- short, medium, and long rollouts;
-- collision/off-track/checkpoint/lap-complete edge cases;
-- CPU vs GPU final state, termination, and score deltas.
+This scripted time becomes `scripted_threshold`. It is the benchmark for v2 ES and v2 RL. After this point, algorithm work should improve search/learning against the threshold instead of moving the threshold by changing physics.
 
 ### Phase 5: V2 GPU ES
 
@@ -989,10 +1082,14 @@ Tasks:
 
 - run tiny smoke;
 - run 1000x5 smoke;
+- run 1000x10 staged search;
 - CPU postcheck;
 - replay selected telemetry;
 - tune scoring only from evidence;
-- scale to meaningful run.
+- scale through 1000x25, 1000x50, and toward 1000x75 when metrics justify it;
+- keep telemetry compressed and manifests complete;
+- inspect bottlenecks and update scoring/search operators as needed;
+- reach `scripted_threshold + 7s` or better under CPU v2 verification.
 
 Validation:
 
@@ -1001,6 +1098,7 @@ Validation:
 - selected replay loads;
 - generation metrics stream;
 - storage stays controlled.
+- fastest CPU-verified v2 ES lap meets the target.
 
 ### Phase 6: V2 Dataset
 
@@ -1027,6 +1125,7 @@ Tasks:
 - CPU v2 eval;
 - swarm replay by checkpoint;
 - compare v2 learned policy to v2 ES.
+- iterate observation/reward/data/replay-buffer/SAC settings until the learned policy reaches `scripted_threshold` or better.
 
 Validation:
 
@@ -1035,16 +1134,23 @@ Validation:
 - CPU v2 eval works;
 - selected telemetry loads;
 - learned policy completes valid laps under v2.
+- promoted learned policy meets the scripted-threshold target under CPU v2.
 
-### Phase 8: Documentation And Benchmarking
+### Phase 8: Highlights, GIFs, Storage, And Finalization
 
 Tasks:
 
+- curate about `1000` local v2 highlight traces total across GPU ES and GPU RL;
+- stratify highlights across generations/checkpoints and performance bands;
+- export exact-pygame GIFs at `4x`;
+- archive/offload all non-highlight bulk artifacts to `D:`;
+- verify local highlights replay without restoring bulk artifacts;
 - update README;
 - update `Documentation.md`;
 - add commands;
 - record current v1 and v2 scoreboard separately;
 - document all caveats.
+- commit and push.
 
 Final validation:
 
@@ -1070,6 +1176,11 @@ artifacts\
   learned\
     v2-bc-YYYYMMDD\
     v2-sac-YYYYMMDD\
+  highlights\
+    physics-v2-YYYYMMDD\
+      gpu-es\
+      gpu-rl\
+      gifs\
 ```
 
 Every folder should contain a manifest that names:
@@ -1082,6 +1193,14 @@ Every folder should contain a manifest that names:
 - git commit;
 - source artifacts;
 - validation status.
+
+Bulk v2 artifact policy:
+
+- active runs may write locally while being debugged;
+- telemetry should default to compressed JSON/gzip or equivalent compressed formats;
+- large raw runs, datasets, checkpoints, and swarm dumps should be archived to `D:\f1-rl-artifacts\archives\...`;
+- local repo should keep only curated v2 highlights and GIFs after the goal is complete;
+- the full uncurated archives should remain restorable and should include verification metadata such as size, entry count, and SHA256 where practical.
 
 ## Rollback Plan
 
@@ -1157,19 +1276,28 @@ The implementing agent must continue through:
 2. FastF1 calibration tooling;
 3. CPU v2 implementation;
 4. CPU v2 tests;
-5. GPU v2 implementation;
+5. GPU v2 implementation under the same physics contract;
 6. CPU/GPU parity tests;
-7. v2 ES smoke;
-8. v2 postcheck;
-9. v2 dataset export;
-10. v2 BC;
-11. v2 SAC;
-12. v2 policy eval;
-13. v2 checkpoint swarm replay;
-14. documentation;
-15. full validation.
+7. calibration report with accepted error bands;
+8. manual-mode handoff;
+9. scripted/reference v2 benchmark and saved telemetry;
+10. staged v2 ES smoke and scale-up;
+11. v2 ES CPU postcheck/rerank;
+12. v2 ES target at `scripted_threshold + 7s` or better;
+13. v2 dataset export;
+14. v2 BC;
+15. v2 SAC;
+16. v2 policy eval;
+17. v2 RL target at `scripted_threshold` or better;
+18. v2 checkpoint swarm replay;
+19. curated v2 GPU ES and GPU RL local highlights;
+20. exact-pygame `4x` GIF exports;
+21. external archive/offload of non-highlight bulk artifacts;
+22. documentation;
+23. full validation;
+24. commit and push.
 
-If any phase fails, isolate the failure, patch the root cause, rerun focused checks, then rerun the broader gate. Do not mark the goal complete while v2 exists only as partial physics, unverified GPU kernels, untrained policies, or non-replayable artifacts.
+If any phase fails, isolate the failure, patch the root cause, rerun focused checks, then rerun the broader gate. Do not mark the goal complete while v2 exists only as partial physics, unverified GPU kernels, untrained policies, non-replayable artifacts, approximate GIFs, local bulk storage bloat, or undocumented results.
 
 ## Research Sources
 

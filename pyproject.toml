@@ -56,6 +56,13 @@ f1-evolution-search = "f1rl.evolution_search:main"
 f1-evolution-ladder = "f1rl.evolution_ladder:main"
 f1-evolution-postcheck = "f1rl.evolution_postcheck:main"
 f1-gpu-ppo = "f1rl.gpu_ppo:main"
+f1-export-es-dataset = "f1rl.es_dataset:main"
+f1-init-controller-policy = "f1rl.controller_policy_init:main"
+f1-train-bc = "f1rl.bc_train:main"
+f1-train-sac = "f1rl.sac_train:main"
+f1-policy-eval = "f1rl.policy_eval:main"
+f1-policy-swarm-eval = "f1rl.policy_swarm_eval:main"
+f1-policy-swarm-replay = "f1rl.policy_swarm_replay:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/f1rl"]

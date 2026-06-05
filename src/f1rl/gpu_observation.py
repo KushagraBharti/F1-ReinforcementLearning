@@ -7,7 +7,7 @@ import math
 
 import torch
 
-from f1rl.config import SimConfig
+from f1rl.config import LEARNED_POLICY_V1_FEATURES, SimConfig
 from f1rl.gpu_features import target_steer_batch
 from f1rl.gpu_track import (
     distance_to_next_braking_gate_batch,
@@ -127,7 +127,7 @@ def observation_batch(
         ray_obs,
         lookahead_errors,
     ]
-    if config.observation_profile in {"brake", "guidance", "racing", "racing_release", "racing_v2"}:
+    if config.observation_profile in {"brake", "guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"}:
         target_norm = torch.clamp(target_speed_kph / max_speed_kph, min=0.0, max=1.0) * 2.0 - 1.0
         speed_error_norm = torch.clamp((speed_kph - target_speed_kph) / 200.0, min=-1.0, max=1.0)
         brake_demand_norm = torch.clamp(
@@ -136,10 +136,10 @@ def observation_batch(
             max=1.0,
         )
         obs_parts.append(torch.stack((target_norm, speed_error_norm, brake_demand_norm * 2.0 - 1.0), dim=1))
-    if config.observation_profile in {"guidance", "racing", "racing_release", "racing_v2"}:
+    if config.observation_profile in {"guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"}:
         steer_error = torch.clamp(target_steer - state.last_steer, min=-1.0, max=1.0)
         obs_parts.append(torch.stack((target_steer, steer_error), dim=1))
-    if config.observation_profile in {"racing", "racing_release", "racing_v2"}:
+    if config.observation_profile in {"racing", "racing_release", "racing_v2", "learned_policy_v1"}:
         if lookahead_errors.shape[1] > 0:
             lookahead_target_speeds = torch.clamp(
                 torch.full_like(lookahead_errors, config.reward.speed_target_max_kph)
@@ -179,7 +179,7 @@ def observation_batch(
                 torch.full_like(speed_kph, -1.0),
             )
             racing = torch.cat((racing, torch.stack((threshold_norm, surplus_norm, deficit_norm, in_band), dim=1)), dim=1)
-        if config.observation_profile == "racing_v2":
+        if config.observation_profile in {"racing_v2", "learned_policy_v1"}:
             target_norm, brake_zone_flag, phase, section_target = _section_values(
                 state.monotonic_progress_m,
                 config,
@@ -195,4 +195,68 @@ def observation_batch(
                 dim=1,
             )
         obs_parts.append(racing)
+    if config.observation_profile == "learned_policy_v1":
+        if lookahead_errors.shape[1] > 0:
+            lookahead_target_speeds = torch.clamp(
+                torch.full_like(lookahead_errors, config.reward.speed_target_max_kph)
+                - config.reward.speed_target_heading_scale * torch.abs(lookahead_errors) * 180.0,
+                min=config.reward.speed_target_min_kph,
+                max=max_speed_kph,
+            )
+            near_target_speed_kph = lookahead_target_speeds[:, 0]
+            min_future_target_speed_kph = torch.minimum(target_speed_kph, torch.min(lookahead_target_speeds, dim=1).values)
+        else:
+            near_target_speed_kph = target_speed_kph
+            min_future_target_speed_kph = target_speed_kph
+        gate_distance_m = distance_to_next_braking_gate_batch(
+            state.monotonic_progress_m,
+            gates_m=torch.tensor(
+                [section.brake_start_m for section in MONZA_SECTIONS if section.brake_start_m is not None],
+                device=state.device,
+                dtype=state.dtype,
+            ),
+            length_m=track.length_m,
+        )
+        target_speed_drop_kph = torch.clamp(near_target_speed_kph - min_future_target_speed_kph, min=0.0)
+        curvature = state.yaw_rate_rps / torch.clamp(state.speed_mps, min=1e-6)
+        learned_by_name = {
+            "bias": torch.ones_like(state.speed_mps),
+            "speed_norm": torch.clamp(speed_kph / max_speed_kph, min=0.0, max=1.0),
+            "target_speed_norm": torch.clamp(target_speed_kph / max_speed_kph, min=0.0, max=1.0) * 2.0 - 1.0,
+            "speed_error_norm": torch.clamp((speed_kph - target_speed_kph) / 220.0, min=-1.0, max=1.0),
+            "brake_demand": torch.clamp(
+                (speed_kph - target_speed_kph - config.reward.speed_target_deadzone_kph) / 220.0,
+                min=0.0,
+                max=1.0,
+            ),
+            "future_brake_demand": torch.clamp(
+                (speed_kph - min_future_target_speed_kph - config.reward.speed_target_deadzone_kph) / 220.0,
+                min=0.0,
+                max=1.0,
+            ),
+            "target_speed_drop_norm": torch.clamp(target_speed_drop_kph / 180.0, min=0.0, max=1.0),
+            "brake_gate_proximity": 1.0 - torch.clamp(gate_distance_m / 900.0, min=0.0, max=1.0),
+            "brake_gate_distance_norm": torch.clamp(gate_distance_m / 1000.0, min=0.0, max=1.0) * 2.0 - 1.0,
+            "lookahead_abs_max": torch.clamp(lookahead_abs_max / math.pi, min=0.0, max=1.0),
+            "signed_lateral_error_norm": torch.clamp(errors["signed_lateral_error_m"] / 30.0, min=-1.0, max=1.0),
+            "heading_error_norm": torch.clamp(errors["heading_error_rad"] / math.pi, min=-1.0, max=1.0),
+            "yaw_rate_norm": torch.clamp(state.yaw_rate_rps / 2.0, min=-1.0, max=1.0),
+            "curvature_norm": torch.clamp(curvature / 0.08, min=-1.0, max=1.0),
+            "target_steer": target_steer,
+            "last_throttle": torch.clamp(state.last_throttle, min=0.0, max=1.0),
+            "last_brake": torch.clamp(state.last_brake, min=0.0, max=1.0),
+            "last_steer": torch.clamp(state.last_steer, min=-1.0, max=1.0),
+            "segment_progress_ratio": progress_ratio * 2.0 - 1.0,
+        }
+        for index in range(4):
+            if index < lookahead_errors.shape[1]:
+                learned_by_name[f"lookahead_{index}"] = lookahead_errors[:, index]
+            else:
+                learned_by_name[f"lookahead_{index}"] = torch.zeros_like(state.speed_mps)
+        obs_parts.append(
+            torch.stack(
+                [torch.clamp(learned_by_name[name], min=-1.0, max=1.0) for name in LEARNED_POLICY_V1_FEATURES],
+                dim=1,
+            )
+        )
     return torch.cat(obs_parts, dim=1).to(dtype=torch.float32)

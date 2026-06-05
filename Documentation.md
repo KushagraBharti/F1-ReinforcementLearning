@@ -6,7 +6,24 @@ This is the concise live status file. Historical prompts, long plans, and transc
 
 ## Scoreboard
 
-Best current evolved result:
+Best current learned-policy result:
+
+- SAC policy path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\best_policy.pt`
+- Dataset manifest path inside archive: `artifacts\datasets\v1-es-policy-dataset-learned-v1-sac79p750-broad-16\dataset_manifest.json`
+- BC checkpoint path inside archive: `artifacts\learned\v1-bc-lpv1-sac79p750-broad16\best_policy.pt`
+- SAC promotion eval path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\promotion_cpu_eval\eval_summary.json`
+- CPU oracle result: `3/3` valid normal-start laps, fastest `79.750s`, average `79.750s`
+- Local replay telemetry: `artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry`
+- Local policy swarm: `artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000`
+
+Best evolved source result:
+
+- Run path inside archive: `artifacts\runs\actor-injected-lpv1-sac80p050-push-20260605-0910`
+- Backend: GPU fused evolutionary search with learned actor injection
+- CPU-replayed source lap: `79.750s`
+- Source candidate: generation `0`, candidate `334`
+
+Previous broad evolved result:
 
 - Run: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
 - Scale: `2000 x 150 = 300,000` candidates
@@ -19,7 +36,8 @@ Best current evolved result:
 - Reason mismatches: `0`
 - Valid-lap mismatches: `0`
 - Max final-progress delta in selected CPU verification: about `0.0306m`
-- Replay telemetry: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+- Archived selected telemetry path: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+- Local curated replay telemetry: `artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150`
 
 Previous milestone:
 
@@ -50,6 +68,12 @@ Main modules:
 - `src/f1rl/evolution_backend.py`: shared CPU/GPU evolution backend routing.
 - `src/f1rl/gpu_batch.py`: batched GPU simulation.
 - `src/f1rl/gpu_fused_warp.py`: Warp fused GPU kernels.
+- `src/f1rl/es_dataset.py`: CPU-replayed ES transition dataset export and report.
+- `src/f1rl/learned_policy.py`: shared learned policy actor/checkpoint code.
+- `src/f1rl/bc_train.py`: behavior cloning trainer.
+- `src/f1rl/sac_train.py`: project-native PyTorch SAC trainer.
+- `src/f1rl/policy_eval.py`: deterministic CPU learned-policy eval.
+- `src/f1rl/policy_swarm_eval.py`: grouped checkpoint swarm export.
 - `src/f1rl/replay.py`: visual/headless replay.
 - `src/f1rl/telemetry.py`: telemetry schema and summaries.
 
@@ -69,7 +93,10 @@ The practical loop is:
 3. CPU-rerank/postcheck selected candidates.
 4. Generate replayable selected telemetry only for verified winners.
 5. Inspect telemetry and replay.
-6. Use verified ES data for the next learned-policy step.
+6. Export fixed-profile transition datasets under `artifacts/datasets/`.
+7. Train BC and SAC on CUDA where possible.
+8. Promote only CPU-verified learned-policy checkpoints.
+9. Use actor injection only as source discovery; ES/search laps are not learned-policy success.
 
 Raw GPU winners are proposal data. CPU-verified selected winners are trusted promotion data.
 
@@ -112,18 +139,19 @@ Recent verified postcheck examples:
   - selected winner: generation `143`, candidate `1864`
   - selected replay telemetry written under `selected_telemetry_summary_top`
 
-## Current RL Direction
+## Learned-Policy Path
 
-The next learned-policy path should use the ES result instead of ignoring it:
+The current v1 learned-policy path now uses:
 
-1. Export a broad verified transition dataset from ES telemetry.
-2. Include fast valid laps, consistent valid laps, near-valid failures, section specialists, and diverse lineages.
-3. Train behavior cloning from observations to controls.
-4. Fine-tune with custom PyTorch SAC.
-5. CPU-evaluate learned policies before promotion.
-6. Optionally inject the learned actor back into ES as a smart candidate source.
+1. `learned_policy_v1`: fixed-order observation profile recorded in manifests and checkpoints.
+2. `f1rl.es_dataset`: CPU replay export with source metadata, dedupe, manifest, and report.
+3. `f1rl.bc_train`: BC actor initialization from verified ES controls.
+4. `f1rl.sac_train`: project-native SAC with ES replay-buffer prefill and CPU eval cadence.
+5. `f1rl.policy_eval`: CPU `MonzaSim` promotion oracle.
+6. `f1rl.policy_swarm_eval`: replayable 1000-car checkpoint groups.
+7. Actor injection back into ES after learned-policy eval works.
 
-Do not train from only the single fastest lap. The useful dataset is a curated library of verified behavior and near-miss behavior.
+For iteration, single-source datasets can be used to preserve a promising line. For broader attempts, export more valid, near-valid, and diverse ES candidates with source metadata and dedupe.
 
 Detailed goal docs:
 
@@ -135,13 +163,31 @@ Detailed goal docs:
 Replay the current best selected telemetry:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top"
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry"
 ```
 
 Headless replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry" --headless --limit 1
+```
+
+Replay the promoted policy swarm:
+
+```powershell
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
+```
+
+Replay curated CPU ES:
+
+```powershell
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\full-generation-reel-20260605\cpu-es-150x60" --by-generation --generation-limit 150 --sort score --speed 2
+```
+
+Replay curated GPU ES:
+
+```powershell
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150" --by-generation --generation-limit 150 --sort score --speed 2
 ```
 
 CPU evolution smoke:
@@ -174,20 +220,39 @@ Before launching large search, also run a small CLI smoke and a replay-load chec
 Keep root clean:
 
 - Do not place large run artifacts in repo root.
-- Put local experiment outputs under `artifacts/runs/`.
+- Put active experiment outputs under `artifacts/runs/`.
 - Put transition datasets under `artifacts/datasets/`.
 - Put learned-policy checkpoints and evals under `artifacts/learned/`.
 - Put calibration output and FastF1 cache data under `artifacts/calibration/` and `artifacts/fastf1-cache/`.
 - Keep only small demo media in root when directly referenced by README.
 - Archive old root documents under `archive/`.
 
-The current large run folder is about `19.86 GB`:
+Current local artifact policy after RL1 cleanup:
 
-`artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
+- Keep curated replay telemetry and GIFs local under `artifacts\highlights`.
+- Keep bulk runs, datasets, checkpoints, and old artifacts compressed on `D:`.
+- Keep the full `12k` GPU ES replay set on `D:` only; local GPU ES is the reduced `6 x 150 = 900` trace stratified set.
 
-The selected replay telemetry for the best candidate is small and replayable:
+Current local highlight split:
 
-`artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+| Set | Files | Size |
+|---|---:|---:|
+| CPU ES telemetry | 907 | `0.43 GB` |
+| GPU ES telemetry, reduced local stratified set | 907 | `0.65 GB` |
+| RL telemetry | 1005 | `1.55 GB` |
+| All local highlights, including GIFs | 2830 | `2.70 GB` |
+
+Important archive directory:
+
+`D:\f1-rl-artifacts\archives\rl1-postgoal-20260605`
+
+Important verified archives:
+
+- `gpu-es-2000x150-full-12000-traces-20260605.tar.zst`: full GPU ES replay set, `13.04 GB`.
+- `artifacts-highlights-20260605-local-reduced-gpu-es.tar.zst`: current local highlight mirror, `1.10 GB`.
+- `artifacts-runs-20260605.tar.zst`: bulk run artifacts, `8.06 GB`.
+- `artifacts-learned-20260605.tar.zst`: learned checkpoints/evals, `4.90 GB`.
+- `artifacts-datasets-20260605.tar.zst`: transition datasets, `0.14 GB`.
 
 ## Root Documentation Policy
 

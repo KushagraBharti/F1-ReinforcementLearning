@@ -49,7 +49,7 @@ def test_gpu_ray_distances_match_cpu() -> None:
 
 
 def test_gpu_observations_match_cpu_profiles() -> None:
-    for profile in ("base", "brake", "guidance", "racing", "racing_release", "racing_v2"):
+    for profile in ("base", "brake", "guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"):
         sim = MonzaSim(SimConfig(action_mode="continuous", observation_profile=profile))
         sim.reset(seed=4, options={"start_progress_m": 2140.0, "start_speed_kph": 155.0})
         _gpu_rays, gpu_obs = _batch_from_sim(sim)

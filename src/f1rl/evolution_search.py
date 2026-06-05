@@ -25,6 +25,7 @@ import numpy as np
 
 from f1rl.config import (
     ARTIFACTS_DIR,
+    LEARNED_POLICY_V1_FEATURES,
     MONZA_LENGTH_METERS,
     SimConfig,
     actions_for_action_set,
@@ -198,6 +199,9 @@ class EvolutionSearchConfig:
     plateau_average_improvement_m: float = 80.0
     plateau_elite_fraction: float = 0.50
     plateau_extra_mutations: int = 1
+    actor_injection_policy: Path | None = None
+    actor_injection_count: int = 0
+    actor_injection_mutation_sigma: float = 0.08
     gpu_device: str = "cuda"
     gpu_engine: str = "eager"
     gpu_run_mode: str = "parity"
@@ -474,6 +478,12 @@ def _validate_config(config: EvolutionSearchConfig, gates: EvolutionGates) -> No
         raise ValueError("plateau_distance_epsilon_m must be >= 0")
     if config.plateau_average_improvement_m < 0.0:
         raise ValueError("plateau_average_improvement_m must be >= 0")
+    if config.actor_injection_count < 0:
+        raise ValueError("actor_injection_count must be >= 0")
+    if config.actor_injection_mutation_sigma < 0.0:
+        raise ValueError("actor_injection_mutation_sigma must be >= 0")
+    if config.actor_injection_policy is not None and config.genome_type != "controller":
+        raise ValueError("actor injection requires --genome-type controller")
     if not 0.0 < config.plateau_elite_fraction <= 1.0:
         raise ValueError("plateau_elite_fraction must be in (0, 1]")
     if config.plateau_extra_mutations < 0:
@@ -596,6 +606,45 @@ def _normalize_controller_genome(genome: Genome) -> Genome:
         weights = weights[:target_count]
     clipped = tuple(float(np.clip(value, -6.0, 6.0)) for value in weights)
     return Genome(kind="controller", controller_weights=clipped)
+
+
+def _controller_genome_from_actor_policy(path: Path) -> Genome:
+    from f1rl.learned_policy import load_policy_checkpoint
+
+    actor, _normalizer, metadata = load_policy_checkpoint(path, device="cpu")
+    if actor.hidden_sizes:
+        raise ValueError("ES actor injection currently supports only linear learned_policy_v1 actors.")
+    if actor.control_mode != "dominance":
+        raise ValueError("ES actor injection currently supports only dominance-mode learned actors.")
+    observation_profile = metadata.get("observation_profile") or metadata.get("config", {}).get("observation_profile")
+    if observation_profile != "learned_policy_v1":
+        raise ValueError("ES actor injection requires a learned_policy_v1 checkpoint.")
+    learned_offset = actor.obs_dim - len(LEARNED_POLICY_V1_FEATURES)
+    if learned_offset < 0:
+        raise ValueError("Actor observation dimension is smaller than learned_policy_v1 appended features.")
+    learned_index = {name: index for index, name in enumerate(LEARNED_POLICY_V1_FEATURES)}
+    weights = np.zeros((CONTROLLER_OUTPUT_COUNT, len(CONTROLLER_FEATURE_NAMES)), dtype=np.float64)
+    actor_weights = actor.mean_head.weight.detach().cpu().numpy().astype(np.float64)
+    for feature_idx, name in enumerate(CONTROLLER_FEATURE_NAMES):
+        if name not in learned_index:
+            continue
+        column = learned_offset + learned_index[name]
+        weights[0, feature_idx] = actor_weights[0, column] * 2.0
+        weights[1, feature_idx] = actor_weights[1, column] * 2.0
+        weights[2, feature_idx] = actor_weights[2, column]
+    return _normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(float(value) for value in weights.reshape(-1))))
+
+
+def _actor_injection_genomes(config: EvolutionSearchConfig, rng: np.random.Generator) -> list[Genome]:
+    if config.actor_injection_policy is None or config.actor_injection_count <= 0:
+        return []
+    base = _controller_genome_from_actor_policy(config.actor_injection_policy)
+    genomes = [base]
+    weights = np.asarray(base.controller_weights, dtype=np.float64)
+    while len(genomes) < config.actor_injection_count:
+        mutated = weights + rng.normal(0.0, config.actor_injection_mutation_sigma, size=weights.shape)
+        genomes.append(_normalize_controller_genome(Genome(kind="controller", controller_weights=tuple(mutated))))
+    return genomes
 
 
 def _normalize_genome(
@@ -2371,8 +2420,24 @@ def _next_population(
                 lineage={"source": "random_reseed", "created_generation": created_generation},
             )
         ]
+    actor_injected = [
+        Candidate(
+            genome=genome,
+            snapshot_index=int(rng.integers(0, len(snapshots))),
+            lineage={
+                "source": "actor_injection",
+                "injection_type": "recurrent_actor_controller",
+                "created_generation": created_generation,
+                "actor_policy": str(config.actor_injection_policy),
+                "actor_injection_index": index,
+            },
+        )
+        for index, genome in enumerate(
+            _actor_injection_genomes(config, rng)[: max(0, config.population - len(elites))]
+        )
+    ]
     parent_buckets, parent_summary = _parent_buckets(ranked, config, survival_floor_m=survival_floor_m)
-    next_candidates = list(elites)
+    next_candidates = [*elites, *actor_injected]
     immigrant_counts = _effective_immigrant_counts(
         config,
         generation=created_generation,
@@ -2380,7 +2445,7 @@ def _next_population(
         quality_pass_rate=quality_pass_rate,
         frontier_best_m=frontier_best_m,
     )
-    reproduction_counts: Counter[str] = Counter({"elite_copy": len(next_candidates)})
+    reproduction_counts: Counter[str] = Counter({"elite_copy": len(elites), "actor_injection": len(actor_injected)})
     source_bucket_counts: Counter[str] = Counter()
     while len(next_candidates) < config.population - immigrant_counts["total"]:
         source_bucket, parent_row = _sample_parent_row(parent_buckets, rng)
@@ -2585,6 +2650,7 @@ def _next_population(
         "plateau_report": plateau,
         "selected_elite_count": selected_elite_count,
         "elite_copy_count": reproduction_counts["elite_copy"],
+        "actor_injection_count": reproduction_counts["actor_injection"],
         "offspring_count": reproduction_counts["offspring"],
         "mutated_offspring_count": reproduction_counts["mutated_offspring"],
         "plateau_extra_mutation_count": reproduction_counts["plateau_extra_mutation"],
@@ -3213,7 +3279,24 @@ def _initial_population(
     rng: np.random.Generator,
     action_names: list[str],
 ) -> list[Candidate]:
+    injected = [
+        Candidate(
+            genome=genome,
+            snapshot_index=int(rng.integers(0, len(snapshots))),
+            lineage={
+                "source": "actor_injection",
+                "injection_type": "initial_actor_controller",
+                "created_generation": 0,
+                "actor_policy": str(config.actor_injection_policy),
+                "actor_injection_index": index,
+            },
+        )
+        for index, genome in enumerate(_actor_injection_genomes(config, rng)[: config.population])
+    ]
+    random_count = max(0, config.population - len(injected))
     return [
+        *injected,
+        *[
         Candidate(
             genome=random_genome(
                 rng,
@@ -3229,7 +3312,8 @@ def _initial_population(
             snapshot_index=int(rng.integers(0, len(snapshots))),
             lineage={"source": "initial_random", "created_generation": 0},
         )
-        for _ in range(config.population)
+            for _ in range(random_count)
+        ],
     ]
 
 
@@ -4083,6 +4167,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--plateau-average-improvement-m", type=float, default=80.0)
     parser.add_argument("--plateau-elite-fraction", type=float, default=0.50)
     parser.add_argument("--plateau-extra-mutations", type=int, default=1)
+    parser.add_argument("--actor-injection-policy", type=Path)
+    parser.add_argument("--actor-injection-count", type=int, default=0)
+    parser.add_argument("--actor-injection-mutation-sigma", type=float, default=0.08)
     return parser.parse_args(argv)
 
 
@@ -4163,6 +4250,9 @@ def main(argv: list[str] | None = None) -> int:
         plateau_average_improvement_m=max(0.0, args.plateau_average_improvement_m),
         plateau_elite_fraction=float(np.clip(args.plateau_elite_fraction, 0.05, 1.0)),
         plateau_extra_mutations=max(0, args.plateau_extra_mutations),
+        actor_injection_policy=args.actor_injection_policy,
+        actor_injection_count=max(0, args.actor_injection_count),
+        actor_injection_mutation_sigma=max(0.0, args.actor_injection_mutation_sigma),
         gpu_device=args.gpu_device,
         gpu_engine=args.gpu_engine,
         gpu_run_mode=args.gpu_run_mode,

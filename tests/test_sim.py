@@ -9,6 +9,7 @@ from f1rl.config import (
     DISCRETE_ACTIONS,
     EXIT_TINY_DISCRETE_ACTIONS,
     EXPANDED_DISCRETE_ACTIONS,
+    LEARNED_POLICY_V1_FEATURES,
     LEGACY_DISCRETE_ACTIONS,
     RACING_DISCRETE_ACTIONS,
     RELEASE_BRAKE_DISCRETE_ACTIONS,
@@ -153,6 +154,24 @@ def test_racing_v2_observation_profile_values_are_bounded() -> None:
     sim = MonzaSim(SimConfig(max_steps=20, observation_profile="racing_v2"))
     obs, _ = sim.reset(seed=1)
     assert obs.shape == (sim.observation_dim,)
+    assert np.all(obs >= -1.0)
+    assert np.all(obs <= 1.0)
+    for action_id in (1, 5, 8, 2):
+        result = sim.step(action_id)
+        assert result.observation.shape == (sim.observation_dim,)
+        assert np.all(result.observation >= -1.0)
+        assert np.all(result.observation <= 1.0)
+        if result.terminated or result.truncated:
+            break
+
+
+def test_learned_policy_v1_observation_profile_values_are_bounded() -> None:
+    sim = MonzaSim(SimConfig(max_steps=20, observation_profile="learned_policy_v1"))
+    obs, _ = sim.reset(seed=1)
+    racing_v2_dim = MonzaSim(SimConfig(max_steps=20, observation_profile="racing_v2")).observation_dim
+
+    assert obs.shape == (sim.observation_dim,)
+    assert sim.observation_dim == racing_v2_dim + len(LEARNED_POLICY_V1_FEATURES)
     assert np.all(obs >= -1.0)
     assert np.all(obs <= 1.0)
     for action_id in (1, 5, 8, 2):

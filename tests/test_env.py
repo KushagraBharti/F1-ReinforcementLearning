@@ -28,6 +28,14 @@ def test_env_checker_passes_for_racing_v2_observation_profile() -> None:
         env.close()
 
 
+def test_env_checker_passes_for_learned_policy_v1_observation_profile() -> None:
+    env = MonzaEnv(SimConfig(max_steps=20, observation_profile="learned_policy_v1"))
+    try:
+        check_env(env, skip_render_check=True)
+    finally:
+        env.close()
+
+
 def test_env_step_contract() -> None:
     env = MonzaEnv(SimConfig(max_steps=20))
     try:
@@ -70,26 +78,31 @@ def test_env_brake_observation_profile_adds_target_speed_features() -> None:
     guidance = MonzaEnv(SimConfig(max_steps=20, observation_profile="guidance"))
     racing = MonzaEnv(SimConfig(max_steps=20, observation_profile="racing"))
     racing_v2 = MonzaEnv(SimConfig(max_steps=20, observation_profile="racing_v2"))
+    learned_policy_v1 = MonzaEnv(SimConfig(max_steps=20, observation_profile="learned_policy_v1"))
     try:
         base_obs, _ = base.reset(seed=1)
         brake_obs, _ = brake.reset(seed=1)
         guidance_obs, _ = guidance.reset(seed=1)
         racing_obs, _ = racing.reset(seed=1)
         racing_v2_obs, _ = racing_v2.reset(seed=1)
+        learned_policy_v1_obs, _ = learned_policy_v1.reset(seed=1)
         assert brake_obs.shape[0] == base_obs.shape[0] + 3
         assert guidance_obs.shape[0] == base_obs.shape[0] + 5
         assert racing_obs.shape[0] == base_obs.shape[0] + 13
         assert racing_v2_obs.shape[0] == base_obs.shape[0] + 17
+        assert learned_policy_v1_obs.shape[0] == base_obs.shape[0] + 40
         assert brake.observation_space.contains(brake_obs)
         assert guidance.observation_space.contains(guidance_obs)
         assert racing.observation_space.contains(racing_obs)
         assert racing_v2.observation_space.contains(racing_v2_obs)
+        assert learned_policy_v1.observation_space.contains(learned_policy_v1_obs)
     finally:
         base.close()
         brake.close()
         guidance.close()
         racing.close()
         racing_v2.close()
+        learned_policy_v1.close()
 
 
 def test_env_continuous_step_contract() -> None:
