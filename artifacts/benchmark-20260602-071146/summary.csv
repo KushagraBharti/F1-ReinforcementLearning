@@ -1,4 +1,0 @@
-avg_progress_m,avg_reward,avg_steps_per_second,best_lap_time_s,best_progress_m,completion_rate,crash_rate,episodes,policy,segment_completion_rate,termination_reasons,valid_lap_rate
-35.76499240136258,-5.4721339412243255,61.170178325047374,,52.33437500543267,0.0,0.3333333333333333,3,random,0.0,"{'max_steps': 2, 'off_track': 1}",0.0
-252.08700908042624,20.166960726434084,55.200371380122874,,252.08700908042624,0.0,0.0,3,scripted,0.0,{'max_steps': 3},0.0
-5793.0,563.44,66.88257935938992,79.662,5793.0,1.0,0.0,3,reference_ghost,0.0,{'lap_complete': 3},1.0

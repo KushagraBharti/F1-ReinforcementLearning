@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,12 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parents[1]
 IMAGES_DIR = REPO_ROOT / "imgs"
 ASSETS_DIR = REPO_ROOT / "assets"
-ARTIFACTS_DIR = REPO_ROOT / "artifacts"
+ARTIFACT_ROOT = Path(os.environ.get("F1RL_ARTIFACT_ROOT", REPO_ROOT / "artifacts")).expanduser().resolve()
+ARTIFACTS_DIR = ARTIFACT_ROOT / "runs"
+DATASETS_DIR = ARTIFACT_ROOT / "datasets"
+LEARNED_DIR = ARTIFACT_ROOT / "learned"
+CALIBRATION_ARTIFACTS_DIR = ARTIFACT_ROOT / "calibration"
+FASTF1_CACHE_DIR = ARTIFACT_ROOT / "fastf1-cache"
 MONZA_ASSET_DIR = ASSETS_DIR / "tracks" / "monza"
 
 TRACK_SOURCE_SIZE = (2463, 1244)

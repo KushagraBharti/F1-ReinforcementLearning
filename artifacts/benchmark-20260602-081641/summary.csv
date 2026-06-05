@@ -1,2 +1,0 @@
-avg_progress_m,avg_reward,avg_segment_progress_delta_m,avg_steps_per_second,best_lap_time_s,best_progress_m,completion_rate,crash_rate,episodes,policy,segment_completion_rate,termination_reasons,valid_lap_rate
-370.94374037729165,19.675499230183313,370.93782264261944,60.740248336195734,,370.94374037729165,0.0,0.0,20,ppo,0.0,{'no_progress': 20},0.0

@@ -236,7 +236,8 @@ def _corner_summaries(steps: list[StepTelemetry]) -> list[dict[str, float]]:
 class TelemetryWriter:
     def __init__(self, root: Path, *, mode: str, seed: int, lap_length_m: float | None = None) -> None:
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        self.run_id = f"{mode}-{timestamp}"
+        unique_suffix = f"{time.time_ns() % 1_000_000_000:09d}"
+        self.run_id = f"{mode}-{timestamp}-seed{seed}-{unique_suffix}"
         self.root = root / self.run_id
         self.root.mkdir(parents=True, exist_ok=True)
         self.steps_path = self.root / "steps.jsonl"

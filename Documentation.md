@@ -8,7 +8,7 @@ This is the concise live status file. Historical prompts, long plans, and transc
 
 Best current evolved result:
 
-- Run: `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605`
+- Run: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
 - Scale: `2000 x 150 = 300,000` candidates
 - Backend: GPU fused evolutionary search
 - Max steps: `25000`
@@ -19,7 +19,7 @@ Best current evolved result:
 - Reason mismatches: `0`
 - Valid-lap mismatches: `0`
 - Max final-progress delta in selected CPU verification: about `0.0306m`
-- Replay telemetry: `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+- Replay telemetry: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
 
 Previous milestone:
 
@@ -98,7 +98,7 @@ Deferred postcheck supports:
 
 Recent verified postcheck examples:
 
-- `C:\f1rl-artifacts\gpu-speed-deferred-rerank-1000x75-25k-20260605`
+- `artifacts\runs\gpu-speed-deferred-rerank-1000x75-25k-20260605`
   - candidate pool: `96`
   - unique CPU replays: `16`
   - cache hits / duplicate skips: `80`
@@ -107,7 +107,7 @@ Recent verified postcheck examples:
   - reason mismatches: `0`
   - valid-lap mismatches: `0`
 
-- `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605`
+- `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
   - selected summary-top CPU verification: passed
   - selected winner: generation `143`, candidate `1864`
   - selected replay telemetry written under `selected_telemetry_summary_top`
@@ -135,25 +135,25 @@ Detailed goal docs:
 Replay the current best selected telemetry:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top"
+uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top"
 ```
 
 Headless replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
 ```
 
 CPU evolution smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation
 ```
 
 Deferred CPU postcheck example:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_postcheck C:\f1rl-artifacts\example-gpu-es --top-k 8 --candidate-pool-size 96 --cpu-rerank --workers 8 --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_postcheck artifacts\runs\example-gpu-es --top-k 8 --candidate-pool-size 96 --cpu-rerank --workers 8 --telemetry-compression gzip
 ```
 
 ## Validation
@@ -174,17 +174,20 @@ Before launching large search, also run a small CLI smoke and a replay-load chec
 Keep root clean:
 
 - Do not place large run artifacts in repo root.
-- Put local experiment outputs in `artifacts/` or `C:\f1rl-artifacts`.
+- Put local experiment outputs under `artifacts/runs/`.
+- Put transition datasets under `artifacts/datasets/`.
+- Put learned-policy checkpoints and evals under `artifacts/learned/`.
+- Put calibration output and FastF1 cache data under `artifacts/calibration/` and `artifacts/fastf1-cache/`.
 - Keep only small demo media in root when directly referenced by README.
 - Archive old root documents under `archive/`.
 
 The current large run folder is about `19.86 GB`:
 
-`C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605`
+`artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
 
 The selected replay telemetry for the best candidate is small and replayable:
 
-`C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+`artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
 
 ## Root Documentation Policy
 

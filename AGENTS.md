@@ -34,7 +34,7 @@ Archived/old material lives under:
 
 - `archive/`
 - `artifacts/`
-- `transcripts/`
+- `archive/transcripts/`
 
 Do not bulk-read archived docs, old plans, transcripts, or artifacts unless the task explicitly needs historical detail.
 
@@ -87,7 +87,7 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 For evolutionary search changes, also run a tiny CLI smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation
 ```
 
 For replay changes, run a headless replay load check against selected telemetry.

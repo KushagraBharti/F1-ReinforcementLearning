@@ -26,6 +26,10 @@ train = [
 gpu-fast = [
   "warp-lang>=1.10.0",
 ]
+calibration = [
+  "fastf1>=3.5.0",
+  "scipy>=1.14.0",
+]
 dev = [
   "pyright>=1.1.405",
   "pytest>=8.3.0",

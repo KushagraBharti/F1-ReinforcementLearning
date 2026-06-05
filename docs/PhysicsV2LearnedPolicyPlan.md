@@ -45,7 +45,7 @@ Mark this goal complete only when all of these are true:
 7. GPU v2 ES can run at meaningful scale using the same speed-first/search-first architecture.
 8. V2 ES winners are CPU postchecked/reranked under CPU v2.
 9. A v2 transition dataset is exported only from CPU-verified v2 trajectories.
-10. A learned v2 policy is trained with BC plus SAC. TD3 is ignored for now.
+10. A learned v2 policy is trained with BC plus SAC.
 11. V2 policy evaluation uses CPU v2 as the promotion oracle.
 12. A replay mode exists for v2 policy checkpoint swarms so the user can visually inspect many cars improving over checkpoints.
 13. Documentation clearly separates v1 and v2 results.
@@ -68,7 +68,6 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 - Do not drop replay compatibility.
 - Do not remove CPU PPO, CPU ES, GPU ES, GPU PPO, telemetry, replay, or postcheck paths.
 - Do not add heavy dependencies without a clear reason and a small smoke proving they work.
-- Do not pursue TD3 in this plan. Use SAC only.
 - Do not declare realism based only on feeling. Use FastF1 calibration reports and measurable error bands.
 
 ## Why Physics V2
@@ -198,7 +197,7 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 uv run --no-sync python -m f1rl.calibration --json
 ```
 
-Do not make FastF1 network access a requirement for normal unit tests. Fetch once, cache processed references under `assets/reference/` or `C:\f1rl-artifacts\calibration`, and keep tests based on checked-in or local cached summaries.
+Do not make FastF1 network access a requirement for normal unit tests. Fetch once, cache processed references under `assets/reference/` or `artifacts\calibration`, and keep tests based on checked-in or local cached summaries.
 
 ## Existing Calibration Surface
 
@@ -788,7 +787,7 @@ Then adjust only with evidence from v2 bottlenecks.
 Required v2 postcheck:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_postcheck C:\f1rl-artifacts\v2-es-run `
+uv run --no-sync python -m f1rl.evolution_postcheck artifacts\runs\v2-es-run `
   --top-k 8 `
   --candidate-pool-size 96 `
   --cpu-rerank `
@@ -1061,7 +1060,7 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 Recommended:
 
 ```text
-C:\f1rl-artifacts\
+artifacts\
   calibration\
     monza_2024_Q_VER_v2_calibration\
   v2-es\

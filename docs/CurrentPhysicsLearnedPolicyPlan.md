@@ -25,8 +25,8 @@ The project has already proved that search can find fast laps:
 
 - CPU ES reached about `89s`.
 - GPU ES reached a CPU-verified selected valid lap of `81.233s`.
-- The current best run is `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605`.
-- The current strongest selected replay path is `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`.
+- The current best run is `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`.
+- The current strongest selected replay path is `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`.
 
 The learned policy goal is stricter than "ES found a lap." A trained neural policy must complete valid normal-start laps by itself under the CPU oracle simulator.
 
@@ -61,7 +61,6 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 - Do not treat raw GPU ES winners as trusted unless they pass CPU postcheck/rerank.
 - Do not train from only the single fastest lap.
 - Do not throw away near-miss and diverse behavior. The learned policy needs a broad dataset, not a one-lap clone.
-- Do not use TD3 in this plan. Use SAC only.
 - Do not make replay optional. Replay is part of the product.
 - Do not remove existing CPU PPO, GPU PPO, CPU ES, GPU ES, replay, or telemetry functionality.
 - Do not break old selected telemetry replay.
@@ -272,13 +271,13 @@ The exporter must accept:
 For the current best run, the exporter should support:
 
 ```powershell
-C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605
+artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605
 ```
 
 and selected telemetry:
 
 ```powershell
-C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top
+artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top
 ```
 
 ### Transition Schema
@@ -566,7 +565,7 @@ Deliverables:
 Validation:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
 ```
 
 ### Phase 1: Dataset Export
@@ -584,9 +583,9 @@ Minimum command shape:
 
 ```powershell
 uv run --no-sync python -m f1rl.es_dataset export `
-  --run-dir "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605" `
-  --selected-telemetry "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" `
-  --output-dir "C:\f1rl-artifacts\datasets\v1-es-policy-dataset" `
+  --run-dir "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605" `
+  --selected-telemetry "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" `
+  --output-dir "artifacts\datasets\v1-es-policy-dataset" `
   --observation-profile racing_v2 `
   --physics-model v1
 ```
@@ -618,7 +617,7 @@ Add:
 Minimum command:
 
 ```powershell
-uv run --no-sync python -m f1rl.es_dataset report "C:\f1rl-artifacts\datasets\v1-es-policy-dataset"
+uv run --no-sync python -m f1rl.es_dataset report "artifacts\datasets\v1-es-policy-dataset"
 ```
 
 Do not train until the dataset report looks sane.
@@ -637,8 +636,8 @@ Minimum commands:
 
 ```powershell
 uv run --no-sync python -m f1rl.bc_train `
-  --dataset "C:\f1rl-artifacts\datasets\v1-es-policy-dataset" `
-  --output-dir "C:\f1rl-artifacts\learned\v1-bc" `
+  --dataset "artifacts\datasets\v1-es-policy-dataset" `
+  --output-dir "artifacts\learned\v1-bc" `
   --device cuda `
   --epochs 1 `
   --smoke
@@ -646,8 +645,8 @@ uv run --no-sync python -m f1rl.bc_train `
 
 ```powershell
 uv run --no-sync python -m f1rl.policy_eval `
-  --policy "C:\f1rl-artifacts\learned\v1-bc\best_policy.pt" `
-  --output-dir "C:\f1rl-artifacts\learned\v1-bc-eval" `
+  --policy "artifacts\learned\v1-bc\best_policy.pt" `
+  --output-dir "artifacts\learned\v1-bc-eval" `
   --episodes 3 `
   --observation-profile racing_v2 `
   --physics-model v1
@@ -669,9 +668,9 @@ Minimum smoke:
 
 ```powershell
 uv run --no-sync python -m f1rl.sac_train `
-  --dataset "C:\f1rl-artifacts\datasets\v1-es-policy-dataset" `
-  --bc-checkpoint "C:\f1rl-artifacts\learned\v1-bc\best_policy.pt" `
-  --output-dir "C:\f1rl-artifacts\learned\v1-sac-smoke" `
+  --dataset "artifacts\datasets\v1-es-policy-dataset" `
+  --bc-checkpoint "artifacts\learned\v1-bc\best_policy.pt" `
+  --output-dir "artifacts\learned\v1-sac-smoke" `
   --device cuda `
   --timesteps 1024 `
   --n-envs 64 `
@@ -697,8 +696,8 @@ Promotion command shape:
 
 ```powershell
 uv run --no-sync python -m f1rl.policy_eval `
-  --policy "C:\f1rl-artifacts\learned\v1-sac\best_policy.pt" `
-  --output-dir "C:\f1rl-artifacts\learned\v1-sac-promotion-eval" `
+  --policy "artifacts\learned\v1-sac\best_policy.pt" `
+  --output-dir "artifacts\learned\v1-sac-promotion-eval" `
   --episodes 20 `
   --deterministic `
   --normal-start `
@@ -729,8 +728,8 @@ Command shape:
 
 ```powershell
 uv run --no-sync python -m f1rl.policy_swarm_eval `
-  --policy-dir "C:\f1rl-artifacts\learned\v1-sac" `
-  --output-dir "C:\f1rl-artifacts\learned\v1-sac-swarms" `
+  --policy-dir "artifacts\learned\v1-sac" `
+  --output-dir "artifacts\learned\v1-sac-swarms" `
   --swarm-size 1000 `
   --checkpoints all `
   --observation-profile racing_v2 `
@@ -740,7 +739,7 @@ uv run --no-sync python -m f1rl.policy_swarm_eval `
 Replay:
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "C:\f1rl-artifacts\learned\v1-sac-swarms" --by-checkpoint --speed 1
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\learned\v1-sac-swarms" --by-checkpoint --speed 1
 ```
 
 ### Phase 7: Optional Actor Injection
@@ -872,7 +871,7 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 Recommended:
 
 ```text
-C:\f1rl-artifacts\
+artifacts\
   datasets\
     v1-es-policy-dataset-YYYYMMDD\
       dataset_manifest.json

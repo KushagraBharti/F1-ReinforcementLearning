@@ -16,7 +16,7 @@ The project started as a Gymnasium/SB3 PPO driving experiment. PPO infrastructur
 
 Best current evolved lap:
 
-- Source run: `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605`
+- Source run: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
 - Search scale: `2000` population x `150` generations = `300,000` candidates
 - Backend: GPU fused evolutionary search
 - Max steps: `25000`
@@ -27,7 +27,7 @@ Best current evolved lap:
 - CPU/GPU reason mismatches: `0`
 - CPU/GPU valid-lap mismatches: `0`
 - Selected replay telemetry:
-  `C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
+  `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
 
 The previous major milestone was a CPU-evolution result around `89s`. GPU ES moved the project from "valid evolved lap" to "near target evolved lap."
 
@@ -91,13 +91,13 @@ uv run --no-sync python -m f1rl.manual
 Replay selected telemetry:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top"
+uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top"
 ```
 
 Headless replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "C:\f1rl-artifacts\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top" --headless --limit 1
 ```
 
 Evolution search help:
@@ -111,19 +111,19 @@ uv run --no-sync python -m f1rl.evolution_ladder --help
 CPU evolution smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\evolution-smoke --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation
 ```
 
 GPU fused production shape:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_search --backend gpu --gpu-engine fused --gpu-run-mode production --gpu-device cuda --gpu-dtype float32 --gpu-fast-geometry local_window --gpu-collision-mode exact_grid --gpu-cpu-replay-top-k 0 --gpu-telemetry-mode none --start-progress-m 0 --start-speed-kph 80 --target-progress-m 5793 --no-target-termination --action-set racing --observation-profile racing_v2 --max-steps 25000 --population 1000 --generations 75 --elite-count 96 --random-immigrants 96 --top-k 24 --workers 1 --genome-type controller --scoring-profiles fast_valid_lap,time_attack,lap_pace,fast_frontier,frontier_fast,farthest_distance,clean_distance,max_progress --progress-every-generation --output-dir C:\f1rl-artifacts\example-gpu-es
+uv run --no-sync python -m f1rl.evolution_search --backend gpu --gpu-engine fused --gpu-run-mode production --gpu-device cuda --gpu-dtype float32 --gpu-fast-geometry local_window --gpu-collision-mode exact_grid --gpu-cpu-replay-top-k 0 --gpu-telemetry-mode none --start-progress-m 0 --start-speed-kph 80 --target-progress-m 5793 --no-target-termination --action-set racing --observation-profile racing_v2 --max-steps 25000 --population 1000 --generations 75 --elite-count 96 --random-immigrants 96 --top-k 24 --workers 1 --genome-type controller --scoring-profiles fast_valid_lap,time_attack,lap_pace,fast_frontier,frontier_fast,farthest_distance,clean_distance,max_progress --progress-every-generation --output-dir artifacts\runs\example-gpu-es
 ```
 
 Deferred CPU postcheck/rerank:
 
 ```powershell
-uv run --no-sync python -m f1rl.evolution_postcheck C:\f1rl-artifacts\example-gpu-es --top-k 8 --candidate-pool-size 96 --cpu-rerank --workers 8 --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_postcheck artifacts\runs\example-gpu-es --top-k 8 --candidate-pool-size 96 --cpu-rerank --workers 8 --telemetry-compression gzip
 ```
 
 SB3 PPO smoke:
@@ -135,7 +135,7 @@ uv run --no-sync python -m f1rl.train --timesteps 16 --seed 91 --n-envs 1 --max-
 GPU PPO smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.gpu_ppo --device cuda --require-gpu --dtype float32 --output-dir artifacts\gpu-ppo-smoke --timesteps 16 --n-envs 2 --n-steps 4 --batch-size 4 --n-epochs 1 --hidden-size 32 --max-steps 8 --observation-profile base --start-speed-kph 60 --target-progress-m 6 --terminate-at-target --cpu-eval-episodes 1 --cpu-eval-max-steps 8
+uv run --no-sync python -m f1rl.gpu_ppo --device cuda --require-gpu --dtype float32 --output-dir artifacts\runs\gpu-ppo-smoke --timesteps 16 --n-envs 2 --n-steps 4 --batch-size 4 --n-epochs 1 --hidden-size 32 --max-steps 8 --observation-profile base --start-speed-kph 60 --target-progress-m 6 --terminate-at-target --cpu-eval-episodes 1 --cpu-eval-max-steps 8
 ```
 
 ## Validation
@@ -156,8 +156,13 @@ Use focused checks first when changing a small area, then broaden to the full se
 - `tools/`: focused diagnostic scripts.
 - `assets/`, `imgs/`: visual assets and track images.
 - `archive/`: historical plans, old docs, old media, and legacy snapshots.
-- `artifacts/`: ignored local run artifacts.
-- `C:\f1rl-artifacts`: large local run artifacts outside the repo working tree.
+- `artifacts/`: ignored local artifact root.
+- `artifacts/runs/`: large local search, eval, replay, and training runs.
+- `artifacts/datasets/`: learned-policy transition datasets.
+- `artifacts/learned/`: BC/SAC policy checkpoints and eval outputs.
+- `artifacts/calibration/`: calibration outputs.
+- `artifacts/fastf1-cache/`: FastF1 cache data.
+- `artifacts/legacy-local/`: older repo-local artifacts kept out of the root artifact namespace.
 
 Root markdown is intentionally minimal:
 
