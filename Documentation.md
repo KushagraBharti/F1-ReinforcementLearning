@@ -119,7 +119,7 @@ The next learned-policy path should use the ES result instead of ignoring it:
 1. Export a broad verified transition dataset from ES telemetry.
 2. Include fast valid laps, consistent valid laps, near-valid failures, section specialists, and diverse lineages.
 3. Train behavior cloning from observations to controls.
-4. Fine-tune with off-policy RL, likely SAC or TD3.
+4. Fine-tune with custom PyTorch SAC.
 5. CPU-evaluate learned policies before promotion.
 6. Optionally inject the learned actor back into ES as a smart candidate source.
 

@@ -84,6 +84,34 @@ Research grounding:
 
 This plan should use project-native SAC where practical, because the repo's strongest simulator path is now batched GPU simulation plus CPU oracle verification. SB3 SAC can remain useful for reference or smoke checks, but the production-quality route should avoid a NumPy/Gym loop that prevents GPU-resident rollout collection.
 
+## Library And Setup Decision
+
+Do not install a separate SAC-specific library for the main path.
+
+Use:
+
+- custom PyTorch SAC for the production implementation;
+- the repo's existing PyTorch/CUDA setup;
+- the repo's existing GPU batch simulator for rollout collection;
+- the repo's existing CPU `MonzaSim` for promotion eval;
+- Stable-Baselines3 SAC only as a reference or smoke baseline.
+
+Reasoning:
+
+- `torch` is already part of the `train` extra.
+- `stable-baselines3` is already part of the `train` extra and includes SAC, but SB3's Gym/VecEnv path is CPU/NumPy oriented.
+- The real goal is a GPU-resident rollout collector and replay buffer, which is cleaner with project-native PyTorch SAC.
+- Adding another RL framework before the custom SAC path is proven would increase complexity without solving the main bottleneck.
+
+Required setup before this goal:
+
+```powershell
+uv sync --active --all-extras --all-packages
+uv run --no-sync f1-hardware-check --json --warp-smoke
+```
+
+No FastF1 dependency is required for the current-physics learned-policy goal unless the implementation also chooses to regenerate calibration reports.
+
 ## Current Simulator Contract
 
 The learned policy must respect the current v1 simulator contract.
@@ -902,4 +930,3 @@ If a blocker appears, isolate it with the smallest reproducible command, fix it,
 - [FastF1 telemetry API reference](https://docs.fastf1.dev/api_reference/telemetry.html)
 - [FastF1 core timing and telemetry data](https://docs.fastf1.dev/core.html)
 - [FastF1 getting started examples](https://docs.fastf1.dev/examples/index.html)
-

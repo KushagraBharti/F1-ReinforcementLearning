@@ -57,7 +57,7 @@ The current practical path is:
 3. Preserve replayable selected telemetry.
 4. Export a broad verified transition dataset from ES traces.
 5. Train a learned neural policy from that data with behavior cloning.
-6. Fine-tune with off-policy RL, likely SAC or TD3.
+6. Fine-tune with custom PyTorch SAC.
 7. Optionally inject the learned actor back into ES as a smart candidate source.
 
 PPO is still real and useful as infrastructure, but blind PPO is not the current lead path.

@@ -165,6 +165,41 @@ Relevant source:
 
 - [NVIDIA Warp documentation](https://nvidia.github.io/warp/)
 
+## Library And Setup Decision
+
+Use custom PyTorch SAC for the production learned-policy path.
+
+Do not install a separate SAC framework as the main route. Stable-Baselines3 SAC may be used only as a reference or small smoke baseline, because the production path should keep rollout collection and replay-buffer training aligned with the repo's GPU batch simulator.
+
+Physics v2 does need calibration dependencies that are not currently part of the base dependency set.
+
+Add an optional calibration extra before implementing the FastF1 fetch/calibration tools:
+
+```toml
+[project.optional-dependencies]
+calibration = [
+  "fastf1>=3.5.0",
+  "scipy>=1.14.0",
+]
+```
+
+Use:
+
+- `fastf1` to fetch real Monza timing, car telemetry, and position data;
+- `scipy` for interpolation, curve fitting, optimization, and calibration loss minimization;
+- existing `numpy` for array processing;
+- existing PyTorch/Warp for GPU v2 parity and production search.
+
+Required setup before v2 work:
+
+```powershell
+uv sync --active --all-extras --all-packages
+uv run --no-sync f1-hardware-check --json --warp-smoke
+uv run --no-sync python -m f1rl.calibration --json
+```
+
+Do not make FastF1 network access a requirement for normal unit tests. Fetch once, cache processed references under `assets/reference/` or `C:\f1rl-artifacts\calibration`, and keep tests based on checked-in or local cached summaries.
+
 ## Existing Calibration Surface
 
 The repo already has calibration scaffolding:
@@ -1148,4 +1183,3 @@ If any phase fails, isolate the failure, patch the root cause, rerun focused che
 - [Soft Actor-Critic Algorithms and Applications](https://arxiv.org/abs/1812.05905)
 - [Stable-Baselines3 SAC documentation](https://stable-baselines3.readthedocs.io/en/v2.3.0/modules/sac.html)
 - [NVIDIA Warp documentation](https://nvidia.github.io/warp/)
-
