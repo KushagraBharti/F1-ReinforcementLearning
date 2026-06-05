@@ -1,8 +1,25 @@
+# pyright: reportPrivateImportUsage=false
+
+from dataclasses import fields
+
 import numpy as np
+import pytest
 import torch
 
-from f1rl.evolution_search import EvolutionGates, _score_rows
-from f1rl.gpu_scoring import TERMINATION_REASON_TO_ID, GpuScoreAccumulator, score_profiles_batch
+from f1rl.config import SimConfig
+from f1rl.evolution_search import SCORING_PROFILES, EvolutionGates, _score_rows
+from f1rl.gpu_fast_warp import warp_status
+from f1rl.gpu_fused_warp import score_profiles_warp_batch, update_score_accumulator_warp_batch
+from f1rl.gpu_scoring import (
+    TERMINATION_REASON_TO_ID,
+    GpuScoreAccumulator,
+    GpuScoringDiagnostics,
+    create_score_accumulator,
+    score_profiles_batch,
+    update_score_accumulator,
+    update_score_accumulator_static,
+)
+from f1rl.gpu_types import GpuCarBatch
 
 
 def _tensor(values, *, dtype=torch.float64):
@@ -15,6 +32,64 @@ def _bool(values):
 
 def _int(values):
     return torch.tensor(values, dtype=torch.int64)
+
+
+def _gpu_state() -> GpuCarBatch:
+    zeros = _tensor([0.0, 0.0])
+    false = _bool([False, False])
+    return GpuCarBatch(
+        x=_tensor([100.0, 120.0]),
+        y=_tensor([200.0, 210.0]),
+        heading_rad=_tensor([0.1, -0.2]),
+        speed_mps=_tensor([42.0, 51.0]),
+        yaw_rate_rps=_tensor([0.05, -0.02]),
+        steering=_tensor([0.03, -0.04]),
+        raw_progress_m=_tensor([12.0, 14.0]),
+        monotonic_progress_m=_tensor([12.0, 14.0]),
+        last_raw_progress_px=_tensor([120.0, 140.0]),
+        checkpoint_index=_int([0, 0]),
+        next_checkpoint_index=_int([1, 1]),
+        checkpoints_passed=_int([0, 0]),
+        missed_checkpoint_count=_int([0, 1]),
+        lap_index=_int([0, 0]),
+        elapsed_steps=_int([1, 1]),
+        no_progress_steps=_int([0, 0]),
+        alive=_bool([True, True]),
+        terminated=false.clone(),
+        truncated=false.clone(),
+        termination_reason_id=_int([TERMINATION_REASON_TO_ID["active"], TERMINATION_REASON_TO_ID["collision"]]),
+        valid_lap=_bool([True, False]),
+        finish_crossed=false.clone(),
+        completed_lap=false.clone(),
+        segment_complete=false.clone(),
+        segment_release_observed=false.clone(),
+        last_throttle=zeros.clone(),
+        last_brake=zeros.clone(),
+        last_steer=zeros.clone(),
+    )
+
+
+def _state_to_cuda_float32(state: GpuCarBatch) -> GpuCarBatch:
+    values = {}
+    for field in fields(GpuCarBatch):
+        tensor = getattr(state, field.name)
+        if tensor.dtype == torch.bool:
+            values[field.name] = tensor.to(device="cuda", dtype=torch.bool)
+        elif tensor.is_floating_point():
+            values[field.name] = tensor.to(device="cuda", dtype=torch.float32)
+        else:
+            values[field.name] = tensor.to(device="cuda", dtype=torch.int64)
+    return GpuCarBatch(**values)
+
+
+def _assert_accumulators_equal(left: GpuScoreAccumulator, right: GpuScoreAccumulator) -> None:
+    for field in fields(GpuScoreAccumulator):
+        left_value = getattr(left, field.name)
+        right_value = getattr(right, field.name)
+        if left_value.dtype == torch.bool or not left_value.is_floating_point():
+            assert torch.equal(left_value, right_value), field.name
+        else:
+            assert torch.allclose(left_value, right_value), field.name
 
 
 def _accumulator_from_terminal_rows(rows: list[dict]) -> GpuScoreAccumulator:
@@ -103,6 +178,135 @@ def _accumulator_from_terminal_rows(rows: list[dict]) -> GpuScoreAccumulator:
     )
 
 
+def _accumulator_to_cuda_float32(acc: GpuScoreAccumulator) -> GpuScoreAccumulator:
+    values = {}
+    for field in fields(GpuScoreAccumulator):
+        tensor = getattr(acc, field.name)
+        if tensor.dtype == torch.bool:
+            values[field.name] = tensor.to(device="cuda", dtype=torch.bool)
+        elif tensor.is_floating_point():
+            values[field.name] = tensor.to(device="cuda", dtype=torch.float32)
+        else:
+            values[field.name] = tensor.to(device="cuda", dtype=torch.int64)
+    return GpuScoreAccumulator(**values)
+
+
+def test_static_score_accumulator_update_matches_mapping_api() -> None:
+    state = _gpu_state()
+    diagnostics = {
+        "lateral_error_m": _tensor([1.2, -2.5]),
+        "heading_error_deg": _tensor([3.0, -4.0]),
+        "future_brake_demand": _tensor([0.3, 0.1]),
+        "brake_gate_proximity": _tensor([0.1, 0.8]),
+        "target_speed_drop_norm": _tensor([0.2, 0.0]),
+        "telemetry_valid_lap": _bool([True, False]),
+        "target_speed_kph": _tensor([180.0, 170.0]),
+        "near_target_speed_kph": _tensor([175.0, 165.0]),
+        "min_future_target_speed_kph": _tensor([150.0, 145.0]),
+        "target_speed_drop_kph": _tensor([20.0, 15.0]),
+        "brake_demand": _tensor([0.4, 0.2]),
+        "braking_gate_distance_m": _tensor([80.0, 70.0]),
+        "brake_gate_distance_norm": _tensor([0.5, 0.4]),
+        "lookahead_abs_max": _tensor([0.08, 0.12]),
+    }
+    throttle = _tensor([0.7, 0.2])
+    brake = _tensor([0.1, 0.8])
+    steer = _tensor([0.05, -0.25])
+    active = _bool([True, True])
+    collided = _bool([False, True])
+    off_track = _bool([False, False])
+
+    mapping_acc = create_score_accumulator(state)
+    static_acc = create_score_accumulator(state)
+    update_score_accumulator(
+        mapping_acc,
+        state=state,
+        diagnostics=diagnostics,
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        active=active,
+        collided=collided,
+        off_track=off_track,
+        config=SimConfig(),
+    )
+    update_score_accumulator_static(
+        static_acc,
+        state=state,
+        diagnostics=GpuScoringDiagnostics.from_mapping(diagnostics, fallback_valid_lap=state.valid_lap),
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        active=active,
+        collided=collided,
+        off_track=off_track,
+        config=SimConfig(),
+    )
+
+    _assert_accumulators_equal(mapping_acc, static_acc)
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available() or not warp_status().cuda_available,
+    reason="Warp accumulator parity requires CUDA and Warp CUDA support",
+)
+def test_warp_score_accumulator_update_matches_torch_reference() -> None:
+    state = _state_to_cuda_float32(_gpu_state())
+    diagnostics_mapping = {
+        "lateral_error_m": _tensor([1.2, -2.5], dtype=torch.float32).cuda(),
+        "heading_error_deg": _tensor([3.0, -4.0], dtype=torch.float32).cuda(),
+        "future_brake_demand": _tensor([0.3, 0.1], dtype=torch.float32).cuda(),
+        "brake_gate_proximity": _tensor([0.1, 0.8], dtype=torch.float32).cuda(),
+        "target_speed_drop_norm": _tensor([0.2, 0.0], dtype=torch.float32).cuda(),
+        "telemetry_valid_lap": _bool([True, False]).cuda(),
+        "target_speed_kph": _tensor([180.0, 170.0], dtype=torch.float32).cuda(),
+        "near_target_speed_kph": _tensor([175.0, 165.0], dtype=torch.float32).cuda(),
+        "min_future_target_speed_kph": _tensor([150.0, 145.0], dtype=torch.float32).cuda(),
+        "target_speed_drop_kph": _tensor([20.0, 15.0], dtype=torch.float32).cuda(),
+        "brake_demand": _tensor([0.4, 0.2], dtype=torch.float32).cuda(),
+        "braking_gate_distance_m": _tensor([80.0, 70.0], dtype=torch.float32).cuda(),
+        "brake_gate_distance_norm": _tensor([0.5, 0.4], dtype=torch.float32).cuda(),
+        "lookahead_abs_max": _tensor([0.08, 0.12], dtype=torch.float32).cuda(),
+    }
+    diagnostics = GpuScoringDiagnostics.from_mapping(diagnostics_mapping, fallback_valid_lap=state.valid_lap)
+    throttle = _tensor([0.7, 0.2], dtype=torch.float32).cuda()
+    brake = _tensor([0.1, 0.8], dtype=torch.float32).cuda()
+    steer = _tensor([0.05, -0.25], dtype=torch.float32).cuda()
+    active = _bool([True, False]).cuda()
+    collided = _bool([False, True]).cuda()
+    off_track = _bool([False, False]).cuda()
+
+    torch_acc = create_score_accumulator(state)
+    warp_acc = create_score_accumulator(state)
+    update_score_accumulator_static(
+        torch_acc,
+        state=state,
+        diagnostics=diagnostics,
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        active=active,
+        collided=collided,
+        off_track=off_track,
+        config=SimConfig(),
+    )
+    update_score_accumulator_warp_batch(
+        warp_acc,
+        state=state,
+        diagnostics=diagnostics,
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        active=active,
+        collided=collided,
+        off_track=off_track,
+        config=SimConfig(),
+    )
+    torch.cuda.synchronize()
+
+    _assert_accumulators_equal(torch_acc, warp_acc)
+
+
 def test_gpu_scoring_profiles_match_cpu_for_terminal_rows() -> None:
     rows = [
         {
@@ -159,3 +363,128 @@ def test_gpu_scoring_profiles_match_cpu_for_terminal_rows() -> None:
         cpu_scores = _score_rows([row], start_progress_m=0.0, gates=gates, scoring_profiles=profiles)
         for profile in profiles:
             assert np.isclose(float(gpu_scores[profile][index]), cpu_scores[profile], rtol=1e-7, atol=1e-5)
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available() or not warp_status().cuda_available,
+    reason="Warp score-profile parity requires CUDA and Warp CUDA support",
+)
+def test_warp_score_profiles_match_torch_reference() -> None:
+    rows = [
+        {
+            "monotonic_progress_m": 650.0,
+            "sim_time_s": 5.0,
+            "speed_kph": 210.0,
+            "lateral_error_m": 2.0,
+            "heading_error_deg": 5.0,
+            "yaw_rate_rps": 0.2,
+            "steering": 0.2,
+            "throttle": 0.2,
+            "brake": 0.0,
+            "missed_checkpoint_count": 0,
+            "segment_complete": True,
+            "completed_lap": False,
+            "valid_lap": True,
+            "finish_crossed": False,
+            "collided": False,
+            "off_track": False,
+            "termination_reason": "segment_complete",
+        },
+        {
+            "monotonic_progress_m": 1800.0,
+            "sim_time_s": 12.0,
+            "speed_kph": 250.0,
+            "lateral_error_m": 4.0,
+            "heading_error_deg": 6.0,
+            "yaw_rate_rps": 0.1,
+            "steering": 0.1,
+            "throttle": 0.7,
+            "brake": 0.0,
+            "missed_checkpoint_count": 0,
+            "segment_complete": False,
+            "completed_lap": False,
+            "valid_lap": True,
+            "finish_crossed": False,
+            "collided": True,
+            "off_track": False,
+            "termination_reason": "collision",
+        },
+        {
+            "monotonic_progress_m": 5300.0,
+            "sim_time_s": 92.0,
+            "speed_kph": 300.0,
+            "lateral_error_m": 1.0,
+            "heading_error_deg": 2.0,
+            "yaw_rate_rps": 0.03,
+            "steering": 0.03,
+            "throttle": 0.9,
+            "brake": 0.0,
+            "missed_checkpoint_count": 0,
+            "segment_complete": False,
+            "completed_lap": True,
+            "valid_lap": True,
+            "finish_crossed": True,
+            "collided": False,
+            "off_track": False,
+            "termination_reason": "lap_complete",
+        },
+    ]
+    profiles = tuple(sorted(SCORING_PROFILES))
+    acc = _accumulator_to_cuda_float32(_accumulator_from_terminal_rows(rows))
+
+    expected = score_profiles_batch(
+        acc,
+        profiles=profiles,
+        target_progress_m=650.0,
+        terminate_at_target_progress=False,
+        frontier_focus_start_m=2200.0,
+        frontier_focus_end_m=2600.0,
+    )
+    actual = score_profiles_warp_batch(
+        acc,
+        profiles=profiles,
+        target_progress_m=650.0,
+        terminate_at_target_progress=False,
+        frontier_focus_start_m=2200.0,
+        frontier_focus_end_m=2600.0,
+    )
+    torch.cuda.synchronize()
+
+    for profile in profiles:
+        assert torch.allclose(actual[profile], expected[profile], rtol=5e-5, atol=64.0), profile
+
+
+def test_warp_core_score_profiles_reject_unsupported_profiles() -> None:
+    acc = _accumulator_from_terminal_rows(
+        [
+            {
+                "monotonic_progress_m": 650.0,
+                "sim_time_s": 5.0,
+                "speed_kph": 210.0,
+                "lateral_error_m": 2.0,
+                "heading_error_deg": 5.0,
+                "yaw_rate_rps": 0.2,
+                "steering": 0.2,
+                "throttle": 0.2,
+                "brake": 0.0,
+                "missed_checkpoint_count": 0,
+                "segment_complete": True,
+                "completed_lap": False,
+                "valid_lap": True,
+                "finish_crossed": False,
+                "collided": False,
+                "off_track": False,
+                "termination_reason": "segment_complete",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="does not support"):
+        score_profiles_warp_batch(
+            acc,
+            profiles=("unknown_future_profile",),
+            target_progress_m=650.0,
+            terminate_at_target_progress=False,
+            frontier_focus_start_m=2200.0,
+            frontier_focus_end_m=2600.0,
+        )

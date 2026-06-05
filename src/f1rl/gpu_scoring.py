@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -95,8 +96,46 @@ class GpuScoreAccumulator:
     demand_max_future_brake_demand: torch.Tensor
 
 
-def _zeros_like(reference: torch.Tensor) -> torch.Tensor:
-    return torch.zeros_like(reference)
+@dataclass(frozen=True, slots=True)
+class GpuScoringDiagnostics:
+    lateral_error_m: torch.Tensor
+    heading_error_deg: torch.Tensor
+    future_brake_demand: torch.Tensor
+    brake_gate_proximity: torch.Tensor
+    target_speed_drop_norm: torch.Tensor
+    telemetry_valid_lap: torch.Tensor
+    target_speed_kph: torch.Tensor
+    near_target_speed_kph: torch.Tensor
+    min_future_target_speed_kph: torch.Tensor
+    target_speed_drop_kph: torch.Tensor
+    brake_demand: torch.Tensor
+    braking_gate_distance_m: torch.Tensor
+    brake_gate_distance_norm: torch.Tensor
+    lookahead_abs_max: torch.Tensor
+
+    @classmethod
+    def from_mapping(
+        cls,
+        diagnostics: Mapping[str, torch.Tensor],
+        *,
+        fallback_valid_lap: torch.Tensor,
+    ) -> GpuScoringDiagnostics:
+        return cls(
+            lateral_error_m=diagnostics["lateral_error_m"],
+            heading_error_deg=diagnostics["heading_error_deg"],
+            future_brake_demand=diagnostics["future_brake_demand"],
+            brake_gate_proximity=diagnostics["brake_gate_proximity"],
+            target_speed_drop_norm=diagnostics["target_speed_drop_norm"],
+            telemetry_valid_lap=diagnostics.get("telemetry_valid_lap", fallback_valid_lap),
+            target_speed_kph=diagnostics["target_speed_kph"],
+            near_target_speed_kph=diagnostics["near_target_speed_kph"],
+            min_future_target_speed_kph=diagnostics["min_future_target_speed_kph"],
+            target_speed_drop_kph=diagnostics["target_speed_drop_kph"],
+            brake_demand=diagnostics["brake_demand"],
+            braking_gate_distance_m=diagnostics["braking_gate_distance_m"],
+            brake_gate_distance_norm=diagnostics["brake_gate_distance_norm"],
+            lookahead_abs_max=diagnostics["lookahead_abs_max"],
+        )
 
 
 def create_score_accumulator(state: GpuCarBatch) -> GpuScoreAccumulator:
@@ -185,9 +224,39 @@ def update_score_accumulator(
     off_track: torch.Tensor,
     config: SimConfig,
 ) -> None:
+    update_score_accumulator_static(
+        acc,
+        state=state,
+        diagnostics=GpuScoringDiagnostics.from_mapping(diagnostics, fallback_valid_lap=state.valid_lap),
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        active=active,
+        collided=collided,
+        off_track=off_track,
+        config=config,
+    )
+
+
+def update_score_accumulator_static(
+    acc: GpuScoreAccumulator,
+    *,
+    state: GpuCarBatch,
+    diagnostics: GpuScoringDiagnostics,
+    throttle: torch.Tensor,
+    brake: torch.Tensor,
+    steer: torch.Tensor,
+    active: torch.Tensor,
+    collided: torch.Tensor,
+    off_track: torch.Tensor,
+    config: SimConfig,
+    zero: torch.Tensor | None = None,
+) -> None:
     speed_kph = state.speed_mps * 3.6
-    lateral_error_m = diagnostics["lateral_error_m"]
-    heading_error_deg = diagnostics["heading_error_deg"]
+    if zero is None:
+        zero = torch.zeros_like(speed_kph)
+    lateral_error_m = diagnostics.lateral_error_m
+    heading_error_deg = diagnostics.heading_error_deg
     curvature = state.yaw_rate_rps / torch.clamp(state.speed_mps, min=1e-6)
     sim_time_s = state.elapsed_steps.to(dtype=state.dtype) * float(config.car.dt)
     best_mask = active & (state.monotonic_progress_m >= acc.best_progress_m)
@@ -199,13 +268,13 @@ def update_score_accumulator(
     progress_delta_m = torch.clamp(state.monotonic_progress_m - acc.start_progress_m, min=0.0)
     first_300 = active & (progress_delta_m <= 300.0)
     first_450 = active & (progress_delta_m <= 450.0)
-    acc.speed_sum_first_300_m += torch.where(first_300, speed_kph, _zeros_like(speed_kph))
+    acc.speed_sum_first_300_m += torch.where(first_300, speed_kph, zero)
     acc.speed_count_first_300_m += first_300.to(dtype=state.dtype)
-    acc.speed_sum_first_450_m += torch.where(first_450, speed_kph, _zeros_like(speed_kph))
+    acc.speed_sum_first_450_m += torch.where(first_450, speed_kph, zero)
     acc.speed_count_first_450_m += first_450.to(dtype=state.dtype)
-    acc.brake_sum_first_300_m += torch.where(first_300, brake, _zeros_like(brake))
+    acc.brake_sum_first_300_m += torch.where(first_300, brake, zero)
     acc.brake_count_first_300_m += first_300.to(dtype=state.dtype)
-    acc.brake_sum_first_450_m += torch.where(first_450, brake, _zeros_like(brake))
+    acc.brake_sum_first_450_m += torch.where(first_450, brake, zero)
     acc.brake_count_first_450_m += first_450.to(dtype=state.dtype)
     reached_300 = active & (acc.time_to_300_m < 0.0) & (progress_delta_m >= 300.0)
     reached_450 = active & (acc.time_to_450_m < 0.0) & (progress_delta_m >= 450.0)
@@ -213,19 +282,19 @@ def update_score_accumulator(
     acc.time_to_450_m = _where(reached_450, sim_time_s, acc.time_to_450_m)
 
     demand = (
-        (diagnostics["future_brake_demand"] >= 0.22)
-        | (diagnostics["brake_gate_proximity"] >= 0.70)
-        | (diagnostics["target_speed_drop_norm"] >= 0.18)
+        (diagnostics.future_brake_demand >= 0.22)
+        | (diagnostics.brake_gate_proximity >= 0.70)
+        | (diagnostics.target_speed_drop_norm >= 0.18)
     ) & (speed_kph >= 135.0) & active
-    acc.demand_brake_sum += torch.where(demand, brake, _zeros_like(brake))
-    acc.demand_throttle_sum += torch.where(demand, throttle, _zeros_like(throttle))
+    acc.demand_brake_sum += torch.where(demand, brake, zero)
+    acc.demand_throttle_sum += torch.where(demand, throttle, zero)
     acc.demand_count += demand.to(dtype=state.dtype)
     acc.demand_max_future_brake_demand = torch.maximum(
         acc.demand_max_future_brake_demand,
-        torch.where(demand, diagnostics["future_brake_demand"], _zeros_like(speed_kph)),
+        torch.where(demand, diagnostics.future_brake_demand, zero),
     )
-    acc.max_brake = torch.maximum(acc.max_brake, torch.where(active, brake, _zeros_like(brake)))
-    acc.throttle_sum += torch.where(active, throttle, _zeros_like(throttle))
+    acc.max_brake = torch.maximum(acc.max_brake, torch.where(active, brake, zero))
+    acc.throttle_sum += torch.where(active, throttle, zero)
     acc.row_count += active.to(dtype=state.dtype)
     acc.start_speed_for_score_kph = torch.where(
         (acc.row_count <= 1.0) & active,
@@ -255,8 +324,7 @@ def update_score_accumulator(
         state.missed_checkpoint_count,
         acc.final_missed_checkpoint_count,
     )
-    telemetry_valid_lap = diagnostics.get("telemetry_valid_lap", state.valid_lap)
-    acc.final_valid_lap = torch.where(final_mask, telemetry_valid_lap, acc.final_valid_lap)
+    acc.final_valid_lap = torch.where(final_mask, diagnostics.telemetry_valid_lap, acc.final_valid_lap)
     acc.final_finish_crossed = torch.where(final_mask, state.finish_crossed, acc.final_finish_crossed)
     acc.final_completed_lap = torch.where(final_mask, state.completed_lap, acc.final_completed_lap)
     acc.final_segment_complete = torch.where(final_mask, state.segment_complete, acc.final_segment_complete)
@@ -269,20 +337,20 @@ def update_score_accumulator(
         state.termination_reason_id,
         acc.final_termination_reason_id,
     )
-    for target_name, source_name in (
-        ("final_target_speed_kph", "target_speed_kph"),
-        ("final_near_target_speed_kph", "near_target_speed_kph"),
-        ("final_min_future_target_speed_kph", "min_future_target_speed_kph"),
-        ("final_target_speed_drop_kph", "target_speed_drop_kph"),
-        ("final_target_speed_drop_norm", "target_speed_drop_norm"),
-        ("final_brake_demand", "brake_demand"),
-        ("final_future_brake_demand", "future_brake_demand"),
-        ("final_brake_gate_proximity", "brake_gate_proximity"),
-        ("final_braking_gate_distance_m", "braking_gate_distance_m"),
-        ("final_brake_gate_distance_norm", "brake_gate_distance_norm"),
-        ("final_lookahead_abs_max", "lookahead_abs_max"),
+    for target_name, source_value in (
+        ("final_target_speed_kph", diagnostics.target_speed_kph),
+        ("final_near_target_speed_kph", diagnostics.near_target_speed_kph),
+        ("final_min_future_target_speed_kph", diagnostics.min_future_target_speed_kph),
+        ("final_target_speed_drop_kph", diagnostics.target_speed_drop_kph),
+        ("final_target_speed_drop_norm", diagnostics.target_speed_drop_norm),
+        ("final_brake_demand", diagnostics.brake_demand),
+        ("final_future_brake_demand", diagnostics.future_brake_demand),
+        ("final_brake_gate_proximity", diagnostics.brake_gate_proximity),
+        ("final_braking_gate_distance_m", diagnostics.braking_gate_distance_m),
+        ("final_brake_gate_distance_norm", diagnostics.brake_gate_distance_norm),
+        ("final_lookahead_abs_max", diagnostics.lookahead_abs_max),
     ):
-        setattr(acc, target_name, _where(final_mask, diagnostics[source_name], getattr(acc, target_name)))
+        setattr(acc, target_name, _where(final_mask, source_value, getattr(acc, target_name)))
 
 
 def _avg(sum_tensor: torch.Tensor, count_tensor: torch.Tensor, fallback: torch.Tensor) -> torch.Tensor:

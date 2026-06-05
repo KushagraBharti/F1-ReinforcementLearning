@@ -23,6 +23,9 @@ train = [
   "tensorboard>=2.20.0",
   "torch>=2.10.0,<2.11.0",
 ]
+gpu-fast = [
+  "warp-lang>=1.10.0",
+]
 dev = [
   "pyright>=1.1.405",
   "pytest>=8.3.0",
@@ -47,6 +50,7 @@ f1-elite-search = "f1rl.elite_search:main"
 f1-action-search = "f1rl.action_search:main"
 f1-evolution-search = "f1rl.evolution_search:main"
 f1-evolution-ladder = "f1rl.evolution_ladder:main"
+f1-evolution-postcheck = "f1rl.evolution_postcheck:main"
 f1-gpu-ppo = "f1rl.gpu_ppo:main"
 
 [tool.hatch.build.targets.wheel]

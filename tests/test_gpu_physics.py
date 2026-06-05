@@ -5,6 +5,8 @@ import pytest
 import torch
 
 from f1rl.config import CarParams
+from f1rl.gpu_fast_warp import warp_status
+from f1rl.gpu_fused_warp import apply_physics_warp_batch
 from f1rl.gpu_physics import apply_physics_batch
 from f1rl.gpu_types import car_batch_from_states, gpu_car_params_from_cpu
 from f1rl.physics import CarState, apply_physics
@@ -116,3 +118,90 @@ def test_gpu_physics_cuda_matches_cpu_with_float32_tolerance() -> None:
         meters_per_pixel=torch.tensor(0.1, device="cuda"),
     )
     _compare_state(cpu_state, gpu_state, 0, atol=1e-3)
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available() or not warp_status().cuda_available,
+    reason="Warp fused physics parity requires CUDA and Warp CUDA support",
+)
+def test_warp_fused_physics_cuda_matches_torch_reference() -> None:
+    params = CarParams()
+    base = [
+        CarState(x=float(i), y=float(i * -0.5), heading_rad=0.03 * i, speed_mps=12.0 + i * 0.7)
+        for i in range(24)
+    ]
+    state = _batch(base, device="cuda", dtype=torch.float32)
+    throttle = torch.linspace(-0.2, 1.2, len(base), device="cuda", dtype=torch.float32)
+    brake = torch.linspace(0.8, -0.1, len(base), device="cuda", dtype=torch.float32)
+    steer = torch.linspace(-1.4, 1.4, len(base), device="cuda", dtype=torch.float32)
+    meters_per_pixel = torch.tensor(0.1, device="cuda", dtype=torch.float32)
+
+    torch_state, torch_movement = apply_physics_batch(
+        state,
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        params=gpu_car_params_from_cpu(params),
+        meters_per_pixel=meters_per_pixel,
+    )
+    warp_state, warp_movement = apply_physics_warp_batch(
+        state,
+        throttle=throttle,
+        brake=brake,
+        steer=steer,
+        params=gpu_car_params_from_cpu(params),
+        meters_per_pixel=meters_per_pixel,
+    )
+    torch.cuda.synchronize()
+
+    assert torch.allclose(warp_state.x, torch_state.x, atol=1e-5, rtol=1e-5)
+    assert torch.allclose(warp_state.y, torch_state.y, atol=1e-5, rtol=1e-5)
+    assert torch.allclose(warp_state.heading_rad, torch_state.heading_rad, atol=1e-6, rtol=1e-6)
+    assert torch.allclose(warp_state.speed_mps, torch_state.speed_mps, atol=1e-5, rtol=1e-5)
+    assert torch.allclose(warp_state.yaw_rate_rps, torch_state.yaw_rate_rps, atol=1e-6, rtol=1e-6)
+    assert torch.allclose(warp_state.steering, torch_state.steering, atol=1e-6, rtol=1e-6)
+    assert torch.equal(warp_state.elapsed_steps, torch_state.elapsed_steps)
+    assert torch.allclose(warp_movement.as_segments(), torch_movement.as_segments(), atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available() or not warp_status().cuda_available,
+    reason="Warp fused physics parity requires CUDA and Warp CUDA support",
+)
+def test_warp_fused_physics_multi_step_stays_close_to_torch_reference() -> None:
+    params = CarParams()
+    base = [CarState(x=float(i), y=float(i * 0.25), heading_rad=-0.02 * i, speed_mps=18.0 + i) for i in range(32)]
+    torch_state = _batch(base, device="cuda", dtype=torch.float32)
+    warp_state = _batch(base, device="cuda", dtype=torch.float32)
+    generator = torch.Generator(device="cuda").manual_seed(7)
+    meters_per_pixel = torch.tensor(0.1, device="cuda", dtype=torch.float32)
+
+    for _ in range(80):
+        throttle = torch.rand(len(base), device="cuda", dtype=torch.float32, generator=generator)
+        brake = torch.rand(len(base), device="cuda", dtype=torch.float32, generator=generator) * 0.6
+        steer = torch.rand(len(base), device="cuda", dtype=torch.float32, generator=generator) * 2.0 - 1.0
+        torch_state, _ = apply_physics_batch(
+            torch_state,
+            throttle=throttle,
+            brake=brake,
+            steer=steer,
+            params=gpu_car_params_from_cpu(params),
+            meters_per_pixel=meters_per_pixel,
+        )
+        warp_state, _ = apply_physics_warp_batch(
+            warp_state,
+            throttle=throttle,
+            brake=brake,
+            steer=steer,
+            params=gpu_car_params_from_cpu(params),
+            meters_per_pixel=meters_per_pixel,
+        )
+    torch.cuda.synchronize()
+
+    assert torch.allclose(warp_state.x, torch_state.x, atol=2e-4, rtol=2e-5)
+    assert torch.allclose(warp_state.y, torch_state.y, atol=2e-4, rtol=2e-5)
+    assert torch.allclose(warp_state.heading_rad, torch_state.heading_rad, atol=2e-5, rtol=2e-5)
+    assert torch.allclose(warp_state.speed_mps, torch_state.speed_mps, atol=2e-4, rtol=2e-5)
+    assert torch.allclose(warp_state.yaw_rate_rps, torch_state.yaw_rate_rps, atol=2e-5, rtol=2e-5)
+    assert torch.allclose(warp_state.steering, torch_state.steering, atol=2e-5, rtol=2e-5)
+    assert torch.equal(warp_state.elapsed_steps, torch_state.elapsed_steps)

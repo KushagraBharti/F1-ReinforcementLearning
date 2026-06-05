@@ -1522,6 +1522,95 @@ Mitigation:
 - do not judge GPU speed only at `150`;
 - keep CPU backend for small diagnostics.
 
+## Resolved Scale-Parity Blocker
+
+The first raw `1000x5`, `18k max_steps`, no-target-termination production proof showed that the speed path was real, but raw GPU-only selected winners were not yet trustworthy.
+
+Completed production run:
+
+```text
+artifacts/gpu-speed-production-compact-1000x5-18k
+```
+
+Important speed result:
+
+- the search itself ran on the persistent fused GPU backend;
+- no inline CPU replay ran during production search;
+- steady-state throughput was about `616-672 candidates/sec`;
+- GPU rollout was about `1.46-1.59s` per `1000` candidates;
+- compact materialization and attempt writing were small compared with rollout time.
+
+Important correctness result:
+
+- deferred CPU postcheck replayed only selected candidates, not the full `1000x5` population;
+- postcheck failed;
+- `postcheck_count=8`;
+- `parity_status=failed`;
+- `reason_mismatches=5`;
+- `valid_lap_mismatches=0`;
+- `max_best_progress_delta_m=1929.7`;
+- `max_final_progress_delta_m=1929.7`;
+- `max_score_delta=135395`.
+
+This means the raw production GPU backend is speed-first only. A GPU-only candidate is not real progress until CPU `MonzaSim` postcheck confirms it.
+
+The failure is concentrated enough to debug:
+
+- candidates `244` and `479` matched CPU postcheck cleanly;
+- candidate `793` had the same termination reason but a huge progress/score mismatch;
+- candidates related to the `578` lineage repeatedly mismatched termination/progress;
+- several bad rows are repeated elite/offspring descendants, so one root divergence can poison later production selection.
+
+Do not treat this as a reason to abandon the GPU backend. Treat it as the exact bug the postcheck system was built to catch.
+
+Resolution:
+
+- Raw GPU fast path: `artifacts/gpu-speed-production-compact-1000x5-18k` remains a speed proof, not a promotion proof.
+- Inline rerank correctness-first path: `artifacts/gpu-speed-production-rerank48-1000x5-18k` passed deferred CPU postcheck with `postcheck_count=8`, `parity_status=passed`, `reason_mismatches=0`, `valid_lap_mismatches=0`, and `0.0m` max best/final progress drift. It kept winners trustworthy, but search-time CPU replay dominated runtime.
+- Deferred pool rerank speed-first verification path: `artifacts/gpu-speed-deferred-rerank-1000x5-18k` kept inline CPU replay disabled during GPU search, then CPU-replayed a deduped selected pool after the run. The search summed about `7.33s` GPU rollout time / `7.70s` GPU backend time and ended near `643` candidates/sec for the last generation. Deferred postcheck requested `48` pool rows, replayed `11` unique rows, skipped/cached `37` duplicate rows, used `8` workers, and took `100.57s`.
+- The deferred pool can fail parity as diagnostics because it intentionally contains inflated GPU candidates. In the final deferred `1000x5` artifact, `pool_parity_status=failed` and `pool_score_parity_status=failed` because rows such as candidate `4:845` had `636.77m` progress drift. Final selected winners are filtered to CPU-clean rows before promotion: `postcheck_count=7`, final `parity_status=passed`, `reason_mismatches=0`, `valid_lap_mismatches=0`, max final-progress delta `0.3695m`, and selected telemetry loaded through `python -m f1rl.replay artifacts\gpu-speed-deferred-rerank-1000x5-18k\selected_telemetry --headless --limit 2`.
+- Final promotion contract: GPU proposes at speed; CPU verifies/reranks winners. Inline rerank is correctness-first production mode. Deferred pool rerank is optimized speed-first verification mode. Raw GPU-only runs are profiling/search proposal artifacts and are not trusted without CPU postcheck.
+
+## Completed Scale-Parity Fix Loop
+
+The `1000x5` postcheck failure was closed before any larger scale runs. The required loop was:
+
+1. Load the failed rows from `artifacts/gpu-speed-production-compact-1000x5-18k/postchecked_attempts.jsonl`.
+2. Build a focused failing-genome harness for at least candidates `793`, `277`, `578`, `0`, `120`, and `122`.
+3. Run each failing genome through:
+   - CPU `MonzaSim` oracle;
+   - GPU eager reference;
+   - GPU persistent Warp fused backend.
+4. Compare state/action/feature/termination at step granularity.
+5. Find the first divergence step, not just the final crash.
+6. Determine whether the first divergence is:
+   - compact artifact reconstruction;
+   - seed/genome/snapshot mismatch;
+   - controller feature mismatch;
+   - throttle/brake/steer dominance mismatch;
+   - target-speed/braking-gate feature mismatch;
+   - physics/grip/clamping mismatch;
+   - projection/local-window mismatch;
+   - drivable mask or collision semantics mismatch;
+   - termination priority mismatch;
+   - score/profile accumulation mismatch.
+7. Patch the root cause in the shared backend semantics, not only in the reporting layer.
+8. Add a focused regression test for the failing candidate or a reduced reproducer.
+9. Re-run the focused failing-genome harness.
+10. Re-run strict parity at `150x2x18k`.
+11. Re-run production `1000x5` only after focused parity is clean.
+12. Re-run deferred postcheck on the new `1000x5`.
+
+The blocker is closed by the corrected `1000x5` postcheck artifacts above:
+
+- `parity_status=passed`;
+- `reason_mismatches=0`;
+- `valid_lap_mismatches=0`;
+- max progress deltas within the documented tolerance;
+- selected telemetry loads through replay.
+
+If the first divergence is long-horizon float32 drift rather than a single local bug, do not hand-wave it. Add a robust strategy, such as tighter CPU/GPU math parity, periodic projection stabilization, exact-grid consistency fixes, or CPU-verified re-ranking of GPU-selected elites. Document the tradeoff clearly.
+
 ## What Not To Do
 
 - Do not keep trying to fix speed by only compiling tiny helper functions.
@@ -1534,6 +1623,10 @@ Mitigation:
 - Do not remove CPU verification to make GPU look faster.
 - Do not move PPO first. Evolution search is the correct first speed target.
 - Do not hard-code a Parabolica/Roggia-only geometry shortcut. The solution must remain full-track general.
+- Do not start larger scale runs while `1000x5` postcheck is failing.
+- Do not mark the GPU speed goal complete while selected production candidates fail CPU postcheck.
+- Do not tune rewards or selection against GPU-only winners from a failing postcheck run.
+- Do not bury a parity failure by lowering postcheck coverage or weakening tolerances.
 
 ## Success Criteria
 
@@ -1549,6 +1642,8 @@ The GPU speed work is successful only when all of this is true:
 8. Profiler shows reduced launch overhead and higher GPU utilization.
 9. No final learning claims are made from unverified GPU-only rollouts.
 10. Documentation records backend, speed, parity, and replay-verification status for every serious run.
+11. `1000x5`, `18k`, production-mode compact search passes deferred CPU postcheck on selected candidates.
+12. Scale runs use GPU for search and CPU only for explicit deferred postcheck, never inline hot-path replay.
 
 ## Immediate Next Goal Prompt
 
@@ -1556,3 +1651,4 @@ Use this file as the operating plan for GPU speed. Do not rewrite the simulator.
 
 Every speed change must preserve physics, geometry, checkpoint/lap validity, termination, observations/features, scoring profiles, artifact schemas, and CPU replay compatibility. Run parity tests, randomized batteries, edge-case tests, GPU PPO smoke, CPU/GPU evolution smoke, and performance benchmarks. Do not promote or trust GPU search results until selected top candidates replay correctly through CPU `MonzaSim`. Keep going until the GPU backend is both correct and actually faster under the same `150x60`, `18k max_steps`, no-target-termination constraints, then scale population upward to prove GPU throughput.
 
+Finalization status: the `1000x5` scale-parity blocker is closed by the inline-rerank and deferred-pool-rerank artifacts recorded above. No larger run is required for this goal-agent finalization; future scale runs can build on the verified production/postcheck split.

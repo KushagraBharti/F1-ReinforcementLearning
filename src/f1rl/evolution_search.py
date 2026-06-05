@@ -41,6 +41,12 @@ from f1rl.state_snapshot import (
 
 GENOME_TYPES = frozenset({"phase", "progress_phase", "controller"})
 EVOLUTION_BACKENDS = frozenset({"cpu", "gpu"})
+GPU_ENGINES = frozenset({"eager", "graph", "fused"})
+GPU_PROFILES = frozenset({"none", "torch", "nsight"})
+GPU_FAST_GEOMETRIES = frozenset({"local_window", "grid"})
+GPU_COLLISION_MODES = frozenset({"exact_all_segments", "exact_grid", "mask_only_debug"})
+GPU_RUN_MODES = frozenset({"parity", "production", "postcheck"})
+GPU_ATTEMPTS_MODES = frozenset({"auto", "full", "compact"})
 TELEMETRY_SELECTIONS = frozenset({"top", "leaders", "all"})
 TELEMETRY_COMPRESSIONS = frozenset({"none", "gzip"})
 GPU_DTYPES = frozenset({"float32", "float64"})
@@ -93,6 +99,7 @@ CONTROLLER_FEATURE_NAMES: tuple[str, ...] = (
     "lookahead_3",
 )
 CONTROLLER_OUTPUT_COUNT = 3
+CONTROLLER_DOMINANCE_EPSILON = 1.0e-3
 CHECKPOINT_NAME = "population_checkpoint.json"
 
 
@@ -192,14 +199,25 @@ class EvolutionSearchConfig:
     plateau_elite_fraction: float = 0.50
     plateau_extra_mutations: int = 1
     gpu_device: str = "cuda"
+    gpu_engine: str = "eager"
+    gpu_run_mode: str = "parity"
     gpu_dtype: str = "float32"
     gpu_batch_size: int | None = None
+    gpu_static_batch_size: int | None = None
     gpu_verify_top_k: int = 4
+    gpu_cpu_replay_top_k: int | None = None
     gpu_verify_elite_multiplier: int = 2
     gpu_telemetry_mode: str = "selected"
     gpu_parity_check: bool = False
     gpu_fallback_to_cpu: bool = False
     gpu_compile: bool = False
+    gpu_profile: str = "none"
+    gpu_profile_output: Path | None = None
+    gpu_chunk_steps: int = 256
+    gpu_disable_early_stop: bool = False
+    gpu_fast_geometry: str = "local_window"
+    gpu_collision_mode: str = "exact_all_segments"
+    gpu_attempts_mode: str = "auto"
 
 
 def _json_default(value: Any) -> Any:
@@ -338,10 +356,28 @@ def _sim_config_for_generation(config: EvolutionSearchConfig, generation: int) -
     )
 
 
-def _validate_config(config: EvolutionSearchConfig) -> None:
+def _validate_config(config: EvolutionSearchConfig, gates: EvolutionGates) -> None:
     if config.backend not in EVOLUTION_BACKENDS:
         valid = ", ".join(sorted(EVOLUTION_BACKENDS))
         raise ValueError(f"Unknown evolution backend {config.backend!r}; expected one of: {valid}")
+    if config.gpu_engine not in GPU_ENGINES:
+        valid = ", ".join(sorted(GPU_ENGINES))
+        raise ValueError(f"Unknown GPU engine {config.gpu_engine!r}; expected one of: {valid}")
+    if config.gpu_run_mode not in GPU_RUN_MODES:
+        valid = ", ".join(sorted(GPU_RUN_MODES))
+        raise ValueError(f"Unknown GPU run mode {config.gpu_run_mode!r}; expected one of: {valid}")
+    if config.gpu_attempts_mode not in GPU_ATTEMPTS_MODES:
+        valid = ", ".join(sorted(GPU_ATTEMPTS_MODES))
+        raise ValueError(f"Unknown GPU attempts mode {config.gpu_attempts_mode!r}; expected one of: {valid}")
+    if config.gpu_profile not in GPU_PROFILES:
+        valid = ", ".join(sorted(GPU_PROFILES))
+        raise ValueError(f"Unknown GPU profile mode {config.gpu_profile!r}; expected one of: {valid}")
+    if config.gpu_fast_geometry not in GPU_FAST_GEOMETRIES:
+        valid = ", ".join(sorted(GPU_FAST_GEOMETRIES))
+        raise ValueError(f"Unknown GPU fast geometry mode {config.gpu_fast_geometry!r}; expected one of: {valid}")
+    if config.gpu_collision_mode not in GPU_COLLISION_MODES:
+        valid = ", ".join(sorted(GPU_COLLISION_MODES))
+        raise ValueError(f"Unknown GPU collision mode {config.gpu_collision_mode!r}; expected one of: {valid}")
     if config.genome_type not in GENOME_TYPES:
         valid = ", ".join(sorted(GENOME_TYPES))
         raise ValueError(f"Unknown genome type {config.genome_type!r}; expected one of: {valid}")
@@ -359,11 +395,37 @@ def _validate_config(config: EvolutionSearchConfig) -> None:
         raise ValueError(f"Unknown GPU telemetry mode {config.gpu_telemetry_mode!r}; expected one of: {valid}")
     if config.gpu_batch_size is not None and config.gpu_batch_size <= 0:
         raise ValueError("gpu_batch_size must be positive when set")
+    if config.gpu_static_batch_size is not None and config.gpu_static_batch_size <= 0:
+        raise ValueError("gpu_static_batch_size must be positive when set")
     if config.gpu_verify_top_k < 0:
         raise ValueError("gpu_verify_top_k must be >= 0")
+    if config.gpu_cpu_replay_top_k is not None and config.gpu_cpu_replay_top_k < 0:
+        raise ValueError("gpu_cpu_replay_top_k must be >= 0 when set")
     if config.gpu_verify_elite_multiplier < 1:
         raise ValueError("gpu_verify_elite_multiplier must be >= 1")
+    if config.gpu_chunk_steps <= 0:
+        raise ValueError("gpu_chunk_steps must be > 0")
     if config.backend == "gpu":
+        if config.gpu_engine == "fused":
+            from f1rl.gpu_fast_warp import warp_status
+
+            status = warp_status()
+            if not status.installed:
+                raise ValueError(
+                    "GPU fused engine requires optional dependency 'warp-lang' before fused rollout work can run. "
+                    "Install with `uv sync --extra gpu-fast`, then use --gpu-engine eager or graph until the fused "
+                    "rollout implementation is promoted."
+                )
+            if config.gpu_device != "cuda":
+                raise ValueError("GPU fused engine currently requires --gpu-device cuda.")
+            if config.gpu_dtype != "float32":
+                raise ValueError("GPU fused engine currently requires --gpu-dtype float32.")
+            if config.gpu_fast_geometry != "local_window":
+                raise ValueError("GPU fused engine currently requires --gpu-fast-geometry local_window.")
+            if config.gpu_collision_mode != "exact_grid":
+                raise ValueError("GPU fused engine currently requires --gpu-collision-mode exact_grid.")
+        if config.gpu_fast_geometry == "grid":
+            raise ValueError("GPU grid geometry is planned but not implemented yet; use local_window.")
         if config.telemetry_selection == "all" and config.gpu_telemetry_mode != "all-cpu-replay":
             raise ValueError(
                 "--telemetry-selection all with --backend gpu requires "
@@ -965,7 +1027,7 @@ def _controller_controls(genome: Genome, features: dict[str, float]) -> tuple[fl
     logits = matrix @ _controller_feature_vector(features)
     throttle_raw = _sigmoid(float(logits[0]))
     brake_raw = _sigmoid(float(logits[1]))
-    if brake_raw > throttle_raw:
+    if brake_raw + CONTROLLER_DOMINANCE_EPSILON >= throttle_raw:
         throttle = throttle_raw * (1.0 - brake_raw)
         brake = brake_raw
     else:
@@ -1819,6 +1881,42 @@ def _evaluate_population(
             active_executor.shutdown()
 
 
+def _make_gpu_backend(
+    *,
+    config: EvolutionSearchConfig,
+    profile_output_dir: Path | None,
+) -> Any:
+    from f1rl.evolution_backend import GpuBackendSettings, GpuEvolutionBackend
+
+    return GpuEvolutionBackend(
+        settings=GpuBackendSettings(
+            device=config.gpu_device,
+            engine=config.gpu_engine,
+            run_mode=config.gpu_run_mode,
+            dtype=config.gpu_dtype,
+            batch_size=config.gpu_batch_size,
+            static_batch_size=config.gpu_static_batch_size,
+            verify_top_k=config.gpu_cpu_replay_top_k
+            if config.gpu_cpu_replay_top_k is not None
+            else config.gpu_verify_top_k,
+            verify_elite_multiplier=config.gpu_verify_elite_multiplier,
+            telemetry_mode=config.gpu_telemetry_mode,
+            parity_check=config.gpu_parity_check,
+            fallback_to_cpu=config.gpu_fallback_to_cpu,
+            compile_rollout=config.gpu_compile and config.gpu_engine != "graph",
+            profile=config.gpu_profile,
+            profile_output_dir=profile_output_dir,
+            active_check_interval=config.gpu_chunk_steps,
+            disable_early_stop=config.gpu_disable_early_stop,
+            fast_geometry=config.gpu_fast_geometry,
+            collision_mode=config.gpu_collision_mode,
+            attempts_mode=_effective_gpu_attempts_mode(config),
+        ),
+        feature_names=CONTROLLER_FEATURE_NAMES,
+        controller_output_count=CONTROLLER_OUTPUT_COUNT,
+    )
+
+
 def _evaluate_population_gpu(
     *,
     candidates: list[Candidate],
@@ -1834,25 +1932,13 @@ def _evaluate_population_gpu(
     stream_telemetry_dir: Path | None,
     telemetry_compression: str,
     config: EvolutionSearchConfig,
+    profile_output_dir: Path | None,
+    backend: Any | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    from f1rl.evolution_backend import GpuBackendSettings, GpuEvolutionBackend
-
-    backend = GpuEvolutionBackend(
-        settings=GpuBackendSettings(
-            device=config.gpu_device,
-            dtype=config.gpu_dtype,
-            batch_size=config.gpu_batch_size,
-            verify_top_k=config.gpu_verify_top_k,
-            verify_elite_multiplier=config.gpu_verify_elite_multiplier,
-            telemetry_mode=config.gpu_telemetry_mode,
-            parity_check=config.gpu_parity_check,
-            fallback_to_cpu=config.gpu_fallback_to_cpu,
-            compile_rollout=config.gpu_compile,
-        ),
-        feature_names=CONTROLLER_FEATURE_NAMES,
-        controller_output_count=CONTROLLER_OUTPUT_COUNT,
-    )
-    return backend.evaluate_population(
+    if backend is None:
+        backend = _make_gpu_backend(config=config, profile_output_dir=profile_output_dir)
+    active_backend = cast(Any, backend)
+    return active_backend.evaluate_population(
         candidates=candidates,
         snapshots=snapshots,
         sim_config=sim_config,
@@ -2793,6 +2879,37 @@ def _search_hash(
     return hashlib.sha256(raw).hexdigest()
 
 
+def _effective_gpu_attempts_mode(config: EvolutionSearchConfig) -> str:
+    if config.gpu_attempts_mode != "auto":
+        return config.gpu_attempts_mode
+    if (
+        config.backend == "gpu"
+        and config.gpu_run_mode == "production"
+        and config.gpu_telemetry_mode == "none"
+        and not config.gpu_parity_check
+    ):
+        return "compact"
+    return "full"
+
+
+def _effective_gpu_cpu_replay_top_k(
+    *,
+    gpu_run_mode: str,
+    gpu_verify_top_k: int,
+    top_k: int,
+    gpu_cpu_replay_top_k: int | None,
+    explicit_gpu_cpu_replay_top_k: bool,
+) -> int | None:
+    if gpu_cpu_replay_top_k is not None:
+        return max(0, int(gpu_cpu_replay_top_k))
+    if gpu_run_mode == "production" and not explicit_gpu_cpu_replay_top_k:
+        # The fused rollout is fast enough to expose long-horizon float32/control
+        # sensitivity. Keep production compact, but CPU-rerank a small selected set
+        # unless the caller explicitly opts out with --gpu-cpu-replay-top-k 0.
+        return max(16, int(gpu_verify_top_k), int(top_k) * 2)
+    return None
+
+
 def _checkpoint_path(path: Path) -> Path:
     if path.is_dir() or path.suffix == "":
         return path / CHECKPOINT_NAME
@@ -2921,24 +3038,46 @@ def _resume_command(
             [
                 "--gpu-device",
                 config.gpu_device,
+                "--gpu-engine",
+                config.gpu_engine,
+                "--gpu-run-mode",
+                config.gpu_run_mode,
                 "--gpu-dtype",
                 config.gpu_dtype,
                 "--gpu-batch-size",
                 str(config.gpu_batch_size) if config.gpu_batch_size is not None else "auto",
+                "--gpu-static-batch-size",
+                str(config.gpu_static_batch_size) if config.gpu_static_batch_size is not None else "auto",
                 "--gpu-verify-top-k",
                 str(config.gpu_verify_top_k),
                 "--gpu-verify-elite-multiplier",
                 str(config.gpu_verify_elite_multiplier),
                 "--gpu-telemetry-mode",
                 config.gpu_telemetry_mode,
+                "--gpu-profile",
+                config.gpu_profile,
+                "--gpu-chunk-steps",
+                str(config.gpu_chunk_steps),
+                "--gpu-fast-geometry",
+                config.gpu_fast_geometry,
+                "--gpu-collision-mode",
+                config.gpu_collision_mode,
+                "--gpu-attempts-mode",
+                config.gpu_attempts_mode,
             ]
         )
+        if config.gpu_cpu_replay_top_k is not None:
+            parts.extend(["--gpu-cpu-replay-top-k", str(config.gpu_cpu_replay_top_k)])
+        if config.gpu_profile_output is not None:
+            parts.extend(["--gpu-profile-output", _quote_cli(config.gpu_profile_output)])
         if config.gpu_parity_check:
             parts.append("--gpu-parity-check")
         if config.gpu_fallback_to_cpu:
             parts.append("--gpu-fallback-to-cpu")
         if config.gpu_compile:
             parts.append("--gpu-compile")
+        if config.gpu_disable_early_stop:
+            parts.append("--gpu-disable-early-stop")
     if config.max_steps_schedule:
         parts.extend(
             [
@@ -3267,7 +3406,7 @@ def run_evolution_search(
             "scoring_profiles": tuple(config.scoring_profiles),
         }
     )
-    _validate_config(config)
+    _validate_config(config, gates)
     action_names = [name for name, _, _, _ in actions_for_action_set(config.action_set)]
     sim_config = _sim_config_for_generation(config, 0)
     snapshots = _load_snapshots(
@@ -3345,6 +3484,8 @@ def run_evolution_search(
     resolved_workers = _resolved_workers(config.workers)
     executor: ProcessPoolExecutor | None = None
     use_gpu_backend = config.backend == "gpu"
+    gpu_backend: Any | None = None
+    gpu_profile_output_dir = config.gpu_profile_output or (output_dir / "gpu_profiles")
     if not use_gpu_backend and resolved_workers > 1:
         executor = ProcessPoolExecutor(max_workers=resolved_workers)
     try:
@@ -3352,8 +3493,14 @@ def run_evolution_search(
             started = time.perf_counter()
             generation_sim_config = _sim_config_for_generation(config, generation)
             backend_metrics: dict[str, Any] = {"backend": "cpu"}
+            evaluation_started = time.perf_counter()
             if use_gpu_backend:
                 try:
+                    if gpu_backend is None:
+                        gpu_backend = _make_gpu_backend(
+                            config=config,
+                            profile_output_dir=gpu_profile_output_dir,
+                        )
                     evaluated, backend_metrics = _evaluate_population_gpu(
                         candidates=population,
                         snapshots=snapshots,
@@ -3368,8 +3515,11 @@ def run_evolution_search(
                         stream_telemetry_dir=all_candidate_telemetry_dir if config.telemetry_selection == "all" else None,
                         telemetry_compression=config.telemetry_compression,
                         config=config,
+                        profile_output_dir=gpu_profile_output_dir,
+                        backend=gpu_backend,
                     )
                 except Exception as exc:
+                    gpu_backend = None
                     if not config.gpu_fallback_to_cpu:
                         raise
                     print(f"evolution_backend_fallback reason={type(exc).__name__}:{exc}", flush=True)
@@ -3409,18 +3559,33 @@ def run_evolution_search(
                     telemetry_compression=config.telemetry_compression,
                     executor=executor,
                 )
+            population_evaluation_seconds = time.perf_counter() - evaluation_started
+            telemetry_extract_started = time.perf_counter()
             for row in evaluated:
                 captured = row.pop("captured_telemetry", None)
                 if captured is not None:
                     captured_telemetry_by_key[_row_identity(row)] = captured
+            captured_telemetry_extract_seconds = time.perf_counter() - telemetry_extract_started
             elapsed_s = time.perf_counter() - started
+            sort_started = time.perf_counter()
             ranked = sorted(evaluated, key=lambda row: float(row["score"]), reverse=True)
+            selection_sort_seconds = time.perf_counter() - sort_started
             latest_ranked = ranked
             attempt_count += len(ranked)
+            attempts_write_started = time.perf_counter()
             _append_jsonl(attempts_path, ranked)
+            attempts_write_seconds = time.perf_counter() - attempts_write_started
             summary = _generation_summary(generation, ranked, elapsed_s)
             summary["max_steps"] = generation_sim_config.max_steps
             summary.update(backend_metrics)
+            summary.update(
+                {
+                    "timing_population_evaluation_seconds": population_evaluation_seconds,
+                    "timing_captured_telemetry_extract_seconds": captured_telemetry_extract_seconds,
+                    "timing_selection_sort_seconds": selection_sort_seconds,
+                    "timing_attempts_jsonl_write_seconds": attempts_write_seconds,
+                }
+            )
             survival_report = _survival_floor_report(ranked, config, active_index=survival_floor_index)
             summary.update(survival_report)
             plateau = _plateau_report(generation_summaries, summary, config)
@@ -3430,11 +3595,16 @@ def run_evolution_search(
                 float(summary.get("generation_best_distance_m", 0.0) or 0.0),
             )
             summary["global_best_distance_m"] = global_best_distance_m
+            best_merge_started = time.perf_counter()
             best_rows = _merge_best_rows(best_rows, ranked, limit=best_limit)
+            summary["timing_best_row_merge_seconds"] = time.perf_counter() - best_merge_started
+            best_artifact_started = time.perf_counter()
             _write_json(output_dir / "best_so_far.json", best_rows[0] if best_rows else {})
             _write_generation_genomes(output_dir, generation, ranked, config.top_k)
+            summary["timing_best_artifact_write_seconds"] = time.perf_counter() - best_artifact_started
 
             if generation < config.generations - 1:
+                reproduction_started = time.perf_counter()
                 survival_floor_index = int(survival_report["next_survival_floor_index"])
                 base_stage_key = f"{float(config.survival_floor_stages_m[0]):.1f}"
                 leader_progress_m = float(survival_report.get("survival_floor_leader_progress_m", 0.0) or 0.0)
@@ -3467,9 +3637,18 @@ def run_evolution_search(
                     plateau=plateau,
                 )
                 summary["next_population"] = reproduction_summary
+                summary["timing_population_selection_mutation_seconds"] = (
+                    time.perf_counter() - reproduction_started
+                )
+            else:
+                summary["timing_population_selection_mutation_seconds"] = 0.0
 
             generation_summaries.append(summary)
+            generation_summary_write_started = time.perf_counter()
             _append_jsonl(generation_summary_path, [summary])
+            summary["timing_generation_summary_jsonl_write_seconds"] = (
+                time.perf_counter() - generation_summary_write_started
+            )
 
             if config.progress_every_generation:
                 best = ranked[0] if ranked else {}
@@ -3477,6 +3656,18 @@ def run_evolution_search(
                 next_population_summary = summary.get("next_population", {})
                 fastest_valid_lap_s = summary.get("fastest_valid_lap_s")
                 average_valid_lap_s = summary.get("average_valid_lap_s")
+                timing_summary = (
+                    f"timing_eval_s={float(summary.get('timing_population_evaluation_seconds', 0.0)):.3f} "
+                    f"timing_gpu_rollout_s={float(summary.get('gpu_rollout_seconds', 0.0) or 0.0):.3f} "
+                    f"timing_gpu_control_upload_s={float(summary.get('gpu_control_program_upload_seconds', 0.0) or 0.0):.3f} "
+                    f"timing_gpu_materialize_s={float(summary.get('gpu_result_materialization_seconds', 0.0) or 0.0):.3f} "
+                    f"timing_cpu_replay_s={float(summary.get('gpu_cpu_replay_seconds', 0.0) or 0.0):.3f} "
+                    f"timing_attempt_write_s={float(summary.get('timing_attempts_jsonl_write_seconds', 0.0)):.3f} "
+                    f"timing_reproduction_s={float(summary.get('timing_population_selection_mutation_seconds', 0.0)):.3f} "
+                    f"timing_artifact_write_s={float(summary.get('timing_best_artifact_write_seconds', 0.0)):.3f} "
+                    f"gpu_rollout_fraction={float(summary.get('gpu_rollout_time_fraction', 0.0) or 0.0):.3f} "
+                    f"gpu_cpu_replay_fraction={float(summary.get('gpu_cpu_replay_time_fraction', 0.0) or 0.0):.3f}"
+                )
                 print(
                     "evolution_generation "
                     f"generation={generation} population={len(ranked)} "
@@ -3505,7 +3696,8 @@ def run_evolution_search(
                     f"gate_5000={int(summary.get('progress_threshold_counts', {}).get('5000', 0))} "
                     f"completion_rate={summary['completion_rate']:.3f} "
                     f"milestone_rate={summary['milestone_rate']:.3f} "
-                    f"candidates_per_second={summary['candidates_per_second']:.3f}",
+                    f"candidates_per_second={summary['candidates_per_second']:.3f} "
+                    f"{timing_summary}",
                     flush=True,
                 )
 
@@ -3513,6 +3705,7 @@ def run_evolution_search(
                 config.checkpoint_every_generations > 0
                 and (generation + 1) % config.checkpoint_every_generations == 0
             ):
+                checkpoint_started = time.perf_counter()
                 _write_checkpoint(
                     output_dir,
                     config_hash=config_hash,
@@ -3531,6 +3724,9 @@ def run_evolution_search(
                     attempt_count=attempt_count,
                     survival_floor_index=survival_floor_index,
                 )
+                summary["timing_checkpoint_write_seconds"] = time.perf_counter() - checkpoint_started
+            else:
+                summary["timing_checkpoint_write_seconds"] = 0.0
             if (
                 stop_after_generations is not None
                 and generation + 1 >= stop_after_generations
@@ -3574,8 +3770,10 @@ def run_evolution_search(
         if executor is not None:
             executor.shutdown()
 
+    postprocess_started = time.perf_counter()
     top_rows = best_rows[: config.top_k]
     top_row_keys = {_row_identity(row) for row in top_rows}
+    telemetry_select_started = time.perf_counter()
     if config.backend == "gpu" and config.gpu_telemetry_mode == "none":
         telemetry_rows = []
     else:
@@ -3585,9 +3783,12 @@ def run_evolution_search(
             latest_ranked=latest_ranked,
             config=config,
         )
+    telemetry_selection_seconds = time.perf_counter() - telemetry_select_started
     elite_snapshots: list[StateSnapshot] = []
     telemetry_manifest: list[dict[str, Any]] = []
     top_rows_by_key = {_row_identity(row): row for row in top_rows}
+    selected_telemetry_write_seconds = 0.0
+    selected_telemetry_replay_seconds = 0.0
     for rank, row in enumerate(telemetry_rows):
         snapshot = snapshots[int(row["snapshot_index"])]
         row_sim_config = _sim_config_for_generation(config, int(row["generation"]))
@@ -3601,6 +3802,7 @@ def run_evolution_search(
             if not final_row:
                 final_row = _last_jsonl_row(telemetry_path)
         else:
+            telemetry_replay_started = time.perf_counter()
             rows, sim = _run_candidate(
                 sim_config=row_sim_config,
                 snapshot=snapshot,
@@ -3609,6 +3811,7 @@ def run_evolution_search(
                 seed=int(row["seed"]),
                 collect_full_telemetry=True,
             )
+            selected_telemetry_replay_seconds += time.perf_counter() - telemetry_replay_started
             reason = _safe_slug(str(row.get("telemetry_selection_reason", "selected")))
             telemetry_suffix = _telemetry_file_suffix(config.telemetry_compression)
             target_telemetry_dir = (
@@ -3621,7 +3824,9 @@ def run_evolution_search(
                 f"evolution-{reason}-rank-{rank:03d}-gen-{int(row['generation']):03d}-"
                 f"candidate-{int(row['candidate_index']):05d}-steps{telemetry_suffix}"
             )
+            telemetry_write_started = time.perf_counter()
             _write_jsonl(telemetry_path, rows)
+            selected_telemetry_write_seconds += time.perf_counter() - telemetry_write_started
             final_row = rows[-1] if rows else {}
         row["selected_telemetry"] = str(telemetry_path)
         telemetry_manifest.append(
@@ -3657,6 +3862,7 @@ def run_evolution_search(
                         }
                     )
                 )
+    manifest_started = time.perf_counter()
     _write_json(
         selected_dir / "manifest.json",
         {
@@ -3671,8 +3877,10 @@ def run_evolution_search(
             "traces": telemetry_manifest,
         },
     )
+    manifest_write_seconds = time.perf_counter() - manifest_started
 
     elite_library_path = output_dir / "elite_state_library.json"
+    state_library_started = time.perf_counter()
     write_state_library(
         elite_library_path,
         elite_snapshots,
@@ -3687,6 +3895,8 @@ def run_evolution_search(
             "gates": asdict(gates),
         },
     )
+    state_library_write_seconds = time.perf_counter() - state_library_started
+    bridge_started = time.perf_counter()
     _write_ppo_bridge(
         output_dir,
         elite_library_path=elite_library_path,
@@ -3695,6 +3905,19 @@ def run_evolution_search(
         state_library=state_library,
         top_rows=top_rows,
     )
+    bridge_write_seconds = time.perf_counter() - bridge_started
+    if generation_summaries:
+        generation_summaries[-1].update(
+            {
+                "timing_postprocess_total_seconds": time.perf_counter() - postprocess_started,
+                "timing_selected_telemetry_selection_seconds": telemetry_selection_seconds,
+                "timing_selected_telemetry_cpu_replay_seconds": selected_telemetry_replay_seconds,
+                "timing_selected_telemetry_write_seconds": selected_telemetry_write_seconds,
+                "timing_manifest_write_seconds": manifest_write_seconds,
+                "timing_elite_state_library_write_seconds": state_library_write_seconds,
+                "timing_ppo_bridge_write_seconds": bridge_write_seconds,
+            }
+        )
     _write_summary(
         output_dir,
         config=config,
@@ -3770,14 +3993,41 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segment-release-max-throttle", type=float, default=0.1)
     parser.add_argument("--backend", choices=sorted(EVOLUTION_BACKENDS), default="cpu")
     parser.add_argument("--gpu-device", default="cuda")
+    parser.add_argument("--gpu-engine", choices=sorted(GPU_ENGINES), default="eager")
+    parser.add_argument(
+        "--gpu-run-mode",
+        choices=sorted(GPU_RUN_MODES),
+        default="parity",
+        help=(
+            "GPU evaluation mode. parity keeps conservative replay/telemetry defaults; "
+            "production defaults to compact GPU-first search; postcheck keeps GPU artifacts ready for verification."
+        ),
+    )
     parser.add_argument("--gpu-dtype", choices=sorted(GPU_DTYPES), default="float32")
     parser.add_argument("--gpu-batch-size", default="auto")
+    parser.add_argument("--gpu-static-batch-size", default="auto")
     parser.add_argument("--gpu-verify-top-k", type=int, default=4)
+    parser.add_argument("--gpu-cpu-replay-top-k", type=int)
     parser.add_argument("--gpu-verify-elite-multiplier", type=int, default=2)
     parser.add_argument("--gpu-telemetry-mode", choices=sorted(GPU_TELEMETRY_MODES), default="selected")
     parser.add_argument("--gpu-parity-check", action="store_true")
     parser.add_argument("--gpu-fallback-to-cpu", action="store_true")
     parser.add_argument("--gpu-compile", action="store_true")
+    parser.add_argument("--gpu-profile", choices=sorted(GPU_PROFILES), default="none")
+    parser.add_argument("--gpu-profile-output", type=Path)
+    parser.add_argument("--gpu-chunk-steps", type=int, default=256)
+    parser.add_argument("--gpu-disable-early-stop", action="store_true")
+    parser.add_argument("--gpu-fast-geometry", choices=sorted(GPU_FAST_GEOMETRIES), default="local_window")
+    parser.add_argument("--gpu-collision-mode", choices=sorted(GPU_COLLISION_MODES), default="exact_all_segments")
+    parser.add_argument(
+        "--gpu-attempts-mode",
+        choices=sorted(GPU_ATTEMPTS_MODES),
+        default="auto",
+        help=(
+            "GPU attempts artifact detail. auto keeps parity/debug full and makes production/no-telemetry compact; "
+            "compact omits per-candidate final_row diagnostics from the hot path."
+        ),
+    )
     parser.add_argument("--action-set", default="racing")
     parser.add_argument("--observation-profile", default="racing_v2")
     parser.add_argument("--max-steps", type=int, default=600)
@@ -3837,11 +4087,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
     args = parse_args(argv)
+    explicit_gpu_cpu_replay_top_k = any(
+        item == "--gpu-cpu-replay-top-k" or item.startswith("--gpu-cpu-replay-top-k=") for item in raw_argv
+    )
+    explicit_gpu_telemetry_mode = any(
+        item == "--gpu-telemetry-mode" or item.startswith("--gpu-telemetry-mode=") for item in raw_argv
+    )
     resume_path = args.resume
     output_dir = args.output_dir
     if output_dir is None and resume_path is not None:
         output_dir = _checkpoint_path(resume_path).parent
+    gpu_telemetry_mode = args.gpu_telemetry_mode
+    gpu_cpu_replay_top_k = _effective_gpu_cpu_replay_top_k(
+        gpu_run_mode=args.gpu_run_mode,
+        gpu_verify_top_k=max(0, args.gpu_verify_top_k),
+        top_k=max(1, args.top_k),
+        gpu_cpu_replay_top_k=args.gpu_cpu_replay_top_k,
+        explicit_gpu_cpu_replay_top_k=explicit_gpu_cpu_replay_top_k,
+    )
+    if args.gpu_run_mode == "production":
+        if not explicit_gpu_telemetry_mode:
+            gpu_telemetry_mode = "none"
+    elif args.gpu_run_mode == "postcheck":
+        if not explicit_gpu_telemetry_mode:
+            gpu_telemetry_mode = "top"
+
     config = EvolutionSearchConfig(
         backend=args.backend,
         action_set=args.action_set,
@@ -3892,14 +4164,25 @@ def main(argv: list[str] | None = None) -> int:
         plateau_elite_fraction=float(np.clip(args.plateau_elite_fraction, 0.05, 1.0)),
         plateau_extra_mutations=max(0, args.plateau_extra_mutations),
         gpu_device=args.gpu_device,
+        gpu_engine=args.gpu_engine,
+        gpu_run_mode=args.gpu_run_mode,
         gpu_dtype=args.gpu_dtype,
         gpu_batch_size=_parse_gpu_batch_size(args.gpu_batch_size),
+        gpu_static_batch_size=_parse_gpu_batch_size(args.gpu_static_batch_size),
         gpu_verify_top_k=max(0, args.gpu_verify_top_k),
+        gpu_cpu_replay_top_k=gpu_cpu_replay_top_k,
         gpu_verify_elite_multiplier=max(1, args.gpu_verify_elite_multiplier),
-        gpu_telemetry_mode=args.gpu_telemetry_mode,
+        gpu_telemetry_mode=gpu_telemetry_mode,
         gpu_parity_check=bool(args.gpu_parity_check),
         gpu_fallback_to_cpu=bool(args.gpu_fallback_to_cpu),
         gpu_compile=bool(args.gpu_compile),
+        gpu_profile=args.gpu_profile,
+        gpu_profile_output=args.gpu_profile_output,
+        gpu_chunk_steps=max(1, args.gpu_chunk_steps),
+        gpu_disable_early_stop=bool(args.gpu_disable_early_stop),
+        gpu_fast_geometry=args.gpu_fast_geometry,
+        gpu_collision_mode=args.gpu_collision_mode,
+        gpu_attempts_mode=args.gpu_attempts_mode,
     )
     gates = EvolutionGates(
         target_progress_m=args.target_progress_m,

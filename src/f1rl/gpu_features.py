@@ -18,6 +18,8 @@ from f1rl.gpu_track import (
 from f1rl.gpu_types import GpuCarBatch, GpuTrackTensors
 from f1rl.track_sections import MONZA_SECTIONS
 
+CONTROLLER_DOMINANCE_EPSILON = 1.0e-3
+
 
 def controller_controls_batch(
     controller_weights: torch.Tensor,
@@ -28,7 +30,7 @@ def controller_controls_batch(
     logits = torch.bmm(controller_weights, features.unsqueeze(2)).squeeze(2)
     throttle_raw = torch.sigmoid(torch.clamp(logits[:, 0], min=-40.0, max=40.0))
     brake_raw = torch.sigmoid(torch.clamp(logits[:, 1], min=-40.0, max=40.0))
-    brake_dominates = brake_raw > throttle_raw
+    brake_dominates = brake_raw + CONTROLLER_DOMINANCE_EPSILON >= throttle_raw
     throttle = torch.where(brake_dominates, throttle_raw * (1.0 - brake_raw), throttle_raw)
     brake = torch.where(brake_dominates, brake_raw, brake_raw * (1.0 - throttle_raw))
     steer = torch.tanh(logits[:, 2])
@@ -71,24 +73,38 @@ def search_features_batch(
     segment_start_progress_m: torch.Tensor,
     segment_target_progress_m: float,
     braking_gates_m: torch.Tensor | None = None,
+    lookahead_m: torch.Tensor | None = None,
+    local_projection_window_px: torch.Tensor | None = None,
+    previous_segment_idx: torch.Tensor | None = None,
+    zero_feature: torch.Tensor | None = None,
+    row_index: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Return the controller feature matrix and diagnostic tensors."""
 
+    zero = (
+        zero_feature.to(device=state.device, dtype=state.dtype)
+        if zero_feature is not None
+        else torch.zeros_like(state.speed_mps)
+    )
     errors = track_errors_batch(
         state.position_xy(),
         state.heading_rad,
         track,
         previous_progress_px=state.last_raw_progress_px,
-        window_px=float(config.local_projection_window_m) / torch.clamp(track.meters_per_pixel, min=1e-6),
+        previous_segment_idx=previous_segment_idx,
+        window_px=local_projection_window_px
+        if local_projection_window_px is not None
+        else float(config.local_projection_window_m) / torch.clamp(track.meters_per_pixel, min=1e-6),
+        row_index=row_index,
     )
     lookahead_errors = lookahead_heading_errors_batch(
         raw_progress_m=state.raw_progress_m,
         heading_rad=state.heading_rad,
-        lookahead_m=tuple(float(value) for value in config.lookahead_m),
+        lookahead_m=lookahead_m if lookahead_m is not None else tuple(float(value) for value in config.lookahead_m),
         track=track,
     )
     if lookahead_errors.shape[1] == 0:
-        lookahead_abs_max = torch.zeros_like(state.speed_mps)
+        lookahead_abs_max = zero
     else:
         lookahead_abs_max = torch.max(torch.abs(lookahead_errors), dim=1).values
     target_speed_kph = torch.maximum(
@@ -151,6 +167,7 @@ def search_features_batch(
         "lateral_error_m": errors["lateral_error_m"],
         "signed_lateral_error_m": errors["signed_lateral_error_m"],
         "heading_error_rad": errors["heading_error_rad"],
+        "segment_idx": errors["segment_idx"],
         "heading_error_deg": errors["heading_error_rad"] * (180.0 / math.pi),
         "target_speed_kph": target_speed_kph,
         "near_target_speed_kph": near_target_speed_kph,
@@ -191,9 +208,9 @@ def search_features_batch(
         if index < lookahead_errors.shape[1]:
             feature_values[f"lookahead_{index}"] = lookahead_errors[:, index]
         else:
-            feature_values[f"lookahead_{index}"] = torch.zeros_like(state.speed_mps)
+            feature_values[f"lookahead_{index}"] = zero
     features = torch.stack(
-        [feature_values.get(name, torch.zeros_like(state.speed_mps)) for name in feature_names],
+        [feature_values.get(name, zero) for name in feature_names],
         dim=1,
     )
     return features, diagnostics

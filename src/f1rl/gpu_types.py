@@ -136,7 +136,13 @@ class GpuTrackTensors:
     centerline_segment_len2: torch.Tensor
     centerline_cumdist_px: torch.Tensor
     centerline_segment_mid_px: torch.Tensor
+    local_projection_indices: torch.Tensor
     boundary_segments: torch.Tensor
+    boundary_grid_indices: torch.Tensor
+    boundary_grid_counts: torch.Tensor
+    boundary_grid_cell_size_px: torch.Tensor
+    boundary_grid_width: int
+    boundary_grid_height: int
     finish_line: torch.Tensor
     drivable_mask: torch.Tensor
     meters_per_pixel: torch.Tensor
@@ -168,12 +174,49 @@ def gpu_track_from_cpu(
     len2 = torch.sum(vec * vec, dim=1).clamp_min(torch.finfo(dtype).eps)
     seg_len = torch.sqrt(len2)
     mid = (centerline_s[:-1] + centerline_s[1:]) * 0.5
+    length_px = torch.tensor(float(track.length_px), device=device, dtype=dtype)
+    segment_count = int(starts.shape[0])
+    local_count = max(1, min(64, segment_count))
+    wrapped_mid_delta = torch.abs(
+        torch.remainder(mid[None, :] - mid[:, None] + length_px * 0.5, length_px) - length_px * 0.5
+    )
+    local_projection_indices = torch.argsort(wrapped_mid_delta, dim=1)[:, :local_count].to(dtype=torch.int64)
     boundary_segments = torch.as_tensor(track.boundary_segments, device=device, dtype=dtype)
+    mask_height, mask_width = int(track.drivable_mask.shape[0]), int(track.drivable_mask.shape[1])
+    grid_cell_size = 64.0
+    grid_width = max(1, int((mask_width + grid_cell_size - 1.0) // grid_cell_size))
+    grid_height = max(1, int((mask_height + grid_cell_size - 1.0) // grid_cell_size))
+    grid_cells: list[list[int]] = [[] for _ in range(grid_width * grid_height)]
+    for segment_index, segment in enumerate(track.boundary_segments):
+        x0, y0, x1, y1 = (float(value) for value in segment)
+        min_x = max(0.0, min(x0, x1))
+        max_x = min(float(mask_width - 1), max(x0, x1))
+        min_y = max(0.0, min(y0, y1))
+        max_y = min(float(mask_height - 1), max(y0, y1))
+        min_cell_x = max(0, min(grid_width - 1, int(min_x // grid_cell_size)))
+        max_cell_x = max(0, min(grid_width - 1, int(max_x // grid_cell_size)))
+        min_cell_y = max(0, min(grid_height - 1, int(min_y // grid_cell_size)))
+        max_cell_y = max(0, min(grid_height - 1, int(max_y // grid_cell_size)))
+        for cell_y in range(min_cell_y, max_cell_y + 1):
+            row_offset = cell_y * grid_width
+            for cell_x in range(min_cell_x, max_cell_x + 1):
+                grid_cells[row_offset + cell_x].append(segment_index)
+    max_segments_per_cell = max((len(indices) for indices in grid_cells), default=0)
+    if max_segments_per_cell <= 0:
+        max_segments_per_cell = 1
+    grid_indices_cpu = torch.full((grid_width * grid_height, max_segments_per_cell), -1, dtype=torch.int64)
+    grid_counts_cpu = torch.empty(grid_width * grid_height, dtype=torch.int64)
+    for cell_index, segment_indices in enumerate(grid_cells):
+        grid_counts_cpu[cell_index] = len(segment_indices)
+        if segment_indices:
+            grid_indices_cpu[cell_index, : len(segment_indices)] = torch.tensor(segment_indices, dtype=torch.int64)
+    boundary_grid_indices = grid_indices_cpu.to(device=device)
+    boundary_grid_counts = grid_counts_cpu.to(device=device)
+    boundary_grid_cell_size_px = torch.tensor(grid_cell_size, device=device, dtype=dtype)
     finish_line = torch.as_tensor(track.finish_line.reshape(1, 4), device=device, dtype=dtype)
     drivable_mask = torch.as_tensor(track.drivable_mask, device=device, dtype=torch.bool)
     meters_per_pixel = torch.tensor(float(track.meters_per_pixel), device=device, dtype=dtype)
     length_m = torch.tensor(float(track.length_m), device=device, dtype=dtype)
-    length_px = torch.tensor(float(track.length_px), device=device, dtype=dtype)
     checkpoint_count = int(len(track.checkpoints))
     checkpoint_spacing_m = length_m / max(checkpoint_count, 1)
     return GpuTrackTensors(
@@ -184,7 +227,13 @@ def gpu_track_from_cpu(
         centerline_segment_len2=len2,
         centerline_cumdist_px=centerline_s[:-1],
         centerline_segment_mid_px=mid,
+        local_projection_indices=local_projection_indices,
         boundary_segments=boundary_segments,
+        boundary_grid_indices=boundary_grid_indices,
+        boundary_grid_counts=boundary_grid_counts,
+        boundary_grid_cell_size_px=boundary_grid_cell_size_px,
+        boundary_grid_width=grid_width,
+        boundary_grid_height=grid_height,
         finish_line=finish_line,
         drivable_mask=drivable_mask,
         meters_per_pixel=meters_per_pixel,

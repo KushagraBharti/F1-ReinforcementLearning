@@ -14,6 +14,7 @@ from f1rl.evolution_search import (
     ProgressPhaseGene,
     _action_for_progress_delta,
     _controller_controls,
+    _effective_gpu_cpu_replay_top_k,
     _max_steps_for_generation,
     _next_population,
     _parent_buckets,
@@ -71,6 +72,59 @@ def test_random_and_mutated_phase_genomes_stay_valid() -> None:
     )
     assert metadata["mutation_type"].startswith("phase_")
     assert "reset_count" in metadata
+
+
+def test_gpu_production_defaults_to_small_cpu_rerank_unless_explicitly_disabled() -> None:
+    assert (
+        _effective_gpu_cpu_replay_top_k(
+            gpu_run_mode="production",
+            gpu_verify_top_k=4,
+            top_k=8,
+            gpu_cpu_replay_top_k=None,
+            explicit_gpu_cpu_replay_top_k=False,
+        )
+        == 16
+    )
+    assert (
+        _effective_gpu_cpu_replay_top_k(
+            gpu_run_mode="production",
+            gpu_verify_top_k=12,
+            top_k=4,
+            gpu_cpu_replay_top_k=None,
+            explicit_gpu_cpu_replay_top_k=False,
+        )
+        == 16
+    )
+    assert (
+        _effective_gpu_cpu_replay_top_k(
+            gpu_run_mode="production",
+            gpu_verify_top_k=12,
+            top_k=24,
+            gpu_cpu_replay_top_k=None,
+            explicit_gpu_cpu_replay_top_k=False,
+        )
+        == 48
+    )
+    assert (
+        _effective_gpu_cpu_replay_top_k(
+            gpu_run_mode="production",
+            gpu_verify_top_k=4,
+            top_k=8,
+            gpu_cpu_replay_top_k=0,
+            explicit_gpu_cpu_replay_top_k=True,
+        )
+        == 0
+    )
+    assert (
+        _effective_gpu_cpu_replay_top_k(
+            gpu_run_mode="parity",
+            gpu_verify_top_k=4,
+            top_k=8,
+            gpu_cpu_replay_top_k=None,
+            explicit_gpu_cpu_replay_top_k=False,
+        )
+        is None
+    )
 
 
 def test_progress_phase_genome_roundtrips_and_switches_by_distance() -> None:
