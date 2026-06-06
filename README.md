@@ -46,7 +46,7 @@ Earlier V1 milestones were a CPU-evolution result around `89s`, a broad GPU ES `
 
 ## Physics V2 Handoff
 
-Physics V2 is an explicit opt-in simulator model. V1 remains the default and is still the current promoted learned-policy benchmark.
+Physics V2 is an explicit opt-in simulator model and is the current promoted learned-policy benchmark. V1 remains the default runtime path for backward-compatible commands unless `--physics-model v2` is explicitly selected.
 
 Current V2 gate status:
 
@@ -98,7 +98,7 @@ Manual section telemetry can be summarized with QC:
 uv run --no-sync python -m f1rl.qc --telemetry artifacts\runs\manual-headless-20260606-012833-seed7-300975100 --output-dir artifacts\runs --max-telemetry-files 1
 ```
 
-Latest QC report before threshold recording: `artifacts\runs\qc-20260606-012846`; its automated `manual_gate` block still keeps `scripted_threshold` unset because it predates the FastF1 threshold correction. The user manually approved v2.0.10 on 2026-06-06. V2 highlight curation, exact-pygame GIF export, bulk artifact offload, and final validation are complete; commit/push remain.
+Latest QC report before threshold recording: `artifacts\runs\qc-20260606-012846`; its automated `manual_gate` block still keeps `scripted_threshold` unset because it predates the FastF1 threshold correction. The user manually approved v2.0.10 on 2026-06-06. V2 highlight curation, exact-pygame GIF export, bulk artifact offload, final validation, commit, and push are complete in `1c09889`.
 
 ## What Exists
 
@@ -140,6 +140,11 @@ Detailed learned-policy goal docs:
 
 - `docs/CurrentPhysicsLearnedPolicyPlan.md`
 - `docs/PhysicsV2LearnedPolicyPlan.md`
+
+Detailed achievement reports:
+
+- `RL1-Achieved.md`
+- `PhysicsV2-Achieved.md`
 
 ## Setup
 

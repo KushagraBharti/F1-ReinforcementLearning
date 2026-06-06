@@ -94,7 +94,7 @@ uv run --no-sync f1-replay artifacts\runs\reference-control-20260606-022941-seed
 
 The threshold source is FastF1 `79.327s` from `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json` locally, with the original source preserved in the D-drive archive. The CPU controller baseline wrote `artifacts\runs\reference-control-20260606-022941-seed7-987680600`, replay-loaded headlessly, and records `lap_time_s=116.2167`; it is baseline evidence only. Earlier post-manual attempts are superseded failed diagnostics: `artifacts\runs\reference-control-20260606-014926-seed7-381937500` failed `off_track` at `14.0s`, and `artifacts\runs\scripted-20260606-014937-seed7-461099600` failed `collision` at `104.0s`. These original bulk run artifacts are now archived on `D:\`.
 
-Large V2 ES, dataset export, BC, SAC workflow training, CPU learned-policy promotion, local highlight curation, exact-pygame `4x` GIF export, D-drive bulk offload, and final validation have now passed their target gates. Remaining goal work is commit and push. The old `127.183s` debug lap remains invalid as a threshold.
+Large V2 ES, dataset export, BC, SAC workflow training, CPU learned-policy promotion, local highlight curation, exact-pygame `4x` GIF export, D-drive bulk offload, final validation, commit, and push have now passed their target gates. Final pushed commit: `1c09889 Complete Physics V2 learned policy pipeline`. The old `127.183s` debug lap remains invalid as a threshold. The detailed historical report is `PhysicsV2-Achieved.md`.
 
 ## Operating Plan
 

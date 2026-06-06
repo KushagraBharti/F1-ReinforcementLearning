@@ -30,6 +30,7 @@ Storage:
 
 - Current local V2 highlights: `artifacts\highlights\v2-fastf1-final-20260606`
 - V2 bulk archive: `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`
+- Full V2 achievement report: `PhysicsV2-Achieved.md`
 
 Previous V1 milestones:
 
@@ -96,7 +97,7 @@ Manual sustained-corner telemetry can be summarized with QC:
 uv run --no-sync python -m f1rl.qc --telemetry artifacts\runs\manual-headless-20260606-012833-seed7-300975100 --output-dir artifacts\runs --max-telemetry-files 1
 ```
 
-Latest QC path before threshold recording: `artifacts\runs\qc-20260606-012846`. Its automated `manual_gate` block reports `scripted_threshold_status=unset` because it was generated before the FastF1 threshold correction. The user manually approved v2.0.10 on 2026-06-06. The QC section-smoke diagnostic is metadata/checklist evidence only because the headless manual smoke runs straight; use the local copied report `artifacts\highlights\v2-fastf1-final-20260606\calibration\fastf1-v2-manual-balance-fix-20260606.json` for handling-balance metrics. V2 highlight curation, exact-pygame GIF export, bulk offload, and final validation are complete; commit/push remain.
+Latest QC path before threshold recording: `artifacts\runs\qc-20260606-012846`. Its automated `manual_gate` block reports `scripted_threshold_status=unset` because it was generated before the FastF1 threshold correction. The user manually approved v2.0.10 on 2026-06-06. The QC section-smoke diagnostic is metadata/checklist evidence only because the headless manual smoke runs straight; use the local copied report `artifacts\highlights\v2-fastf1-final-20260606\calibration\fastf1-v2-manual-balance-fix-20260606.json` for handling-balance metrics. V2 highlight curation, exact-pygame GIF export, bulk offload, final validation, commit, and push are complete in `1c09889`.
 
 FastF1 threshold and CPU controller baseline after manual approval:
 
@@ -250,6 +251,11 @@ Detailed goal docs:
 
 - `docs/CurrentPhysicsLearnedPolicyPlan.md`: current physics v1 ES data -> transition dataset -> BC -> SAC -> learned policy.
 - `docs/PhysicsV2LearnedPolicyPlan.md`: FastF1-calibrated physics v2 -> GPU ES v2 -> v2 dataset -> SAC learned policy v2.
+
+Detailed achievement reports:
+
+- `RL1-Achieved.md`: V1 learned-policy achievement.
+- `PhysicsV2-Achieved.md`: post-RL1 V2 physics, GPU ES, and learned-policy achievement.
 
 ## Important Commands
 
