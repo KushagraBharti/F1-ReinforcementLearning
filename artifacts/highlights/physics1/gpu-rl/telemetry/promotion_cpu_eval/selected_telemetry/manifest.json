@@ -1,0 +1,40 @@
+{
+  "kind": "f1rl_policy_eval_manifest",
+  "backend": "cpu_policy_eval",
+  "trace_count": 3,
+  "traces": [
+    {
+      "rank": 0,
+      "generation": 0,
+      "candidate_index": 0,
+      "seed": 10251,
+      "path": "artifacts/highlights/learned-policy-replays-20260605/telemetry/promotion_cpu_eval/selected_telemetry/policy-eval-episode-000-steps.jsonl.gz",
+      "best_progress_m": 5793.000137343182,
+      "termination_reason": "lap_complete",
+      "valid_lap": true,
+      "lap_time_s": 79.75
+    },
+    {
+      "rank": 1,
+      "generation": 1,
+      "candidate_index": 1,
+      "seed": 10252,
+      "path": "artifacts/highlights/learned-policy-replays-20260605/telemetry/promotion_cpu_eval/selected_telemetry/policy-eval-episode-001-steps.jsonl.gz",
+      "best_progress_m": 5793.000137343182,
+      "termination_reason": "lap_complete",
+      "valid_lap": true,
+      "lap_time_s": 79.75
+    },
+    {
+      "rank": 2,
+      "generation": 2,
+      "candidate_index": 2,
+      "seed": 10253,
+      "path": "artifacts/highlights/learned-policy-replays-20260605/telemetry/promotion_cpu_eval/selected_telemetry/policy-eval-episode-002-steps.jsonl.gz",
+      "best_progress_m": 5793.000137343182,
+      "termination_reason": "lap_complete",
+      "valid_lap": true,
+      "lap_time_s": 79.75
+    }
+  ]
+}

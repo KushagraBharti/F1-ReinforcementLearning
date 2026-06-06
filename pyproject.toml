@@ -71,7 +71,7 @@ packages = ["src/f1rl"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
-testpaths = ["tests"]
+testpaths = ["tools/tests"]
 timeout = 120
 
 [tool.ruff]

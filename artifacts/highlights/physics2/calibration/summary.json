@@ -1,0 +1,883 @@
+{
+  "source": "FastF1 2024 Monza Q NOR lap 011 primary_qualifying_clean_dry",
+  "rows": 616,
+  "lap_time_s": 79.327,
+  "distance_m": 5753.878867527226,
+  "min_speed_kph": 73.0,
+  "max_speed_kph": 347.0,
+  "mean_speed_kph": 262.7248992137443,
+  "p10_speed_kph": 144.25,
+  "p50_speed_kph": 279.2678571428571,
+  "p90_speed_kph": 336.0,
+  "curvature_abs_p90_rad_per_m": 0.011743050811411946,
+  "curvature_abs_p95_rad_per_m": 0.017910598849642002,
+  "radius_p05_m": 55.83307592922746,
+  "radius_p10_m": 85.15675332510087,
+  "lateral_g_p90": 3.4317534399814895,
+  "lateral_g_p95": 4.233904727068529,
+  "trace_features": {
+    "rows": 616,
+    "lap_time_s": 79.327,
+    "distance_m": 5753.878867527226,
+    "speed_trace_samples": [
+      {
+        "distance_m": 0.0,
+        "speed_kph": 319.925,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11281.324999999999
+      },
+      {
+        "distance_m": 250.0,
+        "speed_kph": 336.1661632629735,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11837.625387563829
+      },
+      {
+        "distance_m": 500.0,
+        "speed_kph": 344.0,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 12090.618947045123
+      },
+      {
+        "distance_m": 750.0,
+        "speed_kph": 344.46755606822455,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 12109.286233500941
+      },
+      {
+        "distance_m": 1000.0,
+        "speed_kph": 138.06036048181133,
+        "throttle": 0.9851006008030189,
+        "brake": 0.0,
+        "gear": 3,
+        "rpm": 10990.774766273205
+      },
+      {
+        "distance_m": 1250.0,
+        "speed_kph": 270.98317726618455,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 7,
+        "rpm": 10863.336703638133
+      },
+      {
+        "distance_m": 1500.0,
+        "speed_kph": 304.56638496022305,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 10779.082879151425
+      },
+      {
+        "distance_m": 1750.0,
+        "speed_kph": 319.646784564617,
+        "throttle": 0.99353215435383,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11257.2795819247
+      },
+      {
+        "distance_m": 2000.0,
+        "speed_kph": 305.77714200058614,
+        "throttle": 0.0,
+        "brake": 1.0,
+        "gear": 8,
+        "rpm": 10934.781733211817
+      },
+      {
+        "distance_m": 2250.0,
+        "speed_kph": 208.73556917022435,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 5,
+        "rpm": 11076.109738747342
+      },
+      {
+        "distance_m": 2500.0,
+        "speed_kph": 215.9614119317604,
+        "throttle": 0.07373975284501019,
+        "brake": 0.0,
+        "gear": 5,
+        "rpm": 11209.355908237821
+      },
+      {
+        "distance_m": 2750.0,
+        "speed_kph": 270.52486125263664,
+        "throttle": 0.5859117680512886,
+        "brake": 0.0,
+        "gear": 6,
+        "rpm": 12073.729357804648
+      },
+      {
+        "distance_m": 3000.0,
+        "speed_kph": 254.90351054824592,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 6,
+        "rpm": 11264.742424795275
+      },
+      {
+        "distance_m": 3250.0,
+        "speed_kph": 307.5283001748777,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 10879.499954634259
+      },
+      {
+        "distance_m": 3500.0,
+        "speed_kph": 331.07005568571003,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11662.152505856951
+      },
+      {
+        "distance_m": 3750.0,
+        "speed_kph": 336.85649301707264,
+        "throttle": 0.9985649301707267,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11852.833748614616
+      },
+      {
+        "distance_m": 4000.0,
+        "speed_kph": 226.9872793975275,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 6,
+        "rpm": 10647.261249919322
+      },
+      {
+        "distance_m": 4250.0,
+        "speed_kph": 284.9345809293615,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 7,
+        "rpm": 11389.158909051912
+      },
+      {
+        "distance_m": 4500.0,
+        "speed_kph": 313.6331169801665,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11049.194807523996
+      },
+      {
+        "distance_m": 4750.0,
+        "speed_kph": 325.7624148890113,
+        "throttle": 0.99,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11467.177212885705
+      },
+      {
+        "distance_m": 5000.0,
+        "speed_kph": 321.4546856654369,
+        "throttle": 0.7227342832718439,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11350.541050831886
+      },
+      {
+        "distance_m": 5250.0,
+        "speed_kph": 243.26948596604632,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 6,
+        "rpm": 11258.0
+      },
+      {
+        "distance_m": 5500.0,
+        "speed_kph": 292.5559337502029,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 7,
+        "rpm": 11188.211102474164
+      },
+      {
+        "distance_m": 5750.0,
+        "speed_kph": 317.95055920289724,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11234.429078550656
+      },
+      {
+        "distance_m": 5753.878867527226,
+        "speed_kph": 318.17000064,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11245.840033280001
+      }
+    ],
+    "braking_zones": [
+      {
+        "index": 0,
+        "start_distance_m": 789.6649540275857,
+        "end_distance_m": 898.9819160190572,
+        "length_m": 109.31696199147143,
+        "start_speed_kph": 319.0,
+        "end_speed_kph": 94.0,
+        "min_speed_kph": 94.0,
+        "min_speed_distance_m": 898.9819160190572,
+        "speed_drop_kph": 225.0,
+        "mean_decel_mps2": 26.030820491461892
+      },
+      {
+        "index": 1,
+        "start_distance_m": 923.9023985744625,
+        "end_distance_m": 937.2447596855736,
+        "length_m": 13.342361111111131,
+        "start_speed_kph": 86.0,
+        "end_speed_kph": 76.5,
+        "min_speed_kph": 76.5,
+        "min_speed_distance_m": 937.2447596855736,
+        "speed_drop_kph": 9.5,
+        "mean_decel_mps2": 4.398148148148151
+      },
+      {
+        "index": 2,
+        "start_distance_m": 1994.4275023621562,
+        "end_distance_m": 2094.712431009954,
+        "length_m": 100.28492864779764,
+        "start_speed_kph": 317.0,
+        "end_speed_kph": 121.42857142857143,
+        "min_speed_kph": 121.42857142857143,
+        "min_speed_distance_m": 2094.712431009954,
+        "speed_drop_kph": 195.57142857142856,
+        "mean_decel_mps2": 27.702905061395597
+      },
+      {
+        "index": 3,
+        "start_distance_m": 2424.5416987840485,
+        "end_distance_m": 2492.4376549679214,
+        "length_m": 67.89595618387284,
+        "start_speed_kph": 263.0,
+        "end_speed_kph": 219.69999786666668,
+        "min_speed_kph": 219.69999786666668,
+        "min_speed_distance_m": 2492.4376549679214,
+        "speed_drop_kph": 43.30000213333332,
+        "mean_decel_mps2": 11.576302570135082
+      },
+      {
+        "index": 4,
+        "start_distance_m": 2770.110070313473,
+        "end_distance_m": 2809.830071527505,
+        "length_m": 39.72000121403198,
+        "start_speed_kph": 248.0,
+        "end_speed_kph": 205.98639542659706,
+        "min_speed_kph": 205.98639542659706,
+        "min_speed_distance_m": 2809.830071527505,
+        "speed_drop_kph": 42.013604573402944,
+        "mean_decel_mps2": 17.65574238250246
+      },
+      {
+        "index": 5,
+        "start_distance_m": 3829.2608472248216,
+        "end_distance_m": 3876.7282879770805,
+        "length_m": 47.46744075225888,
+        "start_speed_kph": 296.0,
+        "end_speed_kph": 215.0,
+        "min_speed_kph": 215.0,
+        "min_speed_distance_m": 3876.7282879770805,
+        "speed_drop_kph": 81.0,
+        "mean_decel_mps2": 31.206657420249496
+      },
+      {
+        "index": 6,
+        "start_distance_m": 5021.004059296112,
+        "end_distance_m": 5102.731386778475,
+        "length_m": 81.72732748236285,
+        "start_speed_kph": 307.0,
+        "end_speed_kph": 230.0321408,
+        "min_speed_kph": 230.0321408,
+        "min_speed_distance_m": 5102.731386778475,
+        "speed_drop_kph": 76.96785919999999,
+        "mean_decel_mps2": 18.446903269101618
+      }
+    ],
+    "corner_speed_targets": [
+      {
+        "index": 0,
+        "name": "corner_01",
+        "zone_start_distance_m": 836.1721144638163,
+        "zone_end_distance_m": 1140.9262562301603,
+        "min_speed_distance_m": 943.7780930189069,
+        "entry_speed_kph": 198.8466107597985,
+        "min_speed_kph": 73.0,
+        "exit_speed_kph": 218.44055751205875,
+        "lateral_g_at_min_speed": 1.3353198050445692,
+        "lateral_g_p50": 0.8625954037736555,
+        "lateral_g_p75": 1.4043459412367436,
+        "lateral_g_p90": 2.442643710425812,
+        "lateral_g_max": 3.424564253281493,
+        "curvature_abs_at_min_speed_rad_per_m": 0.031857638439826315,
+        "curvature_abs_p90_rad_per_m": 0.0333104218622248
+      },
+      {
+        "index": 1,
+        "name": "corner_02",
+        "zone_start_distance_m": 2040.1072270412394,
+        "zone_end_distance_m": 2312.426295256618,
+        "min_speed_distance_m": 2115.355023602546,
+        "entry_speed_kph": 272.04886122925933,
+        "min_speed_kph": 113.0,
+        "exit_speed_kph": 218.05691771324612,
+        "lateral_g_at_min_speed": 0.47145923783342714,
+        "lateral_g_p50": 0.9454531256624092,
+        "lateral_g_p75": 1.5956324079656272,
+        "lateral_g_p90": 2.437939630748739,
+        "lateral_g_max": 4.245526848076781,
+        "curvature_abs_at_min_speed_rad_per_m": 0.0046941965695020075,
+        "curvature_abs_p90_rad_per_m": 0.020608813155673318
+      },
+      {
+        "index": 2,
+        "name": "corner_03",
+        "zone_start_distance_m": 2461.3297940221437,
+        "zone_end_distance_m": 2616.7293710861463,
+        "min_speed_distance_m": 2522.9161081461034,
+        "entry_speed_kph": 263.0,
+        "min_speed_kph": 207.0,
+        "exit_speed_kph": 256.9773257598021,
+        "lateral_g_at_min_speed": 3.9568222336849503,
+        "lateral_g_p50": 3.9568222336849503,
+        "lateral_g_p75": 4.2258074397244965,
+        "lateral_g_p90": 7.268034735541933,
+        "lateral_g_max": 7.434138419708853,
+        "curvature_abs_at_min_speed_rad_per_m": 0.01174031791680888,
+        "curvature_abs_p90_rad_per_m": 0.017178669236336503
+      },
+      {
+        "index": 3,
+        "name": "corner_04",
+        "zone_start_distance_m": 2792.5325733638165,
+        "zone_end_distance_m": 2944.438496369765,
+        "min_speed_distance_m": 2839.2272937497273,
+        "entry_speed_kph": 269.0906420218723,
+        "min_speed_kph": 190.0,
+        "exit_speed_kph": 251.40738433797762,
+        "lateral_g_at_min_speed": 3.114546087433289,
+        "lateral_g_p50": 1.876781662788996,
+        "lateral_g_p75": 3.386298930507955,
+        "lateral_g_p90": 4.380305586917329,
+        "lateral_g_max": 6.9433105870994485,
+        "curvature_abs_at_min_speed_rad_per_m": 0.010968861901541787,
+        "curvature_abs_p90_rad_per_m": 0.01404805279918659
+      },
+      {
+        "index": 4,
+        "name": "corner_05",
+        "zone_start_distance_m": 3859.764862405825,
+        "zone_end_distance_m": 4037.212208498956,
+        "min_speed_distance_m": 3921.196065754858,
+        "entry_speed_kph": 310.01217502880326,
+        "min_speed_kph": 194.0,
+        "exit_speed_kph": 250.06597230802677,
+        "lateral_g_at_min_speed": 1.0989197289765038,
+        "lateral_g_p50": 2.947540833980548,
+        "lateral_g_p75": 3.6383097216485805,
+        "lateral_g_p90": 4.200556016962837,
+        "lateral_g_max": 5.133029074666551,
+        "curvature_abs_at_min_speed_rad_per_m": 0.0037122440465172488,
+        "curvature_abs_p90_rad_per_m": 0.010456139036963867
+      },
+      {
+        "index": 5,
+        "name": "corner_06",
+        "zone_start_distance_m": 5084.903895866475,
+        "zone_end_distance_m": 5240.438787206326,
+        "min_speed_distance_m": 5151.801379798919,
+        "entry_speed_kph": 274.09507019022357,
+        "min_speed_kph": 215.0,
+        "exit_speed_kph": 253.82145334264877,
+        "lateral_g_at_min_speed": 3.9817817109566365,
+        "lateral_g_p50": 3.9751910964750308,
+        "lateral_g_p75": 4.9579522506348095,
+        "lateral_g_p90": 5.590863943098245,
+        "lateral_g_max": 7.481519328663171,
+        "curvature_abs_at_min_speed_rad_per_m": 0.010951523427905256,
+        "curvature_abs_p90_rad_per_m": 0.014516085918147771
+      }
+    ],
+    "sustained_corner_targets": [
+      {
+        "index": 0,
+        "name": "sustained_corner_01",
+        "start_distance_m": 2424.5416987840485,
+        "end_distance_m": 2598.1809583877334,
+        "length_m": 173.63925960368488,
+        "mean_speed_kph": 228.97617368954855,
+        "min_speed_kph": 207.0,
+        "max_speed_kph": 263.0,
+        "lateral_g_p50": 4.012203287592229,
+        "lateral_g_p75": 4.239225277555071,
+        "lateral_g_p90": 7.266891963910661,
+        "lateral_g_max": 7.434138419708853,
+        "curvature_abs_p90_rad_per_m": 0.01711468568129609,
+        "radius_p10_m": 58.429352348133236
+      },
+      {
+        "index": 1,
+        "name": "sustained_corner_02",
+        "start_distance_m": 2770.110070313473,
+        "end_distance_m": 2879.498365178298,
+        "length_m": 109.38829486482518,
+        "mean_speed_kph": 205.96540190561035,
+        "min_speed_kph": 190.0,
+        "max_speed_kph": 248.0,
+        "lateral_g_p50": 3.151280251601479,
+        "lateral_g_p75": 3.6509633314436583,
+        "lateral_g_p90": 4.554772027155539,
+        "lateral_g_max": 6.9433105870994485,
+        "curvature_abs_p90_rad_per_m": 0.015355669768527782,
+        "radius_p10_m": 65.41588927363784
+      },
+      {
+        "index": 2,
+        "name": "sustained_corner_03",
+        "start_distance_m": 3848.1068926465364,
+        "end_distance_m": 3934.196065754858,
+        "length_m": 86.08917310832157,
+        "mean_speed_kph": 216.1392504392394,
+        "min_speed_kph": 194.0,
+        "max_speed_kph": 252.18929645714286,
+        "lateral_g_p50": 3.409760217139352,
+        "lateral_g_p75": 3.829266329778283,
+        "lateral_g_p90": 4.650141343043495,
+        "lateral_g_max": 5.133029074666551,
+        "curvature_abs_p90_rad_per_m": 0.014269811503758284,
+        "radius_p10_m": 70.83399878655428
+      },
+      {
+        "index": 3,
+        "name": "sustained_corner_04",
+        "start_distance_m": 5051.994337073891,
+        "end_distance_m": 5338.702739835559,
+        "length_m": 286.70840276166837,
+        "mean_speed_kph": 238.7746382452305,
+        "min_speed_kph": 215.0,
+        "max_speed_kph": 274.0,
+        "lateral_g_p50": 3.874627886551016,
+        "lateral_g_p75": 4.326879724000078,
+        "lateral_g_p90": 5.3927432344018715,
+        "lateral_g_max": 8.883485609191027,
+        "curvature_abs_p90_rad_per_m": 0.01373824167498111,
+        "radius_p10_m": 72.86225793756988
+      }
+    ],
+    "acceleration": {
+      "positive_accel_p95_mps2": 11.574072641702475,
+      "positive_accel_max_mps2": 16.666666666666703,
+      "braking_decel_p95_mps2": 46.62697783859356,
+      "braking_decel_max_mps2": 55.38248528902711
+    },
+    "longitudinal_by_speed_bin": [
+      {
+        "speed_min_kph": 50.0,
+        "speed_max_kph": 100.0,
+        "samples": 28,
+        "mean_speed_kph": 84.11583642154775,
+        "full_throttle_samples": 0,
+        "full_throttle_accel_p50_mps2": null,
+        "full_throttle_accel_p90_mps2": null,
+        "full_throttle_accel_p95_mps2": null,
+        "braking_samples": 9,
+        "braking_decel_p50_mps2": 5.208333333333329,
+        "braking_decel_p90_mps2": 6.767093401709406,
+        "braking_decel_p95_mps2": 7.723824478632477
+      },
+      {
+        "speed_min_kph": 100.0,
+        "speed_max_kph": 150.0,
+        "samples": 36,
+        "mean_speed_kph": 124.84180705326278,
+        "full_throttle_samples": 3,
+        "full_throttle_accel_p50_mps2": 15.187909019607838,
+        "full_throttle_accel_p90_mps2": 16.37091513725493,
+        "full_throttle_accel_p95_mps2": 16.518790901960816,
+        "braking_samples": 13,
+        "braking_decel_p50_mps2": 11.47959183673466,
+        "braking_decel_p90_mps2": 22.53139717425437,
+        "braking_decel_p95_mps2": 25.587606837606813
+      },
+      {
+        "speed_min_kph": 150.0,
+        "speed_max_kph": 200.0,
+        "samples": 33,
+        "mean_speed_kph": 182.51507045348936,
+        "full_throttle_samples": 19,
+        "full_throttle_accel_p50_mps2": 11.805555555555612,
+        "full_throttle_accel_p90_mps2": 13.976298287998238,
+        "full_throttle_accel_p95_mps2": 14.376141821496027,
+        "braking_samples": 5,
+        "braking_decel_p50_mps2": 36.575721629102105,
+        "braking_decel_p90_mps2": 39.38526937673689,
+        "braking_decel_p95_mps2": 40.103450627788256
+      },
+      {
+        "speed_min_kph": 200.0,
+        "speed_max_kph": 250.0,
+        "samples": 124,
+        "mean_speed_kph": 226.0047993826829,
+        "full_throttle_samples": 84,
+        "full_throttle_accel_p50_mps2": 6.944444444444372,
+        "full_throttle_accel_p90_mps2": 10.962301587301669,
+        "full_throttle_accel_p95_mps2": 11.623264688249467,
+        "braking_samples": 23,
+        "braking_decel_p50_mps2": 14.880952380952337,
+        "braking_decel_p90_mps2": 38.490531844013404,
+        "braking_decel_p95_mps2": 44.49404761904758
+      },
+      {
+        "speed_min_kph": 250.0,
+        "speed_max_kph": 300.0,
+        "samples": 142,
+        "mean_speed_kph": 273.77586473723284,
+        "full_throttle_samples": 121,
+        "full_throttle_accel_p50_mps2": 4.1666666666665835,
+        "full_throttle_accel_p90_mps2": 5.95238095238097,
+        "full_throttle_accel_p95_mps2": 6.365740740740706,
+        "braking_samples": 18,
+        "braking_decel_p50_mps2": 31.597216574585953,
+        "braking_decel_p90_mps2": 46.626987455705724,
+        "braking_decel_p95_mps2": 47.9403414089856
+      },
+      {
+        "speed_min_kph": 300.0,
+        "speed_max_kph": 330.0,
+        "samples": 169,
+        "mean_speed_kph": 317.04119568412284,
+        "full_throttle_samples": 126,
+        "full_throttle_accel_p50_mps2": 1.736111111111122,
+        "full_throttle_accel_p90_mps2": 3.472221669430551,
+        "full_throttle_accel_p95_mps2": 3.7143434237536233,
+        "braking_samples": 4,
+        "braking_decel_p50_mps2": 32.24974225589233,
+        "braking_decel_p90_mps2": 43.07922979797972,
+        "braking_decel_p95_mps2": 44.85310696248183
+      },
+      {
+        "speed_min_kph": 330.0,
+        "speed_max_kph": 360.0,
+        "samples": 84,
+        "mean_speed_kph": 339.1102634550481,
+        "full_throttle_samples": 55,
+        "full_throttle_accel_p50_mps2": 0.9920637577206878,
+        "full_throttle_accel_p90_mps2": 1.7361111111110767,
+        "full_throttle_accel_p95_mps2": 1.784722320987676,
+        "braking_samples": 0,
+        "braking_decel_p50_mps2": null,
+        "braking_decel_p90_mps2": null,
+        "braking_decel_p95_mps2": null
+      }
+    ],
+    "gear_rpm": {
+      "min_gear": 2,
+      "max_gear": 8,
+      "gears": {
+        "2": {
+          "samples": 37,
+          "min_speed_kph": 73.0,
+          "median_speed_kph": 86.0,
+          "max_speed_kph": 131.45999616,
+          "min_rpm": 6534.0,
+          "mean_rpm": 8413.640036722361,
+          "max_rpm": 11625.0
+        },
+        "3": {
+          "samples": 29,
+          "min_speed_kph": 113.0,
+          "median_speed_kph": 132.68500096,
+          "max_speed_kph": 183.75,
+          "min_rpm": 8014.0,
+          "mean_rpm": 9785.66469616171,
+          "max_rpm": 11882.0
+        },
+        "4": {
+          "samples": 9,
+          "min_speed_kph": 172.0,
+          "median_speed_kph": 188.0,
+          "max_speed_kph": 195.6,
+          "min_rpm": 10281.0,
+          "mean_rpm": 10741.143209876544,
+          "max_rpm": 11300.0
+        },
+        "5": {
+          "samples": 78,
+          "min_speed_kph": 112.61111111111111,
+          "median_speed_kph": 213.27083199999998,
+          "max_speed_kph": 235.0,
+          "min_rpm": 9543.555555555555,
+          "mean_rpm": 10920.145981958747,
+          "max_rpm": 12203.0
+        },
+        "6": {
+          "samples": 97,
+          "min_speed_kph": 161.0,
+          "median_speed_kph": 248.0,
+          "max_speed_kph": 271.0,
+          "min_rpm": 9748.0,
+          "mean_rpm": 11314.687438755422,
+          "max_rpm": 12259.0
+        },
+        "7": {
+          "samples": 72,
+          "min_speed_kph": 139.0,
+          "median_speed_kph": 279.125,
+          "max_speed_kph": 295.88500096,
+          "min_rpm": 9632.0,
+          "mean_rpm": 11045.665112425802,
+          "max_rpm": 11641.0
+        },
+        "8": {
+          "samples": 294,
+          "min_speed_kph": 145.15,
+          "median_speed_kph": 321.95249984,
+          "max_speed_kph": 347.0,
+          "min_rpm": 9642.0,
+          "mean_rpm": 11276.882869677353,
+          "max_rpm": 12193.0
+        }
+      },
+      "shift_points": [
+        {
+          "distance_m": 866.9104874796894,
+          "speed_kph": 139.0,
+          "rpm": 9632.0,
+          "from_gear": 8,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 873.7438208130227,
+          "speed_kph": 123.0,
+          "rpm": 10162.0,
+          "from_gear": 7,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 884.7478331587016,
+          "speed_kph": 106.0,
+          "rpm": 9150.0,
+          "from_gear": 5,
+          "to_gear": 2
+        },
+        {
+          "distance_m": 1001.9189305797512,
+          "speed_kph": 141.0,
+          "rpm": 10785.0,
+          "from_gear": 2,
+          "to_gear": 3
+        },
+        {
+          "distance_m": 1028.6635409208977,
+          "speed_kph": 172.0,
+          "rpm": 10782.0,
+          "from_gear": 3,
+          "to_gear": 4
+        },
+        {
+          "distance_m": 1068.6032322789224,
+          "speed_kph": 202.0,
+          "rpm": 10742.0,
+          "from_gear": 4,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 1122.4659306916208,
+          "speed_kph": 231.0,
+          "rpm": 10643.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 1217.1076312070045,
+          "speed_kph": 264.0,
+          "rpm": 10588.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 1392.5544696079237,
+          "speed_kph": 294.0,
+          "rpm": 10427.0,
+          "from_gear": 7,
+          "to_gear": 8
+        },
+        {
+          "distance_m": 2062.402510375033,
+          "speed_kph": 161.0,
+          "rpm": 9748.0,
+          "from_gear": 8,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 2072.0691770416997,
+          "speed_kph": 145.0,
+          "rpm": 9644.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2082.323145295668,
+          "speed_kph": 130.0,
+          "rpm": 9154.0,
+          "from_gear": 5,
+          "to_gear": 3
+        },
+        {
+          "distance_m": 2215.394861480815,
+          "speed_kph": 188.0,
+          "rpm": 11150.0,
+          "from_gear": 3,
+          "to_gear": 4
+        },
+        {
+          "distance_m": 2237.070139258593,
+          "speed_kph": 199.0,
+          "rpm": 10716.0,
+          "from_gear": 4,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2297.868602464519,
+          "speed_kph": 231.0,
+          "rpm": 10622.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 2462.6353495776993,
+          "speed_kph": 235.0,
+          "rpm": 12203.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2589.1004028321777,
+          "speed_kph": 230.0,
+          "rpm": 10633.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 2797.1847955860385,
+          "speed_kph": 212.0,
+          "rpm": 10729.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2913.8051513742093,
+          "speed_kph": 219.0,
+          "rpm": 10452.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 3040.1101352184737,
+          "speed_kph": 265.0,
+          "rpm": 10650.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 3175.4355294403213,
+          "speed_kph": 295.0,
+          "rpm": 10502.0,
+          "from_gear": 7,
+          "to_gear": 8
+        },
+        {
+          "distance_m": 3892.6727324215244,
+          "speed_kph": 205.0,
+          "rpm": 10591.0,
+          "from_gear": 8,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 4003.42074695545,
+          "speed_kph": 228.0,
+          "rpm": 10653.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 4106.814351356099,
+          "speed_kph": 257.0,
+          "rpm": 10323.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 4313.577976242286,
+          "speed_kph": 295.0,
+          "rpm": 10357.0,
+          "from_gear": 7,
+          "to_gear": 8
+        },
+        {
+          "distance_m": 5051.994337073891,
+          "speed_kph": 274.0,
+          "rpm": 11507.0,
+          "from_gear": 8,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 5066.1559714301575,
+          "speed_kph": 251.0,
+          "rpm": 11189.0,
+          "from_gear": 7,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 5102.795275667364,
+          "speed_kph": 230.0,
+          "rpm": 11807.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 5208.858092761881,
+          "speed_kph": 232.0,
+          "rpm": 10788.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 5338.629679320004,
+          "speed_kph": 263.0,
+          "rpm": 10613.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 5527.2023677926245,
+          "speed_kph": 298.0,
+          "rpm": 10519.0,
+          "from_gear": 7,
+          "to_gear": 8
+        }
+      ]
+    },
+    "curvature_lateral_g": {
+      "curvature_abs_p90_rad_per_m": 0.011743050811411946,
+      "curvature_abs_p95_rad_per_m": 0.017910598849642002,
+      "radius_p05_m": 55.83307592922746,
+      "radius_p10_m": 85.15675332510087,
+      "lateral_g_p90": 3.4317534399814895,
+      "lateral_g_p95": 4.233904727068529
+    }
+  }
+}

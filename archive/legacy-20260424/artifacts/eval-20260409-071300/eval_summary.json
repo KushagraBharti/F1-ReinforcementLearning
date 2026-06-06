@@ -1,8 +1,0 @@
-{
-  "checkpoint": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\train-smoke-20260409-071207\\checkpoints",
-  "backend": "artifact",
-  "steps": 120,
-  "episodes": 1,
-  "total_reward": 1.5426838963767735,
-  "avg_reward_per_step": 0.012855699136473112
-}

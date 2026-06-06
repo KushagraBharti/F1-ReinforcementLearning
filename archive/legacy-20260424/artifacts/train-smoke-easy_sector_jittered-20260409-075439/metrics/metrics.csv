@@ -1,2 +1,0 @@
-training_iteration,episode_reward_mean,episode_len_mean,timesteps_total,time_total_s,evaluation_episode_reward_mean,evaluation_episode_len_mean,policy_entropy,value_loss,kl_value,sample_time_s,learner_update_time_s,sync_weights_time_s,samples_per_second,iteration_wall_time_s
-1.0,0.5407174863238646,42.0,512.0,11.418409824371338,0.7496247522689906,42.0,3.045212745666504,0.11791648715734482,0.013126651756465435,512.0,0.17766459996346384,0.0,44.749038955716486,11.441586499917321

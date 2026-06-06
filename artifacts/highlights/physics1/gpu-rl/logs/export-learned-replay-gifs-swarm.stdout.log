@@ -1,0 +1,19 @@
+loading policy swarm group 1/1 raw=0 traces=1000
+using shared deterministic trace for policy swarm template=policy-swarm-checkpoint-0000-car-00000-steps.jsonl.gz clones=1000
+rendering policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: traces=1000 duration=79.733s fps=12 speed=1.00 frames=957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 60/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 120/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 180/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 240/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 300/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 360/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 420/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 480/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 540/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 600/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 660/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 720/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 780/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 840/957
+policy_swarm_1000-checkpoint_0001_raw_0-exact.gif: frame 900/957
+wrote C:\Users\kushagra\OneDrive\Documents\CS Projects\F1-ReinforcementLearning\artifacts\highlights\learned-policy-replays-20260605\policy_swarm_1000-checkpoint_0001_raw_0-exact.gif frames=957

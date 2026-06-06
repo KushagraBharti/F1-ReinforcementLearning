@@ -1,2 +1,0 @@
-training_iteration,timesteps_total,episode_reward_mean,episode_len_mean,avg_speed_kph,avg_distance_travelled,avg_checkpoints_reached,alive_cars,samples_per_second,iteration_wall_time_s,policy_loss,value_loss,entropy
-1,2048,0.009726381860673428,64.0,0.36364638805389404,0.16015014052391052,0.0,32,619.3931761501302,3.306462000000465,0.009455223334953189,0.004320712687331252,687.297794342041

@@ -1,0 +1,18 @@
+rendering promotion_cpu_eval-selected_telemetry-exact.gif: traces=3 duration=79.733s fps=12 speed=1.00 frames=957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 60/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 120/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 180/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 240/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 300/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 360/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 420/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 480/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 540/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 600/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 660/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 720/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 780/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 840/957
+promotion_cpu_eval-selected_telemetry-exact.gif: frame 900/957
+wrote C:\Users\kushagra\OneDrive\Documents\CS Projects\F1-ReinforcementLearning\artifacts\highlights\learned-policy-replays-20260605\promotion_cpu_eval-selected_telemetry-exact.gif frames=957
+loading policy swarm group 1/1 raw=0 traces=1000

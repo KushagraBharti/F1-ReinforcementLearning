@@ -1,0 +1,3308 @@
+{
+  "targets": {
+    "source": "Fast-F1 2024 Italian Grand Prix Qualifying VER fastest lap",
+    "lap_time_s": 79.662,
+    "distance_m": 5745.669358933476,
+    "min_speed_kph": 75.0,
+    "max_speed_kph": 348.0,
+    "mean_speed_kph": 259.91445380074884,
+    "p10_speed_kph": 142.0,
+    "p50_speed_kph": 274.22291253333333,
+    "p90_speed_kph": 336.23074976,
+    "curvature_abs_p90_rad_per_m": 0.012834091146067107,
+    "curvature_abs_p95_rad_per_m": 0.020375263694407456,
+    "radius_p05_m": 49.098784984464274,
+    "radius_p10_m": 77.91750620304065,
+    "lateral_g_p90": 3.2784794132687525,
+    "lateral_g_p95": 4.0949627805901985
+  },
+  "reference_trace_features": {
+    "rows": 610,
+    "lap_time_s": 79.662,
+    "distance_m": 5745.669358933476,
+    "speed_trace_samples": [
+      {
+        "distance_m": 0.0,
+        "speed_kph": 321.7178578285714,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11422.142939428571
+      },
+      {
+        "distance_m": 250.0,
+        "speed_kph": 337.43428759690073,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11920.914116278935
+      },
+      {
+        "distance_m": 500.0,
+        "speed_kph": 346.0,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 12172.933181416049
+      },
+      {
+        "distance_m": 750.0,
+        "speed_kph": 345.28399911754985,
+        "throttle": 0.9283999117549866,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 12052.171141052331
+      },
+      {
+        "distance_m": 1000.0,
+        "speed_kph": 149.46341146032356,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 3,
+        "rpm": 11228.373784846943
+      },
+      {
+        "distance_m": 1250.0,
+        "speed_kph": 270.621390209008,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 7,
+        "rpm": 10736.796139251106
+      },
+      {
+        "distance_m": 1500.0,
+        "speed_kph": 306.27133186244237,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 10898.732958079607
+      },
+      {
+        "distance_m": 1750.0,
+        "speed_kph": 322.3627131489651,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11409.800151577881
+      },
+      {
+        "distance_m": 2000.0,
+        "speed_kph": 294.9561831230465,
+        "throttle": 0.0,
+        "brake": 1.0,
+        "gear": 8,
+        "rpm": 10607.251219006825
+      },
+      {
+        "distance_m": 2250.0,
+        "speed_kph": 208.93764153080113,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 4,
+        "rpm": 10878.073680933288
+      },
+      {
+        "distance_m": 2500.0,
+        "speed_kph": 208.83638185476374,
+        "throttle": 0.1215995991951974,
+        "brake": 0.0,
+        "gear": 5,
+        "rpm": 10430.565020962045
+      },
+      {
+        "distance_m": 2750.0,
+        "speed_kph": 267.2872998079334,
+        "throttle": 0.6650309097286948,
+        "brake": 0.5608154011985433,
+        "gear": 6,
+        "rpm": 11893.033295966601
+      },
+      {
+        "distance_m": 3000.0,
+        "speed_kph": 257.2928609545536,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 6,
+        "rpm": 11456.059150602747
+      },
+      {
+        "distance_m": 3250.0,
+        "speed_kph": 306.67200832498634,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 10961.14021853089
+      },
+      {
+        "distance_m": 3500.0,
+        "speed_kph": 331.3871230868676,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11747.322738521205
+      },
+      {
+        "distance_m": 3750.0,
+        "speed_kph": 339.0,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11957.548714548078
+      },
+      {
+        "distance_m": 4000.0,
+        "speed_kph": 221.3829494648082,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 5,
+        "rpm": 11575.265039458356
+      },
+      {
+        "distance_m": 4250.0,
+        "speed_kph": 282.71038496456424,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 7,
+        "rpm": 11175.959042127924
+      },
+      {
+        "distance_m": 4500.0,
+        "speed_kph": 310.89314481214024,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11071.492930455259
+      },
+      {
+        "distance_m": 4750.0,
+        "speed_kph": 325.134624526089,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11541.664151719719
+      },
+      {
+        "distance_m": 5000.0,
+        "speed_kph": 329.04656605464913,
+        "throttle": 0.046566054649115174,
+        "brake": 0.8620265701529886,
+        "gear": 8,
+        "rpm": 11075.287708024382
+      },
+      {
+        "distance_m": 5250.0,
+        "speed_kph": 241.2468815813557,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 6,
+        "rpm": 10944.397699672589
+      },
+      {
+        "distance_m": 5500.0,
+        "speed_kph": 291.2902276438642,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 7,
+        "rpm": 11579.706829315926
+      },
+      {
+        "distance_m": 5745.669358933476,
+        "speed_kph": 319.2625002666667,
+        "throttle": 1.0,
+        "brake": 0.0,
+        "gear": 8,
+        "rpm": 11302.500010666667
+      }
+    ],
+    "braking_zones": [
+      {
+        "index": 0,
+        "start_distance_m": 781.3487535154254,
+        "end_distance_m": 900.0916005991078,
+        "length_m": 118.74284708368236,
+        "start_speed_kph": 336.0,
+        "end_speed_kph": 82.0,
+        "min_speed_kph": 82.0,
+        "min_speed_distance_m": 900.0916005991078,
+        "speed_drop_kph": 254.0,
+        "mean_decel_mps2": 25.93954248366014
+      },
+      {
+        "index": 1,
+        "start_distance_m": 923.2531265127983,
+        "end_distance_m": 935.2999906159095,
+        "length_m": 12.046864103111147,
+        "start_speed_kph": 86.0,
+        "end_speed_kph": 76.26666524444444,
+        "min_speed_kph": 76.26666524444444,
+        "min_speed_distance_m": 935.2999906159095,
+        "speed_drop_kph": 9.73333475555556,
+        "mean_decel_mps2": 4.979197235295448
+      },
+      {
+        "index": 2,
+        "start_distance_m": 1976.657871812571,
+        "end_distance_m": 2097.884715883076,
+        "length_m": 121.22684407050474,
+        "start_speed_kph": 325.0,
+        "end_speed_kph": 117.22500352,
+        "min_speed_kph": 117.22500352,
+        "min_speed_distance_m": 2097.884715883076,
+        "speed_drop_kph": 207.77499648,
+        "mean_decel_mps2": 25.05003333333335
+      },
+      {
+        "index": 3,
+        "start_distance_m": 2435.2741557924346,
+        "end_distance_m": 2472.7678664128794,
+        "length_m": 37.493710620444745,
+        "start_speed_kph": 245.0,
+        "end_speed_kph": 222.3571456,
+        "min_speed_kph": 222.3571456,
+        "min_speed_distance_m": 2472.7678664128794,
+        "speed_drop_kph": 22.642854400000004,
+        "mean_decel_mps2": 10.751592782526101
+      },
+      {
+        "index": 4,
+        "start_distance_m": 2755.1139386658774,
+        "end_distance_m": 2809.2432098109184,
+        "length_m": 54.129271145041,
+        "start_speed_kph": 267.0,
+        "end_speed_kph": 203.0,
+        "min_speed_kph": 203.0,
+        "min_speed_distance_m": 2809.2432098109184,
+        "speed_drop_kph": 64.0,
+        "mean_decel_mps2": 20.225003160156795
+      },
+      {
+        "index": 5,
+        "start_distance_m": 3803.1469214038584,
+        "end_distance_m": 3878.5757485142617,
+        "length_m": 75.42882711040329,
+        "start_speed_kph": 328.0,
+        "end_speed_kph": 204.968752,
+        "min_speed_kph": 204.968752,
+        "min_speed_distance_m": 3878.5757485142617,
+        "speed_drop_kph": 123.031248,
+        "mean_decel_mps2": 29.873554778554823
+      },
+      {
+        "index": 6,
+        "start_distance_m": 5001.702247190738,
+        "end_distance_m": 5091.514968113996,
+        "length_m": 89.81272092325798,
+        "start_speed_kph": 329.0,
+        "end_speed_kph": 221.52500224,
+        "min_speed_kph": 221.52500224,
+        "min_speed_distance_m": 5091.514968113996,
+        "speed_drop_kph": 107.47499776000001,
+        "mean_decel_mps2": 22.876755589612483
+      }
+    ],
+    "corner_speed_targets": [
+      {
+        "index": 0,
+        "name": "corner_01",
+        "zone_start_distance_m": 827.3306845696475,
+        "zone_end_distance_m": 1135.4650826851073,
+        "min_speed_distance_m": 936.4874906159095,
+        "entry_speed_kph": 199.2194716927726,
+        "min_speed_kph": 75.0,
+        "exit_speed_kph": 216.91380489430497,
+        "lateral_g_at_min_speed": 1.8707024486237236,
+        "lateral_g_p50": 0.8246627836042986,
+        "lateral_g_p75": 1.5819164529046785,
+        "lateral_g_p90": 2.1201652517031784,
+        "lateral_g_max": 3.1213216133662423,
+        "curvature_abs_at_min_speed_rad_per_m": 0.04228206571238108,
+        "curvature_abs_p90_rad_per_m": 0.03733477002991412
+      },
+      {
+        "index": 1,
+        "name": "corner_02",
+        "zone_start_distance_m": 2027.2069630546316,
+        "zone_end_distance_m": 2309.6010756632827,
+        "min_speed_distance_m": 2111.7364906030753,
+        "entry_speed_kph": 266.4620110775185,
+        "min_speed_kph": 108.0,
+        "exit_speed_kph": 214.20136631487628,
+        "lateral_g_at_min_speed": 0.5791793369667866,
+        "lateral_g_p50": 1.0642743089808766,
+        "lateral_g_p75": 1.7875788904314829,
+        "lateral_g_p90": 2.5317573420841355,
+        "lateral_g_max": 3.5204999896291858,
+        "curvature_abs_at_min_speed_rad_per_m": 0.006313054772937974,
+        "curvature_abs_p90_rad_per_m": 0.0201135639079891
+      },
+      {
+        "index": 2,
+        "name": "corner_03",
+        "zone_start_distance_m": 2445.940822459101,
+        "zone_end_distance_m": 2609.4148009849455,
+        "min_speed_distance_m": 2515.5967437906575,
+        "entry_speed_kph": 256.41879361369377,
+        "min_speed_kph": 204.0,
+        "exit_speed_kph": 253.52199291305857,
+        "lateral_g_at_min_speed": 6.174751189828722,
+        "lateral_g_p50": 3.7018484727772436,
+        "lateral_g_p75": 4.915304856803124,
+        "lateral_g_p90": 5.813466646505239,
+        "lateral_g_max": 6.174751189828722,
+        "curvature_abs_at_min_speed_rad_per_m": 0.01886397171453211,
+        "curvature_abs_p90_rad_per_m": 0.01425768987879269
+      },
+      {
+        "index": 3,
+        "name": "corner_04",
+        "zone_start_distance_m": 2783.875837010326,
+        "zone_end_distance_m": 2942.970115463447,
+        "min_speed_distance_m": 2833.307867689013,
+        "entry_speed_kph": 267.2341389206465,
+        "min_speed_kph": 192.0,
+        "exit_speed_kph": 253.53991631655038,
+        "lateral_g_at_min_speed": 3.99763322049261,
+        "lateral_g_p50": 2.3396157215618585,
+        "lateral_g_p75": 4.024059789657899,
+        "lateral_g_p90": 4.351616970938979,
+        "lateral_g_max": 4.904095628413516,
+        "curvature_abs_at_min_speed_rad_per_m": 0.013787149884269241,
+        "curvature_abs_p90_rad_per_m": 0.013955761015957463
+      },
+      {
+        "index": 4,
+        "name": "corner_05",
+        "zone_start_distance_m": 3849.215114758707,
+        "zone_end_distance_m": 4050.9856225138255,
+        "min_speed_distance_m": 3907.6429361320397,
+        "entry_speed_kph": 317.1518081028877,
+        "min_speed_kph": 192.0,
+        "exit_speed_kph": 241.47427847199697,
+        "lateral_g_at_min_speed": 2.8509923517157807,
+        "lateral_g_p50": 2.112802207086622,
+        "lateral_g_p75": 3.501831865493664,
+        "lateral_g_p90": 4.334762805786418,
+        "lateral_g_max": 8.760159110097927,
+        "curvature_abs_at_min_speed_rad_per_m": 0.00983258260675728,
+        "curvature_abs_p90_rad_per_m": 0.012458742890564558
+      },
+      {
+        "index": 5,
+        "name": "corner_06",
+        "zone_start_distance_m": 5069.958822165551,
+        "zone_end_distance_m": 5235.39478622547,
+        "min_speed_distance_m": 5120.527110282803,
+        "entry_speed_kph": 293.0586433921057,
+        "min_speed_kph": 208.0,
+        "exit_speed_kph": 245.33935860860444,
+        "lateral_g_at_min_speed": 4.550058462435262,
+        "lateral_g_p50": 4.0279128069776275,
+        "lateral_g_p75": 4.970584144243054,
+        "lateral_g_p90": 5.403603517674155,
+        "lateral_g_max": 7.582487784367293,
+        "curvature_abs_at_min_speed_rad_per_m": 0.013371013146581671,
+        "curvature_abs_p90_rad_per_m": 0.013977815423170902
+      }
+    ],
+    "sustained_corner_targets": [
+      {
+        "index": 0,
+        "name": "sustained_corner_01",
+        "start_distance_m": 2435.2741557924346,
+        "end_distance_m": 2568.3813962724353,
+        "length_m": 133.10724048000066,
+        "mean_speed_kph": 219.83452396799998,
+        "min_speed_kph": 204.0,
+        "max_speed_kph": 245.0,
+        "lateral_g_p50": 3.873487627412837,
+        "lateral_g_p75": 5.209741155508304,
+        "lateral_g_p90": 5.847566941592224,
+        "lateral_g_max": 6.174751189828722,
+        "curvature_abs_p90_rad_per_m": 0.014620251460057852,
+        "radius_p10_m": 68.43180184083126
+      },
+      {
+        "index": 1,
+        "name": "sustained_corner_02",
+        "start_distance_m": 2771.380605332544,
+        "end_distance_m": 2856.2953242179024,
+        "length_m": 84.91471888535852,
+        "mean_speed_kph": 208.7452417575801,
+        "min_speed_kph": 192.0,
+        "max_speed_kph": 244.0,
+        "lateral_g_p50": 3.6455030070528425,
+        "lateral_g_p75": 4.163124705395791,
+        "lateral_g_p90": 4.464808928488387,
+        "lateral_g_max": 4.904095628413516,
+        "curvature_abs_p90_rad_per_m": 0.013993964394191198,
+        "radius_p10_m": 71.45968985407706
+      },
+      {
+        "index": 2,
+        "name": "sustained_corner_03",
+        "start_distance_m": 5033.296727252959,
+        "end_distance_m": 5298.651709650052,
+        "length_m": 265.3549823970934,
+        "mean_speed_kph": 228.28905103767403,
+        "min_speed_kph": 208.0,
+        "max_speed_kph": 267.0,
+        "lateral_g_p50": 3.6385794092483716,
+        "lateral_g_p75": 4.550058462435262,
+        "lateral_g_p90": 5.242431636456099,
+        "lateral_g_max": 7.582487784367293,
+        "curvature_abs_p90_rad_per_m": 0.013644591248776358,
+        "radius_p10_m": 73.29280910042596
+      }
+    ],
+    "acceleration": {
+      "positive_accel_p95_mps2": 9.92178312365272,
+      "positive_accel_max_mps2": 18.51851851851854,
+      "braking_decel_p95_mps2": 51.79834118730537,
+      "braking_decel_max_mps2": 57.29166666666656
+    },
+    "longitudinal_by_speed_bin": [
+      {
+        "speed_min_kph": 50.0,
+        "speed_max_kph": 100.0,
+        "samples": 28,
+        "mean_speed_kph": 81.99373033129038,
+        "full_throttle_samples": 0,
+        "full_throttle_accel_p50_mps2": null,
+        "full_throttle_accel_p90_mps2": null,
+        "full_throttle_accel_p95_mps2": null,
+        "braking_samples": 9,
+        "braking_decel_p50_mps2": 6.172840810006912,
+        "braking_decel_p90_mps2": 8.187314238095249,
+        "braking_decel_p95_mps2": 8.688926841269843
+      },
+      {
+        "speed_min_kph": 100.0,
+        "speed_max_kph": 150.0,
+        "samples": 36,
+        "mean_speed_kph": 124.56527718586712,
+        "full_throttle_samples": 5,
+        "full_throttle_accel_p50_mps2": 18.055555555555635,
+        "full_throttle_accel_p90_mps2": 18.368994414389807,
+        "full_throttle_accel_p95_mps2": 18.443756466454175,
+        "braking_samples": 12,
+        "braking_decel_p50_mps2": 14.359643076923053,
+        "braking_decel_p90_mps2": 18.05555762478131,
+        "braking_decel_p95_mps2": 25.38510480092055
+      },
+      {
+        "speed_min_kph": 150.0,
+        "speed_max_kph": 200.0,
+        "samples": 41,
+        "mean_speed_kph": 181.70631439504456,
+        "full_throttle_samples": 20,
+        "full_throttle_accel_p50_mps2": 11.933754938271631,
+        "full_throttle_accel_p90_mps2": 16.24228395061726,
+        "full_throttle_accel_p95_mps2": 16.605516975308653,
+        "braking_samples": 9,
+        "braking_decel_p50_mps2": 23.91975308641978,
+        "braking_decel_p90_mps2": 33.53174907936496,
+        "braking_decel_p95_mps2": 34.12698565079358
+      },
+      {
+        "speed_min_kph": 200.0,
+        "speed_max_kph": 250.0,
+        "samples": 138,
+        "mean_speed_kph": 225.7698596366638,
+        "full_throttle_samples": 86,
+        "full_throttle_accel_p50_mps2": 6.739004444444524,
+        "full_throttle_accel_p90_mps2": 9.553778042328052,
+        "full_throttle_accel_p95_mps2": 9.899967310511865,
+        "braking_samples": 31,
+        "braking_decel_p50_mps2": 15.65345962355802,
+        "braking_decel_p90_mps2": 38.43466107617079,
+        "braking_decel_p95_mps2": 43.58122417316034
+      },
+      {
+        "speed_min_kph": 250.0,
+        "speed_max_kph": 300.0,
+        "samples": 127,
+        "mean_speed_kph": 275.2382020842492,
+        "full_throttle_samples": 116,
+        "full_throttle_accel_p50_mps2": 3.870080909090865,
+        "full_throttle_accel_p90_mps2": 5.787037037036999,
+        "full_throttle_accel_p95_mps2": 6.386919243808259,
+        "braking_samples": 9,
+        "braking_decel_p50_mps2": 43.05556430335128,
+        "braking_decel_p90_mps2": 52.984802967007425,
+        "braking_decel_p95_mps2": 54.351498359710945
+      },
+      {
+        "speed_min_kph": 300.0,
+        "speed_max_kph": 330.0,
+        "samples": 143,
+        "mean_speed_kph": 317.38540941544454,
+        "full_throttle_samples": 121,
+        "full_throttle_accel_p50_mps2": 1.8939393939394156,
+        "full_throttle_accel_p90_mps2": 3.156566341379874,
+        "full_throttle_accel_p95_mps2": 3.472222222222071,
+        "braking_samples": 8,
+        "braking_decel_p50_mps2": 28.547406458651825,
+        "braking_decel_p90_mps2": 52.90696971576213,
+        "braking_decel_p95_mps2": 54.23126263565863
+      },
+      {
+        "speed_min_kph": 330.0,
+        "speed_max_kph": 360.0,
+        "samples": 97,
+        "mean_speed_kph": 338.3513160755131,
+        "full_throttle_samples": 52,
+        "full_throttle_accel_p50_mps2": 1.0888311370370238,
+        "full_throttle_accel_p90_mps2": 1.7361111111111103,
+        "full_throttle_accel_p95_mps2": 1.906134163369006,
+        "braking_samples": 2,
+        "braking_decel_p50_mps2": 34.62852733686062,
+        "braking_decel_p90_mps2": 52.75903880070537,
+        "braking_decel_p95_mps2": 55.02535273368596
+      }
+    ],
+    "gear_rpm": {
+      "min_gear": 2,
+      "max_gear": 8,
+      "gears": {
+        "2": {
+          "samples": 31,
+          "min_speed_kph": 75.0,
+          "median_speed_kph": 81.57777777777778,
+          "max_speed_kph": 123.94988640366121,
+          "min_rpm": 6760.0,
+          "mean_rpm": 7740.377134303831,
+          "max_rpm": 10023.0
+        },
+        "3": {
+          "samples": 35,
+          "min_speed_kph": 102.46250304,
+          "median_speed_kph": 127.0,
+          "max_speed_kph": 173.4583296,
+          "min_rpm": 7875.0,
+          "mean_rpm": 9507.969921793197,
+          "max_rpm": 11542.0
+        },
+        "4": {
+          "samples": 16,
+          "min_speed_kph": 155.0,
+          "median_speed_kph": 190.8828112,
+          "max_speed_kph": 209.9312512,
+          "min_rpm": 9693.0,
+          "mean_rpm": 11051.77571654,
+          "max_rpm": 12045.0
+        },
+        "5": {
+          "samples": 88,
+          "min_speed_kph": 147.30000384,
+          "median_speed_kph": 212.84999936,
+          "max_speed_kph": 242.05849634611764,
+          "min_rpm": 9796.0,
+          "mean_rpm": 10931.152828774235,
+          "max_rpm": 11785.0
+        },
+        "6": {
+          "samples": 95,
+          "min_speed_kph": 163.0,
+          "median_speed_kph": 249.0,
+          "max_speed_kph": 268.0,
+          "min_rpm": 9866.0,
+          "mean_rpm": 11081.162210764667,
+          "max_rpm": 11908.0
+        },
+        "7": {
+          "samples": 75,
+          "min_speed_kph": 128.67500416000001,
+          "median_speed_kph": 284.0,
+          "max_speed_kph": 302.44999936,
+          "min_rpm": 10317.583389866666,
+          "mean_rpm": 11168.481368399638,
+          "max_rpm": 11727.0
+        },
+        "8": {
+          "samples": 270,
+          "min_speed_kph": 168.875008,
+          "median_speed_kph": 325.0,
+          "max_speed_kph": 348.0,
+          "min_rpm": 9602.0,
+          "mean_rpm": 11396.485978049468,
+          "max_rpm": 12261.0
+        }
+      },
+      "shift_points": [
+        {
+          "distance_m": 861.4924654712348,
+          "speed_kph": 142.0,
+          "rpm": 11682.0,
+          "from_gear": 8,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 875.1211809859016,
+          "speed_kph": 116.0,
+          "rpm": 9743.0,
+          "from_gear": 7,
+          "to_gear": 3
+        },
+        {
+          "distance_m": 886.5755041432349,
+          "speed_kph": 97.0,
+          "rpm": 8399.0,
+          "from_gear": 3,
+          "to_gear": 2
+        },
+        {
+          "distance_m": 985.899515985446,
+          "speed_kph": 126.0,
+          "rpm": 9758.0,
+          "from_gear": 2,
+          "to_gear": 3
+        },
+        {
+          "distance_m": 1028.2887241128533,
+          "speed_kph": 179.0,
+          "rpm": 10443.0,
+          "from_gear": 3,
+          "to_gear": 4
+        },
+        {
+          "distance_m": 1074.670841888409,
+          "speed_kph": 210.0,
+          "rpm": 10819.0,
+          "from_gear": 4,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 1143.1956382406627,
+          "speed_kph": 242.0,
+          "rpm": 10963.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 1244.1017427285642,
+          "speed_kph": 269.0,
+          "rpm": 10634.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 1406.1354754438933,
+          "speed_kph": 296.0,
+          "rpm": 10583.0,
+          "from_gear": 7,
+          "to_gear": 8
+        },
+        {
+          "distance_m": 2063.0433700324097,
+          "speed_kph": 163.0,
+          "rpm": 10743.0,
+          "from_gear": 8,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 2069.710036699076,
+          "speed_kph": 150.0,
+          "rpm": 10340.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2077.4929534137427,
+          "speed_kph": 138.0,
+          "rpm": 9360.0,
+          "from_gear": 5,
+          "to_gear": 3
+        },
+        {
+          "distance_m": 2182.3037819871,
+          "speed_kph": 155.0,
+          "rpm": 9693.0,
+          "from_gear": 3,
+          "to_gear": 4
+        },
+        {
+          "distance_m": 2256.431049502967,
+          "speed_kph": 211.0,
+          "rpm": 11041.0,
+          "from_gear": 4,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2330.926872662212,
+          "speed_kph": 245.0,
+          "rpm": 11019.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 2490.3289775239905,
+          "speed_kph": 213.0,
+          "rpm": 10747.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2625.5481343182787,
+          "speed_kph": 242.0,
+          "rpm": 10975.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 2809.2432098109184,
+          "speed_kph": 203.0,
+          "rpm": 10116.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 2942.970115463447,
+          "speed_kph": 235.0,
+          "rpm": 10740.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 3043.019027187891,
+          "speed_kph": 268.0,
+          "rpm": 10738.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 3199.309899462113,
+          "speed_kph": 299.0,
+          "rpm": 10740.0,
+          "from_gear": 7,
+          "to_gear": 8
+        },
+        {
+          "distance_m": 3874.874923825373,
+          "speed_kph": 207.0,
+          "rpm": 10436.0,
+          "from_gear": 8,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 3883.9063040698175,
+          "speed_kph": 202.0,
+          "rpm": 10154.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 4050.9856225138255,
+          "speed_kph": 239.0,
+          "rpm": 10895.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 4164.025398489074,
+          "speed_kph": 264.0,
+          "rpm": 10571.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 4371.95815537661,
+          "speed_kph": 298.0,
+          "rpm": 10668.0,
+          "from_gear": 7,
+          "to_gear": 8
+        },
+        {
+          "distance_m": 5047.1300605862925,
+          "speed_kph": 249.0,
+          "rpm": 10322.0,
+          "from_gear": 8,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 5069.958822165551,
+          "speed_kph": 228.0,
+          "rpm": 10004.0,
+          "from_gear": 7,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 5104.213579225107,
+          "speed_kph": 212.0,
+          "rpm": 10830.0,
+          "from_gear": 6,
+          "to_gear": 5
+        },
+        {
+          "distance_m": 5219.823839442061,
+          "speed_kph": 232.0,
+          "rpm": 10639.0,
+          "from_gear": 5,
+          "to_gear": 6
+        },
+        {
+          "distance_m": 5347.579931872275,
+          "speed_kph": 265.0,
+          "rpm": 10586.0,
+          "from_gear": 6,
+          "to_gear": 7
+        },
+        {
+          "distance_m": 5579.901257898638,
+          "speed_kph": 303.0,
+          "rpm": 10850.0,
+          "from_gear": 7,
+          "to_gear": 8
+        }
+      ]
+    },
+    "curvature_lateral_g": {
+      "curvature_abs_p90_rad_per_m": 0.012834091146067107,
+      "curvature_abs_p95_rad_per_m": 0.020375263694407456,
+      "radius_p05_m": 49.098784984464274,
+      "radius_p10_m": 77.91750620304065,
+      "lateral_g_p90": 3.2784794132687525,
+      "lateral_g_p95": 4.0949627805901985
+    }
+  },
+  "physics_models": {
+    "v2": {
+      "physics_model": "v2",
+      "physics_version": "physics_v2.0.10-fastf1-manual-balance-fix",
+      "physics_calibration_id": "monza_2022_2024_fastf1_multilap_v2_manual_balance_fix",
+      "params": {
+        "calibration_id": "monza_2022_2024_fastf1_multilap_v2_manual_balance_fix",
+        "version": "physics_v2.0.10-fastf1-manual-balance-fix",
+        "max_steer_deg": 20.0,
+        "steer_response": 8.0,
+        "steering_speed_sensitivity": 0.000445,
+        "front_weight_distribution": 0.46,
+        "cg_height_m": 0.32,
+        "track_width_m": 1.6,
+        "front_axle_distance_m": 1.72,
+        "rear_axle_distance_m": 1.88,
+        "front_cornering_stiffness_n_per_rad": 197000.0,
+        "rear_cornering_stiffness_n_per_rad": 161000.0,
+        "front_peak_mu": 3.28,
+        "rear_peak_mu": 3.12,
+        "mechanical_grip_low_speed_scale": 0.1925,
+        "mechanical_grip_high_speed_scale": 0.7,
+        "mechanical_grip_transition_mps": 80.0,
+        "tire_shape_c": 1.35,
+        "slip_angle_peak_deg": 9.5,
+        "rear_slip_steer_coupling": 0.15,
+        "post_peak_falloff": 0.27,
+        "load_sensitivity": 0.065,
+        "aero_downforce_n_per_mps2": 6.35,
+        "aero_balance_front": 0.49,
+        "engine_power_w": 792000.0,
+        "drivetrain_efficiency": 0.88,
+        "power_min_speed_mps": 18.0,
+        "max_drive_g": 2.42,
+        "max_brake_g": 3.015,
+        "brake_bias_front": 0.57,
+        "brake_lock_threshold": 0.9,
+        "brake_lock_min_speed_mps": 28.0,
+        "brake_lock_steer_loss": 0.45,
+        "drag_coefficient": 0.00082,
+        "rolling_resistance_mps2": 0.23,
+        "max_speed_mps": 97.5,
+        "gear_ratios": [
+          4.45,
+          2.61,
+          2.06,
+          1.59,
+          1.41,
+          1.22,
+          1.08,
+          0.963
+        ],
+        "final_drive_ratio": 4.6,
+        "wheel_radius_m": 0.335,
+        "idle_rpm": 4000.0,
+        "shift_up_rpm": 11500.0,
+        "shift_down_rpm": 7600.0,
+        "max_rpm": 13500.0,
+        "torque_peak_rpm": 10500.0,
+        "torque_peak_nm": 560.0,
+        "torque_low_rpm_factor": 0.72,
+        "torque_high_rpm_factor": 0.88,
+        "tire_scrub_drag": 1.2,
+        "surface_mu": 1.0
+      },
+      "estimates": {
+        "terminal_speed_kph": 351.0,
+        "speed_after_5s_full_throttle_kph": 204.99862379212843,
+        "speed_after_8s_full_throttle_kph": 292.3235889973637,
+        "braking_330_to_100_kph_m": 141.25635882546476,
+        "braking_330_to_150_kph_m": 118.60807468595296,
+        "steering_limited_radius_m": 11.079660733830915,
+        "cornering_capacity": [
+          {
+            "speed_kph": 100.0,
+            "max_curvature_rad_per_m": 0.020854552228824232,
+            "min_radius_m": 47.95116140723677,
+            "lateral_g_at_limit": 1.6403135051176232,
+            "front_load_n": 6001.903565432099,
+            "rear_load_n": 6726.167792592592
+          },
+          {
+            "speed_kph": 150.0,
+            "max_curvature_rad_per_m": 0.01796515606553287,
+            "min_radius_m": 55.66330714591199,
+            "lateral_g_at_limit": 3.1793585176571644,
+            "front_load_n": 9002.964522222223,
+            "rear_load_n": 9849.721033333331
+          },
+          {
+            "speed_kph": 200.0,
+            "max_curvature_rad_per_m": 0.0152712835141818,
+            "min_radius_m": 65.48238064412477,
+            "lateral_g_at_limit": 4.804647410107411,
+            "front_load_n": 13204.449861728393,
+            "rear_load_n": 14222.69557037037
+          },
+          {
+            "speed_kph": 250.0,
+            "max_curvature_rad_per_m": 0.011830270837570043,
+            "min_radius_m": 84.52891854548629,
+            "lateral_g_at_limit": 5.815682593883538,
+            "front_load_n": 18606.359583950616,
+            "rear_load_n": 19845.0914037037
+          },
+          {
+            "speed_kph": 300.0,
+            "max_curvature_rad_per_m": 0.008761632986334545,
+            "min_radius_m": 114.13397497472134,
+            "lateral_g_at_limit": 6.2023112656689205,
+            "front_load_n": 25208.69368888889,
+            "rear_load_n": 26716.90853333333
+          }
+        ],
+        "calibration_id": "monza_2022_2024_fastf1_multilap_v2_manual_balance_fix",
+        "physics_version": "physics_v2.0.10-fastf1-manual-balance-fix",
+        "acceleration_envelope": {
+          "samples": [
+            {
+              "speed_kph": 50.0,
+              "full_throttle_accel_mps2": 8.288276446622334,
+              "full_brake_decel_mps2": 8.604634471313766
+            },
+            {
+              "speed_kph": 100.0,
+              "full_throttle_accel_mps2": 16.368306103676815,
+              "full_brake_decel_mps2": 17.63373820244233
+            },
+            {
+              "speed_kph": 150.0,
+              "full_throttle_accel_mps2": 18.904674686619103,
+              "full_brake_decel_mps2": 25.67687411111109
+            },
+            {
+              "speed_kph": 200.0,
+              "full_throttle_accel_mps2": 13.035250260268612,
+              "full_brake_decel_mps2": 26.784127197530836
+            },
+            {
+              "speed_kph": 250.0,
+              "full_throttle_accel_mps2": 8.315790325125647,
+              "full_brake_decel_mps2": 28.207738308641694
+            },
+            {
+              "speed_kph": 300.0,
+              "full_throttle_accel_mps2": 4.776617729026498,
+              "full_brake_decel_mps2": 29.947707444444518
+            },
+            {
+              "speed_kph": 330.0,
+              "full_throttle_accel_mps2": 2.227834019753061,
+              "full_brake_decel_mps2": 31.143540777778185
+            }
+          ],
+          "max_full_throttle_accel_mps2": 18.904674686619103,
+          "p95_full_throttle_accel_mps2": 18.143764111736417,
+          "max_full_brake_decel_mps2": 31.143540777778185,
+          "p95_full_brake_decel_mps2": 30.784790777778085
+        },
+        "gear_rpm_profile": [
+          {
+            "speed_kph": 50.0,
+            "gear": 1,
+            "rpm": 8104.233047490292
+          },
+          {
+            "speed_kph": 100.0,
+            "gear": 2,
+            "rpm": 9506.538541100972
+          },
+          {
+            "speed_kph": 150.0,
+            "gear": 3,
+            "rpm": 11254.8674682
+          },
+          {
+            "speed_kph": 200.0,
+            "gear": 5,
+            "rpm": 10271.432446706796
+          },
+          {
+            "speed_kph": 250.0,
+            "gear": 6,
+            "rpm": 11109.173390941747
+          },
+          {
+            "speed_kph": 300.0,
+            "gear": 8,
+            "rpm": 10522.75472997728
+          },
+          {
+            "speed_kph": 330.0,
+            "gear": 8,
+            "rpm": 11575.030202975011
+          },
+          {
+            "speed_kph": 350.0,
+            "gear": 8,
+            "rpm": 12276.547184973493
+          }
+        ],
+        "braking_zone_comparison": {
+          "rows": [
+            {
+              "index": 0,
+              "reference_start_speed_kph": 336.0,
+              "reference_min_speed_kph": 82.0,
+              "reference_distance_to_min_m": 118.74284708368236,
+              "model_full_brake_distance_to_min_m": 154.51440043020693,
+              "distance_error_m": 35.77155334652457
+            },
+            {
+              "index": 1,
+              "reference_start_speed_kph": 86.0,
+              "reference_min_speed_kph": 76.26666524444444,
+              "reference_distance_to_min_m": 12.046864103111147,
+              "model_full_brake_distance_to_min_m": 4.8800929137087135,
+              "distance_error_m": -7.166771189402434
+            },
+            {
+              "index": 2,
+              "reference_start_speed_kph": 325.0,
+              "reference_min_speed_kph": 117.22500352,
+              "reference_distance_to_min_m": 121.22684407050474,
+              "model_full_brake_distance_to_min_m": 128.46849310327383,
+              "distance_error_m": 7.2416490327690894
+            },
+            {
+              "index": 3,
+              "reference_start_speed_kph": 245.0,
+              "reference_min_speed_kph": 222.3571456,
+              "reference_distance_to_min_m": 37.493710620444745,
+              "model_full_brake_distance_to_min_m": 15.175692347038463,
+              "distance_error_m": -22.31801827340628
+            },
+            {
+              "index": 4,
+              "reference_start_speed_kph": 267.0,
+              "reference_min_speed_kph": 203.0,
+              "reference_distance_to_min_m": 54.129271145041,
+              "model_full_brake_distance_to_min_m": 42.42454874689634,
+              "distance_error_m": -11.70472239814466
+            },
+            {
+              "index": 5,
+              "reference_start_speed_kph": 328.0,
+              "reference_min_speed_kph": 204.968752,
+              "reference_distance_to_min_m": 75.42882711040329,
+              "model_full_brake_distance_to_min_m": 88.39502631712486,
+              "distance_error_m": 12.96619920672157
+            },
+            {
+              "index": 6,
+              "reference_start_speed_kph": 329.0,
+              "reference_min_speed_kph": 221.52500224,
+              "reference_distance_to_min_m": 89.81272092325798,
+              "model_full_brake_distance_to_min_m": 78.82185113315661,
+              "distance_error_m": -10.990869790101371
+            }
+          ],
+          "mean_abs_distance_error_m": 15.45139760529571,
+          "max_abs_distance_error_m": 35.77155334652457
+        },
+        "corner_capacity_comparison": {
+          "rows": [
+            {
+              "name": "corner_01",
+              "min_speed_kph": 75.0,
+              "reference_lateral_g": 1.8707024486237236,
+              "reference_lateral_g_p75": 1.5819164529046785,
+              "reference_lateral_g_p90": 2.1201652517031784,
+              "reference_lateral_g_max": 3.1213216133662423,
+              "model_lateral_g_at_limit": 1.1302770721406008,
+              "lateral_g_margin": -0.7404253764831228,
+              "robust_lateral_g_margin": -0.4516393807640777,
+              "reference_curvature_rad_per_m": 0.04228206571238108,
+              "reference_curvature_p90_rad_per_m": 0.03733477002991412,
+              "model_max_curvature_rad_per_m": 0.025546793651019178
+            },
+            {
+              "name": "corner_02",
+              "min_speed_kph": 108.0,
+              "reference_lateral_g": 0.5791793369667866,
+              "reference_lateral_g_p75": 1.7875788904314829,
+              "reference_lateral_g_p90": 2.5317573420841355,
+              "reference_lateral_g_max": 3.5204999896291858,
+              "model_lateral_g_at_limit": 1.8447943807556986,
+              "lateral_g_margin": 1.265615043788912,
+              "robust_lateral_g_margin": 0.05721549032421569,
+              "reference_curvature_rad_per_m": 0.006313054772937974,
+              "reference_curvature_p90_rad_per_m": 0.0201135639079891,
+              "model_max_curvature_rad_per_m": 0.020108258750237116
+            },
+            {
+              "name": "corner_03",
+              "min_speed_kph": 204.0,
+              "reference_lateral_g": 6.174751189828722,
+              "reference_lateral_g_p75": 4.915304856803124,
+              "reference_lateral_g_p90": 5.813466646505239,
+              "reference_lateral_g_max": 6.174751189828722,
+              "model_lateral_g_at_limit": 4.912007753036683,
+              "lateral_g_margin": -1.2627434367920394,
+              "robust_lateral_g_margin": -0.003297103766441545,
+              "reference_curvature_rad_per_m": 0.01886397171453211,
+              "reference_curvature_p90_rad_per_m": 0.01425768987879269,
+              "model_max_curvature_rad_per_m": 0.015006268668360166
+            },
+            {
+              "name": "corner_04",
+              "min_speed_kph": 192.0,
+              "reference_lateral_g": 3.99763322049261,
+              "reference_lateral_g_p75": 4.024059789657899,
+              "reference_lateral_g_p90": 4.351616970938979,
+              "reference_lateral_g_max": 4.904095628413516,
+              "model_lateral_g_at_limit": 4.576737905802516,
+              "lateral_g_margin": 0.5791046853099062,
+              "robust_lateral_g_margin": 0.5526781161446168,
+              "reference_curvature_rad_per_m": 0.013787149884269241,
+              "reference_curvature_p90_rad_per_m": 0.013955761015957463,
+              "model_max_curvature_rad_per_m": 0.015784382410285323
+            },
+            {
+              "name": "corner_05",
+              "min_speed_kph": 192.0,
+              "reference_lateral_g": 2.8509923517157807,
+              "reference_lateral_g_p75": 3.501831865493664,
+              "reference_lateral_g_p90": 4.334762805786418,
+              "reference_lateral_g_max": 8.760159110097927,
+              "model_lateral_g_at_limit": 4.576737905802516,
+              "lateral_g_margin": 1.7257455540867355,
+              "robust_lateral_g_margin": 1.0749060403088522,
+              "reference_curvature_rad_per_m": 0.00983258260675728,
+              "reference_curvature_p90_rad_per_m": 0.012458742890564558,
+              "model_max_curvature_rad_per_m": 0.015784382410285323
+            },
+            {
+              "name": "corner_06",
+              "min_speed_kph": 208.0,
+              "reference_lateral_g": 4.550058462435262,
+              "reference_lateral_g_p75": 4.970584144243054,
+              "reference_lateral_g_p90": 5.403603517674155,
+              "reference_lateral_g_max": 7.582487784367293,
+              "model_lateral_g_at_limit": 5.014796344077148,
+              "lateral_g_margin": 0.4647378816418861,
+              "robust_lateral_g_margin": 0.04421219983409408,
+              "reference_curvature_rad_per_m": 0.013371013146581671,
+              "reference_curvature_p90_rad_per_m": 0.013977815423170902,
+              "model_max_curvature_rad_per_m": 0.01473671347251162
+            }
+          ],
+          "min_lateral_g_margin": -1.2627434367920394,
+          "mean_lateral_g_margin": 0.33867239192537957,
+          "min_robust_lateral_g_margin": -0.4516393807640777,
+          "mean_robust_lateral_g_margin": 0.21234589368020992
+        },
+        "gear_rpm_reference_comparison": {
+          "rows": [
+            {
+              "reference_gear": "2",
+              "reference_median_speed_kph": 81.57777777777778,
+              "reference_mean_rpm": 7740.377134303831,
+              "model_gear": 2,
+              "model_rpm": 7755.222885418147,
+              "gear_delta": 0,
+              "rpm_error": 14.845751114316045
+            },
+            {
+              "reference_gear": "3",
+              "reference_median_speed_kph": 127.0,
+              "reference_mean_rpm": 9507.969921793197,
+              "model_gear": 3,
+              "model_rpm": 9529.121123076,
+              "gear_delta": 0,
+              "rpm_error": 21.151201282802504
+            },
+            {
+              "reference_gear": "4",
+              "reference_median_speed_kph": 190.8828112,
+              "reference_mean_rpm": 11051.77571654,
+              "model_gear": 4,
+              "model_rpm": 11054.671779292474,
+              "gear_delta": 0,
+              "rpm_error": 2.896062752473881
+            },
+            {
+              "reference_gear": "5",
+              "reference_median_speed_kph": 212.84999936,
+              "reference_mean_rpm": 10931.152828774235,
+              "model_gear": 5,
+              "model_rpm": 10931.371948539123,
+              "gear_delta": 0,
+              "rpm_error": 0.2191197648880916
+            },
+            {
+              "reference_gear": "6",
+              "reference_median_speed_kph": 249.0,
+              "reference_mean_rpm": 11081.162210764667,
+              "model_gear": 6,
+              "model_rpm": 11064.736697377983,
+              "gear_delta": 0,
+              "rpm_error": -16.425513386684543
+            },
+            {
+              "reference_gear": "7",
+              "reference_median_speed_kph": 284.0,
+              "reference_mean_rpm": 11168.481368399638,
+              "model_gear": 7,
+              "model_rpm": 11171.821844162796,
+              "gear_delta": 0,
+              "rpm_error": 3.340475763157883
+            },
+            {
+              "reference_gear": "8",
+              "reference_median_speed_kph": 325.0,
+              "reference_mean_rpm": 11396.485978049468,
+              "model_gear": 8,
+              "model_rpm": 11399.650957475385,
+              "gear_delta": 0,
+              "rpm_error": 3.1649794259174087
+            }
+          ],
+          "gear_match_rate": 1.0,
+          "mean_abs_rpm_error": 8.863300498605765
+        },
+        "speed_trace_feasibility": {
+          "reference_lap_time_s": 79.662,
+          "reference_distance_m": 5745.669358933476,
+          "bins": [
+            {
+              "speed_min_kph": 50.0,
+              "speed_max_kph": 100.0,
+              "compare_speed_kph": 81.99373033129038,
+              "reference_full_throttle_samples": 0,
+              "reference_full_throttle_accel_p95_mps2": null,
+              "model_full_throttle_accel_mps2": 12.599424960082928,
+              "full_throttle_accel_p95_error_mps2": null,
+              "reference_braking_samples": 9,
+              "reference_braking_decel_p95_mps2": 8.688926841269843,
+              "model_full_brake_decel_mps2": 13.450171393290518,
+              "full_brake_decel_p95_error_mps2": 4.761244552020674
+            },
+            {
+              "speed_min_kph": 100.0,
+              "speed_max_kph": 150.0,
+              "compare_speed_kph": 124.56527718586712,
+              "reference_full_throttle_samples": 5,
+              "reference_full_throttle_accel_p95_mps2": 18.443756466454175,
+              "model_full_throttle_accel_mps2": 22.75844561806153,
+              "full_throttle_accel_p95_error_mps2": 4.314689151607354,
+              "reference_braking_samples": 12,
+              "reference_braking_decel_p95_mps2": 25.38510480092055,
+              "model_full_brake_decel_mps2": 21.008681941189735,
+              "full_brake_decel_p95_error_mps2": -4.376422859730816
+            },
+            {
+              "speed_min_kph": 150.0,
+              "speed_max_kph": 200.0,
+              "compare_speed_kph": 181.70631439504456,
+              "reference_full_throttle_samples": 20,
+              "reference_full_throttle_accel_p95_mps2": 16.605516975308653,
+              "model_full_throttle_accel_mps2": 15.19851031374941,
+              "full_throttle_accel_p95_error_mps2": -1.4070066615592438,
+              "reference_braking_samples": 9,
+              "reference_braking_decel_p95_mps2": 34.12698565079358,
+              "model_full_brake_decel_mps2": 26.34231326594488,
+              "full_brake_decel_p95_error_mps2": -7.784672384848697
+            },
+            {
+              "speed_min_kph": 200.0,
+              "speed_max_kph": 250.0,
+              "compare_speed_kph": 225.7698596366638,
+              "reference_full_throttle_samples": 86,
+              "reference_full_throttle_accel_p95_mps2": 9.899967310511865,
+              "model_full_throttle_accel_mps2": 10.420924058467449,
+              "full_throttle_accel_p95_error_mps2": 0.5209567479555837,
+              "reference_braking_samples": 31,
+              "reference_braking_decel_p95_mps2": 43.58122417316034,
+              "model_full_brake_decel_mps2": 27.478345114714244,
+              "full_brake_decel_p95_error_mps2": -16.102879058446092
+            },
+            {
+              "speed_min_kph": 250.0,
+              "speed_max_kph": 300.0,
+              "compare_speed_kph": 275.2382020842492,
+              "reference_full_throttle_samples": 116,
+              "reference_full_throttle_accel_p95_mps2": 6.386919243808259,
+              "model_full_throttle_accel_mps2": 6.480790276403923,
+              "full_throttle_accel_p95_error_mps2": 0.09387103259566398,
+              "reference_braking_samples": 9,
+              "reference_braking_decel_p95_mps2": 54.351498359710945,
+              "model_full_brake_decel_mps2": 29.04647099899563,
+              "full_brake_decel_p95_error_mps2": -25.305027360715314
+            },
+            {
+              "speed_min_kph": 300.0,
+              "speed_max_kph": 330.0,
+              "compare_speed_kph": 317.38540941544454,
+              "reference_full_throttle_samples": 121,
+              "reference_full_throttle_accel_p95_mps2": 3.472222222222071,
+              "model_full_throttle_accel_mps2": 3.2822764099637425,
+              "full_throttle_accel_p95_error_mps2": -0.1899458122583284,
+              "reference_braking_samples": 8,
+              "reference_braking_decel_p95_mps2": 54.23126263565863,
+              "model_full_brake_decel_mps2": 30.62683309645422,
+              "full_brake_decel_p95_error_mps2": -23.60442953920441
+            },
+            {
+              "speed_min_kph": 330.0,
+              "speed_max_kph": 360.0,
+              "compare_speed_kph": 338.3513160755131,
+              "reference_full_throttle_samples": 52,
+              "reference_full_throttle_accel_p95_mps2": 1.906134163369006,
+              "model_full_throttle_accel_mps2": 1.5407360356599042,
+              "full_throttle_accel_p95_error_mps2": -0.36539812770910185,
+              "reference_braking_samples": 2,
+              "reference_braking_decel_p95_mps2": 55.02535273368596,
+              "model_full_brake_decel_mps2": 31.496698396128124,
+              "full_brake_decel_p95_error_mps2": -23.52865433755784
+            }
+          ],
+          "mean_abs_full_throttle_accel_p95_error_mps2": 1.1486445889475458,
+          "max_abs_full_throttle_accel_p95_error_mps2": 4.314689151607354,
+          "max_full_throttle_accel_deficit_mps2": 1.4070066615592438,
+          "max_full_throttle_accel_excess_mps2": 4.314689151607354,
+          "mean_abs_full_brake_decel_p95_error_mps2": 15.066190013217692,
+          "max_abs_full_brake_decel_p95_error_mps2": 25.305027360715314,
+          "max_full_brake_decel_deficit_mps2": 25.305027360715314,
+          "max_full_brake_decel_excess_mps2": 4.761244552020674
+        },
+        "sustained_corner_diagnostic": {
+          "rows": [
+            {
+              "name": "sustained_corner_01",
+              "reference_start_distance_m": 2435.2741557924346,
+              "reference_end_distance_m": 2568.3813962724353,
+              "sim_start_progress_m": 2455.335018986238,
+              "sim_end_progress_m": 2589.5387463381676,
+              "reference_length_m": 133.10724048000066,
+              "reference_mean_speed_kph": 219.83452396799998,
+              "reference_min_speed_kph": 204.0,
+              "reference_max_speed_kph": 245.0,
+              "reference_curvature_abs_p90_rad_per_m": 0.014620251460057852,
+              "reference_radius_p10_m": 68.43180184083126,
+              "reference_lateral_g_p75": 5.209741155508304,
+              "reference_lateral_g_p90": 5.847566941592224,
+              "reference_lateral_g_max": 6.174751189828722,
+              "reference_run": {
+                "speed_mode": "reference",
+                "target_speed_kph": null,
+                "steps": 140,
+                "mean_speed_kph": 217.5116394960414,
+                "mean_target_speed_kph": 218.54468744540938,
+                "mean_speed_error_kph": -1.0330479493680076,
+                "p95_abs_lateral_error_m": 8.358356792671135,
+                "max_abs_lateral_error_m": 11.753219355976514,
+                "p95_abs_heading_error_deg": 21.97725482097331,
+                "steering_saturation_rate": 0.5928571428571429,
+                "mean_abs_steering": 0.8155332620554889,
+                "curvature_abs_p90_rad_per_m": 0.009155226217307416,
+                "lateral_g_p90": 3.0367427826500086,
+                "lateral_g_max": 3.0370073036623495,
+                "front_slip_angle_p90_deg": 7.268985957789412,
+                "rear_slip_angle_p90_deg": 2.2116500713209852,
+                "front_lateral_force_p90_n": 17868.56640619383,
+                "rear_lateral_force_p90_n": 6057.938066940736,
+                "tire_saturation_p90": 0.7651564166094117,
+                "mean_throttle": 0.12698973337542072,
+                "mean_brake": 0.0976562326154503,
+                "off_track_rate": 0.0,
+                "terminated": false,
+                "termination_reason": "active",
+                "control_pass": false
+              },
+              "controlled_speed_runs": [
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 150.0,
+                  "steps": 193,
+                  "mean_speed_kph": 147.85030117674935,
+                  "mean_target_speed_kph": 150.0,
+                  "mean_speed_error_kph": -2.149698823250614,
+                  "p95_abs_lateral_error_m": 1.941124863003384,
+                  "max_abs_lateral_error_m": 2.5710037505501964,
+                  "p95_abs_heading_error_deg": 16.59652799424331,
+                  "steering_saturation_rate": 0.26424870466321243,
+                  "mean_abs_steering": 0.4924526229496831,
+                  "curvature_abs_p90_rad_per_m": 0.014362961676605687,
+                  "lateral_g_p90": 2.468732858741765,
+                  "lateral_g_max": 2.4711004810453763,
+                  "front_slip_angle_p90_deg": 10.011663168398874,
+                  "rear_slip_angle_p90_deg": 3.2607175724586326,
+                  "front_lateral_force_p90_n": 11578.868352707479,
+                  "rear_lateral_force_p90_n": 7751.908651230706,
+                  "tire_saturation_p90": 1.0538592808840919,
+                  "mean_throttle": 0.06716733486680734,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 180.0,
+                  "steps": 165,
+                  "mean_speed_kph": 176.42366505330773,
+                  "mean_target_speed_kph": 180.0,
+                  "mean_speed_error_kph": -3.5763349466922674,
+                  "p95_abs_lateral_error_m": 2.8634863920423075,
+                  "max_abs_lateral_error_m": 2.93344168145242,
+                  "p95_abs_heading_error_deg": 19.099998662757102,
+                  "steering_saturation_rate": 0.4909090909090909,
+                  "mean_abs_steering": 0.6268997128219649,
+                  "curvature_abs_p90_rad_per_m": 0.011840615793892981,
+                  "lateral_g_p90": 2.8986739753643627,
+                  "lateral_g_max": 2.898677001956268,
+                  "front_slip_angle_p90_deg": 8.501217122527965,
+                  "rear_slip_angle_p90_deg": 2.7254038684690256,
+                  "front_lateral_force_p90_n": 15522.898962833548,
+                  "rear_lateral_force_p90_n": 7169.043588783853,
+                  "tire_saturation_p90": 0.8948649602661015,
+                  "mean_throttle": 0.11175690097656625,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 200.0,
+                  "steps": 152,
+                  "mean_speed_kph": 195.07640037513227,
+                  "mean_target_speed_kph": 200.0,
+                  "mean_speed_error_kph": -4.923599624867743,
+                  "p95_abs_lateral_error_m": 5.157413323263743,
+                  "max_abs_lateral_error_m": 7.410314479533959,
+                  "p95_abs_heading_error_deg": 20.548974417542787,
+                  "steering_saturation_rate": 0.5197368421052632,
+                  "mean_abs_steering": 0.6794713854339783,
+                  "curvature_abs_p90_rad_per_m": 0.010096969541823592,
+                  "lateral_g_p90": 3.0218460355660004,
+                  "lateral_g_max": 3.0218512693714974,
+                  "front_slip_angle_p90_deg": 7.676205541039348,
+                  "rear_slip_angle_p90_deg": 2.3881469853772623,
+                  "front_lateral_force_p90_n": 17180.845566874472,
+                  "rear_lateral_force_p90_n": 6475.457952006305,
+                  "tire_saturation_p90": 0.8080216358988787,
+                  "mean_throttle": 0.15384894628751541,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 220.0,
+                  "steps": 144,
+                  "mean_speed_kph": 213.64017467796566,
+                  "mean_target_speed_kph": 220.0,
+                  "mean_speed_error_kph": -6.3598253220343315,
+                  "p95_abs_lateral_error_m": 9.843038321583162,
+                  "max_abs_lateral_error_m": 13.635139926777299,
+                  "p95_abs_heading_error_deg": 22.800336203454954,
+                  "steering_saturation_rate": 0.5555555555555556,
+                  "mean_abs_steering": 0.7390513131401601,
+                  "curvature_abs_p90_rad_per_m": 0.008418639347951845,
+                  "lateral_g_p90": 3.0213347143464175,
+                  "lateral_g_max": 3.021338671877908,
+                  "front_slip_angle_p90_deg": 6.962520475568477,
+                  "rear_slip_angle_p90_deg": 2.075561209805825,
+                  "front_lateral_force_p90_n": 17933.42302082196,
+                  "rear_lateral_force_p90_n": 5718.955418893679,
+                  "tire_saturation_p90": 0.7328968921651027,
+                  "mean_throttle": 0.19870955134276985,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 230.0,
+                  "steps": 140,
+                  "mean_speed_kph": 222.6868565860052,
+                  "mean_target_speed_kph": 230.0,
+                  "mean_speed_error_kph": -7.313143413994764,
+                  "p95_abs_lateral_error_m": 12.615380282074566,
+                  "max_abs_lateral_error_m": 16.710024111138182,
+                  "p95_abs_heading_error_deg": 23.686167991538717,
+                  "steering_saturation_rate": 0.5714285714285714,
+                  "mean_abs_steering": 0.76921506606651,
+                  "curvature_abs_p90_rad_per_m": 0.007654031661343966,
+                  "lateral_g_p90": 2.983821568656677,
+                  "lateral_g_max": 2.9838357729743166,
+                  "front_slip_angle_p90_deg": 6.648187602989619,
+                  "rear_slip_angle_p90_deg": 1.9347678642770332,
+                  "front_lateral_force_p90_n": 18001.839531307065,
+                  "rear_lateral_force_p90_n": 5356.672810094797,
+                  "tire_saturation_p90": 0.6998092213673284,
+                  "mean_throttle": 0.22847453905010817,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 240.0,
+                  "steps": 133,
+                  "mean_speed_kph": 231.99548385544435,
+                  "mean_target_speed_kph": 240.0,
+                  "mean_speed_error_kph": -8.004516144555643,
+                  "p95_abs_lateral_error_m": 13.968712099059161,
+                  "max_abs_lateral_error_m": 17.62945888811957,
+                  "p95_abs_heading_error_deg": 22.85817592721952,
+                  "steering_saturation_rate": 0.5789473684210527,
+                  "mean_abs_steering": 0.7934458947554205,
+                  "curvature_abs_p90_rad_per_m": 0.006916162598138155,
+                  "lateral_g_p90": 2.9258048243234582,
+                  "lateral_g_max": 2.925835505383749,
+                  "front_slip_angle_p90_deg": 6.3439972885918205,
+                  "rear_slip_angle_p90_deg": 1.7987662658527677,
+                  "front_lateral_force_p90_n": 17906.20759634098,
+                  "rear_lateral_force_p90_n": 4998.153394128865,
+                  "tire_saturation_p90": 0.6677891882728232,
+                  "mean_throttle": 0.25005791735531774,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": true,
+                  "termination_reason": "collision",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 250.0,
+                  "steps": 123,
+                  "mean_speed_kph": 241.0526324787584,
+                  "mean_target_speed_kph": 250.0,
+                  "mean_speed_error_kph": -8.947367521241606,
+                  "p95_abs_lateral_error_m": 15.133637062306702,
+                  "max_abs_lateral_error_m": 16.82554979909029,
+                  "p95_abs_heading_error_deg": 23.44589150062575,
+                  "steering_saturation_rate": 0.5772357723577236,
+                  "mean_abs_steering": 0.8164732616063854,
+                  "curvature_abs_p90_rad_per_m": 0.006252620881463947,
+                  "lateral_g_p90": 2.8550536547771475,
+                  "lateral_g_max": 2.8551104062377743,
+                  "front_slip_angle_p90_deg": 6.065337338731355,
+                  "rear_slip_angle_p90_deg": 1.6756937766310207,
+                  "front_lateral_force_p90_n": 17682.356788876587,
+                  "rear_lateral_force_p90_n": 4668.163911473414,
+                  "tire_saturation_p90": 0.6384565619717217,
+                  "mean_throttle": 0.2794890499431349,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": true,
+                  "termination_reason": "collision",
+                  "control_pass": false
+                }
+              ]
+            },
+            {
+              "name": "sustained_corner_02",
+              "reference_start_distance_m": 2771.380605332544,
+              "reference_end_distance_m": 2856.2953242179024,
+              "sim_start_progress_m": 2794.2101857513635,
+              "sim_end_progress_m": 2879.8243998268827,
+              "reference_length_m": 84.91471888535852,
+              "reference_mean_speed_kph": 208.7452417575801,
+              "reference_min_speed_kph": 192.0,
+              "reference_max_speed_kph": 244.0,
+              "reference_curvature_abs_p90_rad_per_m": 0.013993964394191198,
+              "reference_radius_p10_m": 71.45968985407706,
+              "reference_lateral_g_p75": 4.163124705395791,
+              "reference_lateral_g_p90": 4.464808928488387,
+              "reference_lateral_g_max": 4.904095628413516,
+              "reference_run": {
+                "speed_mode": "reference",
+                "target_speed_kph": null,
+                "steps": 87,
+                "mean_speed_kph": 212.6578984098282,
+                "mean_target_speed_kph": 205.03165196363625,
+                "mean_speed_error_kph": 7.626246446191907,
+                "p95_abs_lateral_error_m": 1.9986020118542818,
+                "max_abs_lateral_error_m": 2.6820552417648886,
+                "p95_abs_heading_error_deg": 25.354754799844596,
+                "steering_saturation_rate": 0.3563218390804598,
+                "mean_abs_steering": 0.4073096046075677,
+                "curvature_abs_p90_rad_per_m": 0.010219499930364844,
+                "lateral_g_p90": 3.019497371256843,
+                "lateral_g_max": 3.0244167912162565,
+                "front_slip_angle_p90_deg": 7.728531089126827,
+                "rear_slip_angle_p90_deg": 2.4095877702476076,
+                "front_lateral_force_p90_n": 17282.945147526654,
+                "rear_lateral_force_p90_n": 6523.9561015924555,
+                "tire_saturation_p90": 0.8135295883291396,
+                "mean_throttle": 0.02456654508677508,
+                "mean_brake": 0.2846443643486351,
+                "off_track_rate": 0.0,
+                "terminated": false,
+                "termination_reason": "active",
+                "control_pass": true
+              },
+              "controlled_speed_runs": [
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 150.0,
+                  "steps": 123,
+                  "mean_speed_kph": 147.85551809634205,
+                  "mean_target_speed_kph": 150.0,
+                  "mean_speed_error_kph": -2.144481903657961,
+                  "p95_abs_lateral_error_m": 1.991872856537599,
+                  "max_abs_lateral_error_m": 2.6616824288923064,
+                  "p95_abs_heading_error_deg": 19.960502762793908,
+                  "steering_saturation_rate": 0.2682926829268293,
+                  "mean_abs_steering": 0.33159919186759496,
+                  "curvature_abs_p90_rad_per_m": 0.014363121226878828,
+                  "lateral_g_p90": 2.468626056715405,
+                  "lateral_g_max": 2.469215637898343,
+                  "front_slip_angle_p90_deg": 10.012012292107753,
+                  "rear_slip_angle_p90_deg": 3.260825918970483,
+                  "front_lateral_force_p90_n": 11575.048576669584,
+                  "rear_lateral_force_p90_n": 7751.919307443271,
+                  "tire_saturation_p90": 1.0538960307481844,
+                  "mean_throttle": 0.06699670363493546,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 180.0,
+                  "steps": 104,
+                  "mean_speed_kph": 176.42541282281582,
+                  "mean_target_speed_kph": 180.0,
+                  "mean_speed_error_kph": -3.5745871771841857,
+                  "p95_abs_lateral_error_m": 1.7976063535823368,
+                  "max_abs_lateral_error_m": 2.438022541818148,
+                  "p95_abs_heading_error_deg": 22.63510808092785,
+                  "steering_saturation_rate": 0.2980769230769231,
+                  "mean_abs_steering": 0.3556848318948651,
+                  "curvature_abs_p90_rad_per_m": 0.011840560060594191,
+                  "lateral_g_p90": 2.8986777696384065,
+                  "lateral_g_max": 2.898680701483044,
+                  "front_slip_angle_p90_deg": 8.501191113647687,
+                  "rear_slip_angle_p90_deg": 2.7253924614643514,
+                  "front_lateral_force_p90_n": 15522.94922917023,
+                  "rear_lateral_force_p90_n": 7169.023188526977,
+                  "tire_saturation_p90": 0.8948622224892303,
+                  "mean_throttle": 0.11170031870096876,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 200.0,
+                  "steps": 94,
+                  "mean_speed_kph": 195.08366626837787,
+                  "mean_target_speed_kph": 200.0,
+                  "mean_speed_error_kph": -4.916333731622143,
+                  "p95_abs_lateral_error_m": 1.862074975596861,
+                  "max_abs_lateral_error_m": 2.521064798639496,
+                  "p95_abs_heading_error_deg": 24.709199761273123,
+                  "steering_saturation_rate": 0.3191489361702128,
+                  "mean_abs_steering": 0.37088094119136944,
+                  "curvature_abs_p90_rad_per_m": 0.01009663943457015,
+                  "lateral_g_p90": 3.021851681762236,
+                  "lateral_g_max": 3.021856046199335,
+                  "front_slip_angle_p90_deg": 7.676071989697392,
+                  "rear_slip_angle_p90_deg": 2.3880829936913903,
+                  "front_lateral_force_p90_n": 17180.998796547174,
+                  "rear_lateral_force_p90_n": 6475.311887114426,
+                  "tire_saturation_p90": 0.8080075778628834,
+                  "mean_throttle": 0.15361442506021153,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 220.0,
+                  "steps": 86,
+                  "mean_speed_kph": 213.66094542314406,
+                  "mean_target_speed_kph": 220.0,
+                  "mean_speed_error_kph": -6.339054576855915,
+                  "p95_abs_lateral_error_m": 1.9174772309153518,
+                  "max_abs_lateral_error_m": 3.1698649894210416,
+                  "p95_abs_heading_error_deg": 26.831823568981264,
+                  "steering_saturation_rate": 0.3372093023255814,
+                  "mean_abs_steering": 0.3814917626723708,
+                  "curvature_abs_p90_rad_per_m": 0.008417542144928536,
+                  "lateral_g_p90": 3.021291169510792,
+                  "lateral_g_max": 3.0213036307171834,
+                  "front_slip_angle_p90_deg": 6.962073791583883,
+                  "rear_slip_angle_p90_deg": 2.075354163236374,
+                  "front_lateral_force_p90_n": 17933.538967613145,
+                  "rear_lateral_force_p90_n": 5718.430334687879,
+                  "tire_saturation_p90": 0.7328498727983035,
+                  "mean_throttle": 0.19804048889803783,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 230.0,
+                  "steps": 83,
+                  "mean_speed_kph": 222.72437819847892,
+                  "mean_target_speed_kph": 230.0,
+                  "mean_speed_error_kph": -7.2756218015210505,
+                  "p95_abs_lateral_error_m": 1.9719051995808183,
+                  "max_abs_lateral_error_m": 3.7435622452756623,
+                  "p95_abs_heading_error_deg": 27.729164973788418,
+                  "steering_saturation_rate": 0.3493975903614458,
+                  "mean_abs_steering": 0.392028139803479,
+                  "curvature_abs_p90_rad_per_m": 0.007651941616973481,
+                  "lateral_g_p90": 2.98367567912102,
+                  "lateral_g_max": 2.983715486239736,
+                  "front_slip_angle_p90_deg": 6.64734817342999,
+                  "rear_slip_angle_p90_deg": 1.9343748043292972,
+                  "front_lateral_force_p90_n": 18001.80181276377,
+                  "rear_lateral_force_p90_n": 5355.6473402542515,
+                  "tire_saturation_p90": 0.6997208603610515,
+                  "mean_throttle": 0.2272677141664499,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 240.0,
+                  "steps": 80,
+                  "mean_speed_kph": 232.04461583574295,
+                  "mean_target_speed_kph": 240.0,
+                  "mean_speed_error_kph": -7.955384164257066,
+                  "p95_abs_lateral_error_m": 2.2106662081202004,
+                  "max_abs_lateral_error_m": 4.10226323339111,
+                  "p95_abs_heading_error_deg": 28.855435465430915,
+                  "steering_saturation_rate": 0.35,
+                  "mean_abs_steering": 0.396752209273569,
+                  "curvature_abs_p90_rad_per_m": 0.006913368907222982,
+                  "lateral_g_p90": 2.925528092824398,
+                  "lateral_g_max": 2.9256024556880447,
+                  "front_slip_angle_p90_deg": 6.342904746763563,
+                  "rear_slip_angle_p90_deg": 1.7982394007835492,
+                  "front_lateral_force_p90_n": 17905.580001455204,
+                  "rear_lateral_force_p90_n": 4996.750656841552,
+                  "tire_saturation_p90": 0.6676741838698487,
+                  "mean_throttle": 0.24847922113021959,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 250.0,
+                  "steps": 77,
+                  "mean_speed_kph": 241.11301233864907,
+                  "mean_target_speed_kph": 250.0,
+                  "mean_speed_error_kph": -8.88698766135091,
+                  "p95_abs_lateral_error_m": 2.604262357236024,
+                  "max_abs_lateral_error_m": 4.558947681560814,
+                  "p95_abs_heading_error_deg": 29.765797094845272,
+                  "steering_saturation_rate": 0.36363636363636365,
+                  "mean_abs_steering": 0.4063495941356803,
+                  "curvature_abs_p90_rad_per_m": 0.006249244995853356,
+                  "lateral_g_p90": 2.854627408394715,
+                  "lateral_g_max": 2.854746185911824,
+                  "front_slip_angle_p90_deg": 6.063987835476594,
+                  "rear_slip_angle_p90_deg": 1.6750518361164881,
+                  "front_lateral_force_p90_n": 17680.97434999421,
+                  "rear_lateral_force_p90_n": 4666.430899743324,
+                  "tire_saturation_p90": 0.6383145089975362,
+                  "mean_throttle": 0.2775490985837946,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                }
+              ]
+            },
+            {
+              "name": "sustained_corner_03",
+              "reference_start_distance_m": 5033.296727252959,
+              "reference_end_distance_m": 5298.651709650052,
+              "sim_start_progress_m": 5074.759113251296,
+              "sim_end_progress_m": 5342.299989169659,
+              "reference_length_m": 265.3549823970934,
+              "reference_mean_speed_kph": 228.28905103767403,
+              "reference_min_speed_kph": 208.0,
+              "reference_max_speed_kph": 267.0,
+              "reference_curvature_abs_p90_rad_per_m": 0.013644591248776358,
+              "reference_radius_p10_m": 73.29280910042596,
+              "reference_lateral_g_p75": 4.550058462435262,
+              "reference_lateral_g_p90": 5.242431636456099,
+              "reference_lateral_g_max": 7.582487784367293,
+              "reference_run": {
+                "speed_mode": "reference",
+                "target_speed_kph": null,
+                "steps": 173,
+                "mean_speed_kph": 223.09122579995767,
+                "mean_target_speed_kph": 220.6425830405513,
+                "mean_speed_error_kph": 2.4486427594063827,
+                "p95_abs_lateral_error_m": 17.94986390116031,
+                "max_abs_lateral_error_m": 19.671803081041453,
+                "p95_abs_heading_error_deg": 24.788154985555686,
+                "steering_saturation_rate": 0.6820809248554913,
+                "mean_abs_steering": 0.8589213070245287,
+                "curvature_abs_p90_rad_per_m": 0.009046063576168521,
+                "lateral_g_p90": 3.0353636534367125,
+                "lateral_g_max": 3.035635777283496,
+                "front_slip_angle_p90_deg": 7.223410784047044,
+                "rear_slip_angle_p90_deg": 2.1916369508388844,
+                "front_lateral_force_p90_n": 17947.458716997717,
+                "rear_lateral_force_p90_n": 6008.885844603517,
+                "tire_saturation_p90": 0.7603590298996887,
+                "mean_throttle": 0.12401869845414881,
+                "mean_brake": 0.22543185372633426,
+                "off_track_rate": 0.0,
+                "terminated": true,
+                "termination_reason": "collision",
+                "control_pass": false
+              },
+              "controlled_speed_runs": [
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 150.0,
+                  "steps": 387,
+                  "mean_speed_kph": 147.8563652555935,
+                  "mean_target_speed_kph": 150.0,
+                  "mean_speed_error_kph": -2.1436347444065267,
+                  "p95_abs_lateral_error_m": 2.0132828636403444,
+                  "max_abs_lateral_error_m": 2.5655453047111556,
+                  "p95_abs_heading_error_deg": 14.4917987468119,
+                  "steering_saturation_rate": 0.11627906976744186,
+                  "mean_abs_steering": 0.4438240598063988,
+                  "curvature_abs_p90_rad_per_m": 0.014360870748235308,
+                  "lateral_g_p90": 2.467890690102659,
+                  "lateral_g_max": 2.4697599829281836,
+                  "front_slip_angle_p90_deg": 10.009856498312503,
+                  "rear_slip_angle_p90_deg": 3.260156949781841,
+                  "front_lateral_force_p90_n": 11577.235626635136,
+                  "rear_lateral_force_p90_n": 7751.8278407509915,
+                  "tire_saturation_p90": 1.0536691050855267,
+                  "mean_throttle": 0.06698848783388577,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": true
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 180.0,
+                  "steps": 330,
+                  "mean_speed_kph": 176.42208335586312,
+                  "mean_target_speed_kph": 180.0,
+                  "mean_speed_error_kph": -3.577916644136893,
+                  "p95_abs_lateral_error_m": 5.010473710513326,
+                  "max_abs_lateral_error_m": 5.293072984724552,
+                  "p95_abs_heading_error_deg": 16.809044811453766,
+                  "steering_saturation_rate": 0.43636363636363634,
+                  "mean_abs_steering": 0.6612946005757001,
+                  "curvature_abs_p90_rad_per_m": 0.011840624286190673,
+                  "lateral_g_p90": 2.898670179359778,
+                  "lateral_g_max": 2.8986754329290743,
+                  "front_slip_angle_p90_deg": 8.501221138577248,
+                  "rear_slip_angle_p90_deg": 2.7254056066004857,
+                  "front_lateral_force_p90_n": 15522.867741993612,
+                  "rear_lateral_force_p90_n": 7169.046697231664,
+                  "tire_saturation_p90": 0.8948653830081312,
+                  "mean_throttle": 0.11180810683968397,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 200.0,
+                  "steps": 313,
+                  "mean_speed_kph": 195.06966500508844,
+                  "mean_target_speed_kph": 200.0,
+                  "mean_speed_error_kph": -4.930334994911566,
+                  "p95_abs_lateral_error_m": 18.36636754078934,
+                  "max_abs_lateral_error_m": 18.63360730940456,
+                  "p95_abs_heading_error_deg": 18.514404585144206,
+                  "steering_saturation_rate": 0.7507987220447284,
+                  "mean_abs_steering": 0.8171314713583717,
+                  "curvature_abs_p90_rad_per_m": 0.010097043692401561,
+                  "lateral_g_p90": 3.021841486426689,
+                  "lateral_g_max": 3.0218490592061658,
+                  "front_slip_angle_p90_deg": 7.67623675923388,
+                  "rear_slip_angle_p90_deg": 2.3881613596395073,
+                  "front_lateral_force_p90_n": 17180.72213066348,
+                  "rear_lateral_force_p90_n": 6475.490761527304,
+                  "tire_saturation_p90": 0.8080249220246188,
+                  "mean_throttle": 0.1540663439977407,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": false,
+                  "termination_reason": "active",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 220.0,
+                  "steps": 177,
+                  "mean_speed_kph": 213.63363293509627,
+                  "mean_target_speed_kph": 220.0,
+                  "mean_speed_error_kph": -6.366367064903725,
+                  "p95_abs_lateral_error_m": 18.083738228110295,
+                  "max_abs_lateral_error_m": 20.527460672727965,
+                  "p95_abs_heading_error_deg": 26.945397400690172,
+                  "steering_saturation_rate": 0.615819209039548,
+                  "mean_abs_steering": 0.733482240154336,
+                  "curvature_abs_p90_rad_per_m": 0.008418807666331903,
+                  "lateral_g_p90": 3.021341390247017,
+                  "lateral_g_max": 3.0213432796794573,
+                  "front_slip_angle_p90_deg": 6.96258505437226,
+                  "rear_slip_angle_p90_deg": 2.075592972400083,
+                  "front_lateral_force_p90_n": 17933.363019715256,
+                  "rear_lateral_force_p90_n": 5719.035968763532,
+                  "tire_saturation_p90": 0.7329036899339221,
+                  "mean_throttle": 0.19892027288995007,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": true,
+                  "termination_reason": "collision",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 230.0,
+                  "steps": 160,
+                  "mean_speed_kph": 222.67894587866712,
+                  "mean_target_speed_kph": 230.0,
+                  "mean_speed_error_kph": -7.321054121332868,
+                  "p95_abs_lateral_error_m": 17.39320504519175,
+                  "max_abs_lateral_error_m": 20.895862134015935,
+                  "p95_abs_heading_error_deg": 29.63835174011381,
+                  "steering_saturation_rate": 0.6,
+                  "mean_abs_steering": 0.7338288194518878,
+                  "curvature_abs_p90_rad_per_m": 0.007654281315586462,
+                  "lateral_g_p90": 2.9838389837477766,
+                  "lateral_g_max": 2.9838483954730854,
+                  "front_slip_angle_p90_deg": 6.648292059942896,
+                  "rear_slip_angle_p90_deg": 1.93481481524755,
+                  "front_lateral_force_p90_n": 18001.844143866914,
+                  "rear_lateral_force_p90_n": 5356.795297751533,
+                  "tire_saturation_p90": 0.6998202168360943,
+                  "mean_throttle": 0.22872897570206696,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.00625,
+                  "terminated": true,
+                  "termination_reason": "off_track",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 240.0,
+                  "steps": 147,
+                  "mean_speed_kph": 231.98719389085616,
+                  "mean_target_speed_kph": 240.0,
+                  "mean_speed_error_kph": -8.012806109143828,
+                  "p95_abs_lateral_error_m": 16.22159756123127,
+                  "max_abs_lateral_error_m": 20.42183002002386,
+                  "p95_abs_heading_error_deg": 32.63818362608112,
+                  "steering_saturation_rate": 0.5850340136054422,
+                  "mean_abs_steering": 0.737799735249317,
+                  "curvature_abs_p90_rad_per_m": 0.006916460706823509,
+                  "lateral_g_p90": 2.9258343354348466,
+                  "lateral_g_max": 2.9258577992230723,
+                  "front_slip_angle_p90_deg": 6.344118389169156,
+                  "rear_slip_angle_p90_deg": 1.7988224860411524,
+                  "front_lateral_force_p90_n": 17906.269949686066,
+                  "rear_lateral_force_p90_n": 4998.3030704350895,
+                  "tire_saturation_p90": 0.6678019357020164,
+                  "mean_throttle": 0.25032428884829394,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": true,
+                  "termination_reason": "collision",
+                  "control_pass": false
+                },
+                {
+                  "speed_mode": "fixed",
+                  "target_speed_kph": 250.0,
+                  "steps": 135,
+                  "mean_speed_kph": 241.04204694750422,
+                  "mean_target_speed_kph": 250.0,
+                  "mean_speed_error_kph": -8.957953052495837,
+                  "p95_abs_lateral_error_m": 14.488280670968912,
+                  "max_abs_lateral_error_m": 18.77017577683631,
+                  "p95_abs_heading_error_deg": 22.409605142950095,
+                  "steering_saturation_rate": 0.5777777777777777,
+                  "mean_abs_steering": 0.7458715991217884,
+                  "curvature_abs_p90_rad_per_m": 0.006253026321191823,
+                  "lateral_g_p90": 2.8551048153503285,
+                  "lateral_g_max": 2.8551502716872523,
+                  "front_slip_angle_p90_deg": 6.06550616278128,
+                  "rear_slip_angle_p90_deg": 1.6757708714016308,
+                  "front_lateral_force_p90_n": 17682.52953014301,
+                  "rear_lateral_force_p90_n": 4668.372032692692,
+                  "tire_saturation_p90": 0.6384743329243452,
+                  "mean_throttle": 0.2798291556802083,
+                  "mean_brake": 0.0,
+                  "off_track_rate": 0.0,
+                  "terminated": true,
+                  "termination_reason": "collision",
+                  "control_pass": false
+                }
+              ]
+            }
+          ],
+          "controlled_speeds_kph": [
+            150.0,
+            180.0,
+            200.0,
+            220.0,
+            230.0,
+            240.0,
+            250.0
+          ],
+          "reference_control_pass_rate": 0.3333333333333333,
+          "min_reference_lateral_g_p75_margin": -2.1729983728582956,
+          "min_reference_lateral_g_p90_margin": -2.8108241589422156,
+          "max_reference_p95_abs_lateral_error_m": 17.94986390116031,
+          "max_reference_abs_mean_speed_error_kph": 7.626246446191907
+        }
+      },
+      "error_terms": {
+        "max_speed_error_kph": 3.0,
+        "mean_speed_proxy_error_kph": 32.40913519661484,
+        "lateral_g_p95_proxy_error": 2.107348485078722,
+        "radius_p05_proxy_error_m": 65.03518999025707,
+        "braking_330_to_150_m": 118.60807468595296,
+        "braking_330_to_100_m": 141.25635882546476,
+        "acceleration_p95_error_mps2": 8.221980988083697,
+        "braking_decel_p95_error_mps2": -21.013550409527284,
+        "mean_abs_braking_zone_distance_error_m": 15.45139760529571,
+        "max_abs_braking_zone_distance_error_m": 35.77155334652457,
+        "min_corner_lateral_g_margin": -1.2627434367920394,
+        "mean_corner_lateral_g_margin": 0.33867239192537957,
+        "min_robust_corner_lateral_g_margin": -0.4516393807640777,
+        "mean_robust_corner_lateral_g_margin": 0.21234589368020992,
+        "gear_match_rate": 1.0,
+        "mean_abs_rpm_error": 8.863300498605765,
+        "speed_trace_accel_p95_mae_mps2": 1.1486445889475458,
+        "speed_trace_accel_p95_max_abs_error_mps2": 4.314689151607354,
+        "speed_trace_accel_p95_max_deficit_mps2": 1.4070066615592438,
+        "speed_trace_accel_p95_max_excess_mps2": 4.314689151607354,
+        "speed_trace_brake_p95_mae_mps2": 15.066190013217692,
+        "speed_trace_brake_p95_max_abs_error_mps2": 25.305027360715314,
+        "speed_trace_brake_p95_max_deficit_mps2": 25.305027360715314,
+        "speed_trace_brake_p95_max_excess_mps2": 4.761244552020674,
+        "sustained_corner_reference_control_pass_rate": 0.3333333333333333,
+        "min_sustained_corner_reference_lateral_g_p75_margin": -2.1729983728582956,
+        "min_sustained_corner_reference_lateral_g_p90_margin": -2.8108241589422156,
+        "max_sustained_corner_reference_p95_abs_lateral_error_m": 17.94986390116031,
+        "max_sustained_corner_reference_abs_mean_speed_error_kph": 7.626246446191907
+      },
+      "multi_lap_sustained_corner_comparison": {
+        "rows": [
+          {
+            "reference_section": "sustained_corner_01",
+            "matched_multi_lap_section": "section_01",
+            "center_distance_error_m": -5.257722994875621,
+            "sim_mean_speed_kph": 217.5116394960414,
+            "multi_lap_mean_speed_p10_kph": 209.2262316215332,
+            "multi_lap_mean_speed_p50_kph": 215.26693222768097,
+            "multi_lap_mean_speed_p90_kph": 222.9406462548706,
+            "sim_speed_within_multi_lap_p10_p90": true,
+            "sim_lateral_g_p90": 3.0367427826500086,
+            "multi_lap_lateral_g_p90_p50": 5.1521582022196215,
+            "multi_lap_lateral_g_p90_p90": 5.847849822825669,
+            "sim_lateral_g_p90_margin_to_multi_lap_p50": -2.115415419569613,
+            "sim_p95_abs_lateral_error_m": 8.358356792671135,
+            "sim_steering_saturation_rate": 0.5928571428571429,
+            "sim_control_pass": false
+          },
+          {
+            "reference_section": "sustained_corner_02",
+            "matched_multi_lap_section": "section_02",
+            "center_distance_error_m": -18.7662373041062,
+            "sim_mean_speed_kph": 212.6578984098282,
+            "multi_lap_mean_speed_p10_kph": 193.8525844151111,
+            "multi_lap_mean_speed_p50_kph": 198.25175951258151,
+            "multi_lap_mean_speed_p90_kph": 205.07094658777467,
+            "sim_speed_within_multi_lap_p10_p90": false,
+            "sim_lateral_g_p90": 3.019497371256843,
+            "multi_lap_lateral_g_p90_p50": 4.736507804355529,
+            "multi_lap_lateral_g_p90_p90": 5.288594878363181,
+            "sim_lateral_g_p90_margin_to_multi_lap_p50": -1.7170104330986864,
+            "sim_p95_abs_lateral_error_m": 1.9986020118542818,
+            "sim_steering_saturation_rate": 0.3563218390804598,
+            "sim_control_pass": true
+          },
+          {
+            "reference_section": "sustained_corner_03",
+            "matched_multi_lap_section": "section_04",
+            "center_distance_error_m": -19.421323229565132,
+            "sim_mean_speed_kph": 223.09122579995767,
+            "multi_lap_mean_speed_p10_kph": 221.82364509156395,
+            "multi_lap_mean_speed_p50_kph": 228.94597384440357,
+            "multi_lap_mean_speed_p90_kph": 235.71495041853655,
+            "sim_speed_within_multi_lap_p10_p90": true,
+            "sim_lateral_g_p90": 3.0353636534367125,
+            "multi_lap_lateral_g_p90_p50": 5.3502226415536445,
+            "multi_lap_lateral_g_p90_p90": 6.148600679571064,
+            "sim_lateral_g_p90_margin_to_multi_lap_p50": -2.314858988116932,
+            "sim_p95_abs_lateral_error_m": 17.94986390116031,
+            "sim_steering_saturation_rate": 0.6820809248554913,
+            "sim_control_pass": false
+          }
+        ],
+        "matched_sections": 3,
+        "sim_speed_within_multi_lap_p10_p90_rate": 0.6666666666666666,
+        "min_sim_lateral_g_p90_margin_to_multi_lap_p50": -2.314858988116932
+      }
+    }
+  },
+  "multi_lap_reference_summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\section_distribution_summary.json",
+  "multi_lap_reference_summary": {
+    "output_dir": "artifacts\\calibration\\fastf1-multilap-20260605",
+    "summary_count": 60,
+    "sources": [
+      {
+        "source": "FastF1 2022 Monza FP2 HAM lap 005 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP2\\HAM_lap005\\summary.json",
+        "lap_time_s": 83.332,
+        "distance_m": 5753.6759720108075,
+        "max_speed_kph": 333.0,
+        "mean_speed_kph": 250.5858896000278
+      },
+      {
+        "source": "FastF1 2022 Monza FP2 LEC lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP2\\LEC_lap011\\summary.json",
+        "lap_time_s": 81.857,
+        "distance_m": 5758.073515462841,
+        "max_speed_kph": 339.0,
+        "mean_speed_kph": 252.69792931079198
+      },
+      {
+        "source": "FastF1 2022 Monza FP2 NOR lap 010 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP2\\NOR_lap010\\summary.json",
+        "lap_time_s": 82.338,
+        "distance_m": 5750.407371318127,
+        "max_speed_kph": 340.0,
+        "mean_speed_kph": 253.10596417331934
+      },
+      {
+        "source": "FastF1 2022 Monza FP2 RUS lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP2\\RUS_lap011\\summary.json",
+        "lap_time_s": 82.386,
+        "distance_m": 5750.881021227828,
+        "max_speed_kph": 337.0,
+        "mean_speed_kph": 251.36343716659363
+      },
+      {
+        "source": "FastF1 2022 Monza FP2 SAI lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP2\\SAI_lap011\\summary.json",
+        "lap_time_s": 81.664,
+        "distance_m": 5762.107955082745,
+        "max_speed_kph": 337.0,
+        "mean_speed_kph": 253.99963139293646
+      },
+      {
+        "source": "FastF1 2022 Monza FP2 VER lap 004 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP2\\VER_lap004\\summary.json",
+        "lap_time_s": 82.303,
+        "distance_m": 5759.482525283757,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 251.51440334889992
+      },
+      {
+        "source": "FastF1 2022 Monza FP3 HAM lap 015 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP3\\HAM_lap015\\summary.json",
+        "lap_time_s": 82.56700000000001,
+        "distance_m": 5759.115405775887,
+        "max_speed_kph": 333.0,
+        "mean_speed_kph": 251.74811050209908
+      },
+      {
+        "source": "FastF1 2022 Monza FP3 LEC lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP3\\LEC_lap011\\summary.json",
+        "lap_time_s": 81.599,
+        "distance_m": 5755.007818228669,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 253.8668768139961
+      },
+      {
+        "source": "FastF1 2022 Monza FP3 NOR lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP3\\NOR_lap011\\summary.json",
+        "lap_time_s": 82.319,
+        "distance_m": 5738.901056108324,
+        "max_speed_kph": 338.0,
+        "mean_speed_kph": 253.26358819874372
+      },
+      {
+        "source": "FastF1 2022 Monza FP3 RUS lap 015 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP3\\RUS_lap015\\summary.json",
+        "lap_time_s": 82.357,
+        "distance_m": 5757.190411145588,
+        "max_speed_kph": 332.0,
+        "mean_speed_kph": 255.23089341199235
+      },
+      {
+        "source": "FastF1 2022 Monza FP3 SAI lap 009 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP3\\SAI_lap009\\summary.json",
+        "lap_time_s": 81.89699999999999,
+        "distance_m": 5770.108887732781,
+        "max_speed_kph": 338.0,
+        "mean_speed_kph": 253.14088589881015
+      },
+      {
+        "source": "FastF1 2022 Monza FP3 VER lap 014 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_FP3\\VER_lap014\\summary.json",
+        "lap_time_s": 81.252,
+        "distance_m": 5756.990661702037,
+        "max_speed_kph": 342.0,
+        "mean_speed_kph": 256.0303060724679
+      },
+      {
+        "source": "FastF1 2022 Monza Q HAM lap 016 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_Q\\HAM_lap016\\summary.json",
+        "lap_time_s": 81.524,
+        "distance_m": 5755.038548510864,
+        "max_speed_kph": 339.0,
+        "mean_speed_kph": 253.8135855479421
+      },
+      {
+        "source": "FastF1 2022 Monza Q LEC lap 012 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_Q\\LEC_lap012\\summary.json",
+        "lap_time_s": 80.161,
+        "distance_m": 5758.600725538192,
+        "max_speed_kph": 343.0,
+        "mean_speed_kph": 258.5339855801179
+      },
+      {
+        "source": "FastF1 2022 Monza Q NOR lap 018 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_Q\\NOR_lap018\\summary.json",
+        "lap_time_s": 81.584,
+        "distance_m": 5743.516209391231,
+        "max_speed_kph": 342.0,
+        "mean_speed_kph": 254.15100950039698
+      },
+      {
+        "source": "FastF1 2022 Monza Q RUS lap 014 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_Q\\RUS_lap014\\summary.json",
+        "lap_time_s": 81.542,
+        "distance_m": 5751.917978956533,
+        "max_speed_kph": 338.0,
+        "mean_speed_kph": 254.44211089061488
+      },
+      {
+        "source": "FastF1 2022 Monza Q SAI lap 011 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_Q\\SAI_lap011\\summary.json",
+        "lap_time_s": 80.429,
+        "distance_m": 5760.304351435504,
+        "max_speed_kph": 340.0,
+        "mean_speed_kph": 258.4610658434427
+      },
+      {
+        "source": "FastF1 2022 Monza Q VER lap 014 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2022_Q\\VER_lap014\\summary.json",
+        "lap_time_s": 80.306,
+        "distance_m": 5746.289749162886,
+        "max_speed_kph": 343.0,
+        "mean_speed_kph": 258.52150329420897
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 HAM lap 006 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\HAM_lap006\\summary.json",
+        "lap_time_s": 82.783,
+        "distance_m": 5764.402414434729,
+        "max_speed_kph": 332.0,
+        "mean_speed_kph": 250.6219222152616
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 LEC lap 010 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\LEC_lap010\\summary.json",
+        "lap_time_s": 81.71600000000001,
+        "distance_m": 5765.1305299061405,
+        "max_speed_kph": 344.0,
+        "mean_speed_kph": 254.31637200828638
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 NOR lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\NOR_lap011\\summary.json",
+        "lap_time_s": 81.374,
+        "distance_m": 5766.493726496314,
+        "max_speed_kph": 337.0,
+        "mean_speed_kph": 256.6979691962778
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 PIA lap 012 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\PIA_lap012\\summary.json",
+        "lap_time_s": 81.545,
+        "distance_m": 5763.046550951797,
+        "max_speed_kph": 339.0,
+        "mean_speed_kph": 253.54774481569183
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 RUS lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\RUS_lap011\\summary.json",
+        "lap_time_s": 82.176,
+        "distance_m": 5773.379890760075,
+        "max_speed_kph": 336.0,
+        "mean_speed_kph": 253.47117658179516
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 SAI lap 012 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\SAI_lap012\\summary.json",
+        "lap_time_s": 81.355,
+        "distance_m": 5760.184736160805,
+        "max_speed_kph": 344.0,
+        "mean_speed_kph": 254.74468395668995
+      },
+      {
+        "source": "FastF1 2023 Monza FP2 VER lap 009 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP2\\VER_lap009\\summary.json",
+        "lap_time_s": 81.631,
+        "distance_m": 5765.73688515959,
+        "max_speed_kph": 340.0,
+        "mean_speed_kph": 253.89420542464606
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 HAM lap 016 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\HAM_lap016\\summary.json",
+        "lap_time_s": 81.453,
+        "distance_m": 5762.664372137969,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 253.30435308086257
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 LEC lap 019 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\LEC_lap019\\summary.json",
+        "lap_time_s": 81.486,
+        "distance_m": 5764.642502348552,
+        "max_speed_kph": 345.0,
+        "mean_speed_kph": 253.29671905053263
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 NOR lap 003 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\NOR_lap003\\summary.json",
+        "lap_time_s": 82.515,
+        "distance_m": 5755.751946538127,
+        "max_speed_kph": 332.0,
+        "mean_speed_kph": 251.3128725227753
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 PIA lap 013 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\PIA_lap013\\summary.json",
+        "lap_time_s": 82.30199999999999,
+        "distance_m": 5757.124278659277,
+        "max_speed_kph": 337.0,
+        "mean_speed_kph": 251.26375598357996
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 RUS lap 016 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\RUS_lap016\\summary.json",
+        "lap_time_s": 81.73,
+        "distance_m": 5763.263183561195,
+        "max_speed_kph": 338.0,
+        "mean_speed_kph": 253.92327988582483
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 SAI lap 018 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\SAI_lap018\\summary.json",
+        "lap_time_s": 80.912,
+        "distance_m": 5780.424724995757,
+        "max_speed_kph": 344.0,
+        "mean_speed_kph": 258.0382261269138
+      },
+      {
+        "source": "FastF1 2023 Monza FP3 VER lap 017 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_FP3\\VER_lap017\\summary.json",
+        "lap_time_s": 80.998,
+        "distance_m": 5758.99607885837,
+        "max_speed_kph": 340.0,
+        "mean_speed_kph": 255.3350907303429
+      },
+      {
+        "source": "FastF1 2023 Monza Q HAM lap 020 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\HAM_lap020\\summary.json",
+        "lap_time_s": 80.82,
+        "distance_m": 5765.711008917201,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 258.8376510979784
+      },
+      {
+        "source": "FastF1 2023 Monza Q LEC lap 020 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\LEC_lap020\\summary.json",
+        "lap_time_s": 80.361,
+        "distance_m": 5769.527642557175,
+        "max_speed_kph": 346.0,
+        "mean_speed_kph": 261.1751676134544
+      },
+      {
+        "source": "FastF1 2023 Monza Q NOR lap 019 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\NOR_lap019\\summary.json",
+        "lap_time_s": 80.979,
+        "distance_m": 5758.227287029903,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 256.67269435429716
+      },
+      {
+        "source": "FastF1 2023 Monza Q PIA lap 023 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\PIA_lap023\\summary.json",
+        "lap_time_s": 80.785,
+        "distance_m": 5758.4560019511555,
+        "max_speed_kph": 342.0,
+        "mean_speed_kph": 256.0204210863578
+      },
+      {
+        "source": "FastF1 2023 Monza Q RUS lap 020 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\RUS_lap020\\summary.json",
+        "lap_time_s": 80.67099999999999,
+        "distance_m": 5768.679059199643,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 258.50205628385044
+      },
+      {
+        "source": "FastF1 2023 Monza Q SAI lap 019 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\SAI_lap019\\summary.json",
+        "lap_time_s": 80.294,
+        "distance_m": 5766.219799539135,
+        "max_speed_kph": 350.0,
+        "mean_speed_kph": 259.11339478570005
+      },
+      {
+        "source": "FastF1 2023 Monza Q VER lap 020 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2023_Q\\VER_lap020\\summary.json",
+        "lap_time_s": 80.307,
+        "distance_m": 5764.449724256124,
+        "max_speed_kph": 343.0,
+        "mean_speed_kph": 258.6141365466315
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 HAM lap 008 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\HAM_lap008\\summary.json",
+        "lap_time_s": 80.738,
+        "distance_m": 5760.641313318392,
+        "max_speed_kph": 349.0,
+        "mean_speed_kph": 258.4444008587162
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 LEC lap 010 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\LEC_lap010\\summary.json",
+        "lap_time_s": 80.892,
+        "distance_m": 5760.19242635682,
+        "max_speed_kph": 347.0,
+        "mean_speed_kph": 255.3540027630186
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 NOR lap 008 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\NOR_lap008\\summary.json",
+        "lap_time_s": 80.741,
+        "distance_m": 5745.844847964614,
+        "max_speed_kph": 345.0,
+        "mean_speed_kph": 256.8123016100084
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 PIA lap 005 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\PIA_lap005\\summary.json",
+        "lap_time_s": 80.858,
+        "distance_m": 5756.58516564227,
+        "max_speed_kph": 346.0,
+        "mean_speed_kph": 254.93789092824545
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 RUS lap 016 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\RUS_lap016\\summary.json",
+        "lap_time_s": 81.086,
+        "distance_m": 5746.2729030897635,
+        "max_speed_kph": 351.0,
+        "mean_speed_kph": 254.25457301034578
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 SAI lap 011 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\SAI_lap011\\summary.json",
+        "lap_time_s": 80.84100000000001,
+        "distance_m": 5747.191806434225,
+        "max_speed_kph": 349.0,
+        "mean_speed_kph": 255.10575898018675
+      },
+      {
+        "source": "FastF1 2024 Monza FP2 VER lap 004 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP2\\VER_lap004\\summary.json",
+        "lap_time_s": 81.61,
+        "distance_m": 5757.629795637667,
+        "max_speed_kph": 341.0,
+        "mean_speed_kph": 253.8722359183087
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 HAM lap 013 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\HAM_lap013\\summary.json",
+        "lap_time_s": 80.117,
+        "distance_m": 5752.193624023701,
+        "max_speed_kph": 345.0,
+        "mean_speed_kph": 258.90697041576846
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 LEC lap 013 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\LEC_lap013\\summary.json",
+        "lap_time_s": 80.226,
+        "distance_m": 5757.514642636522,
+        "max_speed_kph": 345.0,
+        "mean_speed_kph": 257.7335177048883
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 NOR lap 008 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\NOR_lap008\\summary.json",
+        "lap_time_s": 80.262,
+        "distance_m": 5764.479007321878,
+        "max_speed_kph": 344.0,
+        "mean_speed_kph": 260.4186423480928
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 PIA lap 009 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\PIA_lap009\\summary.json",
+        "lap_time_s": 80.252,
+        "distance_m": 5753.570002192795,
+        "max_speed_kph": 344.0,
+        "mean_speed_kph": 257.0337731857917
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 RUS lap 017 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\RUS_lap017\\summary.json",
+        "lap_time_s": 80.21000000000001,
+        "distance_m": 5764.184959898561,
+        "max_speed_kph": 343.0,
+        "mean_speed_kph": 259.1532112405538
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 SAI lap 008 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\SAI_lap008\\summary.json",
+        "lap_time_s": 80.463,
+        "distance_m": 5753.227896532249,
+        "max_speed_kph": 345.0,
+        "mean_speed_kph": 257.7883881635242
+      },
+      {
+        "source": "FastF1 2024 Monza FP3 VER lap 019 secondary_practice_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_FP3\\VER_lap019\\summary.json",
+        "lap_time_s": 80.368,
+        "distance_m": 5752.086019480076,
+        "max_speed_kph": 344.0,
+        "mean_speed_kph": 255.7599385636088
+      },
+      {
+        "source": "FastF1 2024 Monza Q HAM lap 017 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\HAM_lap017\\summary.json",
+        "lap_time_s": 79.513,
+        "distance_m": 5759.86101569348,
+        "max_speed_kph": 349.0,
+        "mean_speed_kph": 260.5899910603702
+      },
+      {
+        "source": "FastF1 2024 Monza Q LEC lap 020 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\LEC_lap020\\summary.json",
+        "lap_time_s": 79.461,
+        "distance_m": 5759.726517431103,
+        "max_speed_kph": 351.0,
+        "mean_speed_kph": 263.09894041403857
+      },
+      {
+        "source": "FastF1 2024 Monza Q NOR lap 011 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\NOR_lap011\\summary.json",
+        "lap_time_s": 79.327,
+        "distance_m": 5753.878867527226,
+        "max_speed_kph": 347.0,
+        "mean_speed_kph": 262.7248992137443
+      },
+      {
+        "source": "FastF1 2024 Monza Q PIA lap 015 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\PIA_lap015\\summary.json",
+        "lap_time_s": 79.436,
+        "distance_m": 5759.322621692559,
+        "max_speed_kph": 346.0,
+        "mean_speed_kph": 262.20787770930195
+      },
+      {
+        "source": "FastF1 2024 Monza Q RUS lap 017 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\RUS_lap017\\summary.json",
+        "lap_time_s": 79.44,
+        "distance_m": 5760.401132802512,
+        "max_speed_kph": 348.0,
+        "mean_speed_kph": 261.7024178860178
+      },
+      {
+        "source": "FastF1 2024 Monza Q SAI lap 017 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\SAI_lap017\\summary.json",
+        "lap_time_s": 79.467,
+        "distance_m": 5753.454624992787,
+        "max_speed_kph": 351.0,
+        "mean_speed_kph": 261.95929800631467
+      },
+      {
+        "source": "FastF1 2024 Monza Q VER lap 011 primary_qualifying_clean_dry",
+        "summary_path": "artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\VER_lap011\\summary.json",
+        "lap_time_s": 79.662,
+        "distance_m": 5745.669358933476,
+        "max_speed_kph": 348.0,
+        "mean_speed_kph": 259.91445380074884
+      }
+    ],
+    "lap_distributions": {
+      "distance_m": {
+        "count": 60,
+        "min": 5738.901056108324,
+        "p10": 5747.101600707092,
+        "p50": 5758.798402198281,
+        "p90": 5766.247192234852,
+        "max": 5780.424724995757,
+        "mean": 5758.400850968272
+      },
+      "lap_time_s": {
+        "count": 60,
+        "min": 79.327,
+        "p10": 79.64710000000001,
+        "p50": 80.9885,
+        "p90": 82.3399,
+        "max": 83.332,
+        "mean": 81.07633333333334
+      },
+      "max_speed_kph": {
+        "count": 60,
+        "min": 332.0,
+        "p10": 336.9,
+        "p50": 342.0,
+        "p90": 349.0,
+        "max": 351.0,
+        "mean": 342.1166666666667
+      },
+      "mean_speed_kph": {
+        "count": 60,
+        "min": 250.5858896000278,
+        "p10": 251.72473978677917,
+        "p50": 255.34454674668075,
+        "p90": 260.64850871567864,
+        "max": 263.09894041403857,
+        "mean": 256.08247589461246
+      },
+      "p10_speed_kph": {
+        "count": 60,
+        "min": 130.0,
+        "p10": 134.40154524578023,
+        "p50": 140.10000000000002,
+        "p90": 149.09790328320003,
+        "max": 159.65471461009207,
+        "mean": 141.665373532137
+      },
+      "p50_speed_kph": {
+        "count": 60,
+        "min": 264.1,
+        "p10": 266.31375040000006,
+        "p50": 270.5,
+        "p90": 276.2055555555556,
+        "max": 281.0,
+        "mean": 271.21933203961055
+      },
+      "p90_speed_kph": {
+        "count": 60,
+        "min": 320.0,
+        "p10": 324.8101998762667,
+        "p50": 329.98118276560683,
+        "p90": 335.3231995392,
+        "max": 339.3614285714286,
+        "mean": 329.9861126946051
+      }
+    },
+    "section_distributions": {
+      "sustained_high_speed_curves": {
+        "section_01": {
+          "center_distance_m": {
+            "count": 60,
+            "min": 2482.137358440381,
+            "p10": 2495.227159967381,
+            "p50": 2507.0854990273106,
+            "p90": 2520.15103475195,
+            "max": 2531.9838235905636,
+            "mean": 2507.4479907386335
+          },
+          "curvature_abs_p90_rad_per_m": {
+            "count": 60,
+            "min": 0.012982120590871879,
+            "p10": 0.013937975138976627,
+            "p50": 0.014970240369047939,
+            "p90": 0.01712473887005144,
+            "max": 0.019514036725014464,
+            "mean": 0.015294744006225615
+          },
+          "end_distance_m": {
+            "count": 60,
+            "min": 2554.942911849686,
+            "p10": 2571.336754891359,
+            "p50": 2590.3817643367447,
+            "p90": 2605.0839212859255,
+            "max": 2625.0172979406593,
+            "mean": 2589.997947011251
+          },
+          "lateral_g_max": {
+            "count": 60,
+            "min": 4.960863775376176,
+            "p10": 5.269795867452314,
+            "p50": 6.140542254346203,
+            "p90": 7.963884026415334,
+            "max": 11.718304028293897,
+            "mean": 6.507280456676487
+          },
+          "lateral_g_p75": {
+            "count": 60,
+            "min": 3.588804901489681,
+            "p10": 3.9434265181125188,
+            "p50": 4.321576871277113,
+            "p90": 4.842285282723332,
+            "max": 5.3238500386749825,
+            "mean": 4.334180132374101
+          },
+          "lateral_g_p90": {
+            "count": 60,
+            "min": 3.9192878262414435,
+            "p10": 4.637288896631312,
+            "p50": 5.1521582022196215,
+            "p90": 5.847849822825669,
+            "max": 7.266891963910661,
+            "mean": 5.178495966032657
+          },
+          "length_m": {
+            "count": 60,
+            "min": 122.27827264483994,
+            "p10": 147.26349430031502,
+            "p50": 165.3290162595099,
+            "p90": 184.37270074627722,
+            "max": 197.55717706541327,
+            "mean": 165.09991254523533
+          },
+          "max_speed_kph": {
+            "count": 60,
+            "min": 231.0611072,
+            "p10": 242.18624710400002,
+            "p50": 256.0,
+            "p90": 262.09999999999997,
+            "max": 265.44444444444446,
+            "mean": 253.87825181510678
+          },
+          "mean_speed_kph": {
+            "count": 60,
+            "min": 203.47222929020072,
+            "p10": 209.2262316215332,
+            "p50": 215.26693222768097,
+            "p90": 222.9406462548706,
+            "max": 232.3813691140741,
+            "mean": 215.32737544858816
+          },
+          "min_speed_kph": {
+            "count": 60,
+            "min": 185.0,
+            "p10": 191.9,
+            "p50": 196.5,
+            "p90": 204.1,
+            "max": 211.0,
+            "mean": 197.31666666666666
+          },
+          "radius_p10_m": {
+            "count": 60,
+            "min": 51.647806235935,
+            "p10": 58.60463044405918,
+            "p50": 66.83841798816766,
+            "p90": 71.78550388313077,
+            "max": 77.03481411723683,
+            "mean": 65.92655460828202
+          },
+          "start_distance_m": {
+            "count": 60,
+            "min": 2391.5138225215633,
+            "p10": 2409.345798001494,
+            "p50": 2424.8836407296008,
+            "p90": 2435.474715886697,
+            "max": 2468.494472411601,
+            "mean": 2424.8980344660163
+          }
+        },
+        "section_02": {
+          "center_distance_m": {
+            "count": 42,
+            "min": 2813.837964775223,
+            "p10": 2824.878362472854,
+            "p50": 2832.6042020793293,
+            "p90": 2842.3772327520355,
+            "max": 2852.8235743627483,
+            "mean": 2833.2221805429617
+          },
+          "curvature_abs_p90_rad_per_m": {
+            "count": 42,
+            "min": 0.013140783419048317,
+            "p10": 0.014333649714997185,
+            "p50": 0.016071318178223007,
+            "p90": 0.0181496439182321,
+            "max": 0.01911110614166875,
+            "mean": 0.016224307005790223
+          },
+          "end_distance_m": {
+            "count": 42,
+            "min": 2856.2953242179024,
+            "p10": 2868.8681376906934,
+            "p50": 2885.5215999804664,
+            "p90": 2898.2240390805296,
+            "max": 2908.9792721119707,
+            "mean": 2884.742314561967
+          },
+          "lateral_g_max": {
+            "count": 42,
+            "min": 4.487512397698879,
+            "p10": 4.807291975897636,
+            "p50": 5.66530109067204,
+            "p90": 8.046996176937562,
+            "max": 17.17146846234739,
+            "mean": 6.276084468006341
+          },
+          "lateral_g_p75": {
+            "count": 42,
+            "min": 3.082189132937751,
+            "p10": 3.4104381951078175,
+            "p50": 3.7399142577092457,
+            "p90": 4.31716698423676,
+            "max": 4.613140836290663,
+            "mean": 3.7956224271219607
+          },
+          "lateral_g_p90": {
+            "count": 42,
+            "min": 3.701574960453134,
+            "p10": 4.119174930186453,
+            "p50": 4.736507804355529,
+            "p90": 5.288594878363181,
+            "max": 6.139560789438233,
+            "mean": 4.722937434281841
+          },
+          "length_m": {
+            "count": 42,
+            "min": 81.09345632865143,
+            "p10": 90.54858458230677,
+            "p50": 102.59375182804501,
+            "p90": 115.90900464479346,
+            "max": 123.28952566139924,
+            "mean": 103.04026803801088
+          },
+          "max_speed_kph": {
+            "count": 42,
+            "min": 205.31109973333332,
+            "p10": 216.62201036800002,
+            "p50": 230.62501759999998,
+            "p90": 244.28968192,
+            "max": 259.5562544,
+            "mean": 230.2142656190362
+          },
+          "mean_speed_kph": {
+            "count": 42,
+            "min": 191.3497200750051,
+            "p10": 193.8525844151111,
+            "p50": 198.25175951258151,
+            "p90": 205.07094658777467,
+            "max": 210.54645466352943,
+            "mean": 198.69705071997504
+          },
+          "min_speed_kph": {
+            "count": 42,
+            "min": 181.0,
+            "p10": 181.0,
+            "p50": 185.0,
+            "p90": 189.0,
+            "max": 192.0,
+            "mean": 185.28571428571428
+          },
+          "radius_p10_m": {
+            "count": 42,
+            "min": 52.46771884267777,
+            "p10": 55.73979709723022,
+            "p50": 62.37865275156972,
+            "p90": 69.86796711742414,
+            "max": 76.96717976885321,
+            "mean": 62.65662176749786
+          },
+          "start_distance_m": {
+            "count": 42,
+            "min": 2766.3885046125592,
+            "p10": 2771.4726379653584,
+            "p50": 2780.76844786484,
+            "p90": 2794.128201217363,
+            "max": 2801.2447726393166,
+            "mean": 2781.7020465239557
+          }
+        },
+        "section_03": {
+          "center_distance_m": {
+            "count": 26,
+            "min": 3882.951764025838,
+            "p10": 3886.148239069016,
+            "p50": 3995.2110666410294,
+            "p90": 4112.20145501807,
+            "max": 4124.426562189852,
+            "mean": 3989.483681759674
+          },
+          "curvature_abs_p90_rad_per_m": {
+            "count": 26,
+            "min": 0.006064327381440634,
+            "p10": 0.007634700068106131,
+            "p50": 0.009796412619703463,
+            "p90": 0.012220312364528313,
+            "max": 0.014391655030090903,
+            "mean": 0.009874042552357003
+          },
+          "end_distance_m": {
+            "count": 26,
+            "min": 3924.0149102953765,
+            "p10": 3929.512378148923,
+            "p50": 4035.7846634260095,
+            "p90": 4153.857730857688,
+            "max": 4165.720435526001,
+            "mean": 4032.3190269088327
+          },
+          "lateral_g_max": {
+            "count": 26,
+            "min": 2.9852736940584923,
+            "p10": 3.2694553831001882,
+            "p50": 4.441926018068317,
+            "p90": 5.7089051492160765,
+            "max": 5.984870003279632,
+            "mean": 4.4803542461028405
+          },
+          "lateral_g_p75": {
+            "count": 26,
+            "min": 2.2868567031446316,
+            "p10": 2.5689997054841225,
+            "p50": 3.0344029810297126,
+            "p90": 3.6563975179634465,
+            "max": 3.829266329778283,
+            "mean": 3.1009471050224775
+          },
+          "lateral_g_p90": {
+            "count": 26,
+            "min": 2.917813224733801,
+            "p10": 3.0793057500946945,
+            "p50": 3.730930360199213,
+            "p90": 4.5129593863861475,
+            "max": 5.131564225204565,
+            "mean": 3.7401495678775425
+          },
+          "length_m": {
+            "count": 26,
+            "min": 80.66797763059867,
+            "p10": 81.16460060616168,
+            "p50": 85.67957944788304,
+            "p90": 90.22720325308114,
+            "max": 100.75321956947528,
+            "mean": 85.67069029831772
+          },
+          "max_speed_kph": {
+            "count": 26,
+            "min": 222.0,
+            "p10": 227.60000159999998,
+            "p50": 236.61249856,
+            "p90": 263.3125,
+            "max": 279.0,
+            "mean": 243.52970657934065
+          },
+          "mean_speed_kph": {
+            "count": 26,
+            "min": 205.9738475259259,
+            "p10": 209.66046235116346,
+            "p50": 215.99006234872024,
+            "p90": 249.80122100837352,
+            "max": 255.73007439515152,
+            "mean": 221.34872618242318
+          },
+          "min_speed_kph": {
+            "count": 26,
+            "min": 181.0,
+            "p10": 185.2214272,
+            "p50": 197.11666773333332,
+            "p90": 235.6982641777778,
+            "max": 245.04999253333332,
+            "mean": 202.96645149659227
+          },
+          "radius_p10_m": {
+            "count": 26,
+            "min": 69.58263404323918,
+            "p10": 81.93921450306365,
+            "p50": 102.27325990853544,
+            "p90": 131.04485041521392,
+            "max": 164.8989436831828,
+            "mean": 105.9636556377893
+          },
+          "start_distance_m": {
+            "count": 26,
+            "min": 3840.083112568197,
+            "p10": 3844.027859661335,
+            "p50": 3952.906066101601,
+            "p90": 4068.481229994227,
+            "max": 4083.132688853704,
+            "mean": 3946.648336610515
+          }
+        },
+        "section_04": {
+          "center_distance_m": {
+            "count": 60,
+            "min": 5135.087773166772,
+            "p10": 5162.4990176239735,
+            "p50": 5185.39554168107,
+            "p90": 5206.544201425767,
+            "max": 5216.0359325065165,
+            "mean": 5183.906771829037
+          },
+          "curvature_abs_p90_rad_per_m": {
+            "count": 60,
+            "min": 0.012240296497669922,
+            "p10": 0.013264127984676159,
+            "p50": 0.014645282220706653,
+            "p90": 0.01664890793421717,
+            "max": 0.018478246791733998,
+            "mean": 0.014784548436339676
+          },
+          "end_distance_m": {
+            "count": 60,
+            "min": 5220.12522923304,
+            "p10": 5277.0758800573,
+            "p50": 5317.413888390216,
+            "p90": 5343.771544019125,
+            "max": 5361.999303978092,
+            "mean": 5311.809903979233
+          },
+          "lateral_g_max": {
+            "count": 60,
+            "min": 5.327744416418608,
+            "p10": 6.018930711371652,
+            "p50": 7.628010197450703,
+            "p90": 10.73386382999928,
+            "max": 27.68730818346876,
+            "mean": 8.24166650227498
+          },
+          "lateral_g_p75": {
+            "count": 60,
+            "min": 3.847951453898585,
+            "p10": 4.097462072131262,
+            "p50": 4.4416193097161365,
+            "p90": 4.87392013671091,
+            "max": 5.315961940619403,
+            "mean": 4.478398379979203
+          },
+          "lateral_g_p90": {
+            "count": 60,
+            "min": 4.248019597270944,
+            "p10": 4.835063113606226,
+            "p50": 5.3502226415536445,
+            "p90": 6.148600679571064,
+            "max": 7.4689805704030325,
+            "mean": 5.444445030083215
+          },
+          "length_m": {
+            "count": 60,
+            "min": 170.07491213253525,
+            "p10": 220.79528579178077,
+            "p50": 261.9513928450692,
+            "p90": 290.52629162289827,
+            "max": 303.38363089119684,
+            "mean": 255.80626430039163
+          },
+          "max_speed_kph": {
+            "count": 60,
+            "min": 242.0312512,
+            "p10": 249.905999616,
+            "p50": 259.0,
+            "p90": 284.219995392,
+            "max": 308.0,
+            "mean": 263.4795992288254
+          },
+          "mean_speed_kph": {
+            "count": 60,
+            "min": 216.53364930612327,
+            "p10": 221.82364509156395,
+            "p50": 228.94597384440357,
+            "p90": 235.71495041853655,
+            "max": 239.2786820372222,
+            "mean": 228.81776787323938
+          },
+          "min_speed_kph": {
+            "count": 60,
+            "min": 189.0,
+            "p10": 200.0,
+            "p50": 206.5,
+            "p90": 215.0,
+            "max": 219.0,
+            "mean": 206.58333333333334
+          },
+          "radius_p10_m": {
+            "count": 60,
+            "min": 54.227069805563545,
+            "p10": 60.06554045889352,
+            "p50": 68.30972551185747,
+            "p90": 75.46468567755716,
+            "max": 81.8194464685294,
+            "mean": 68.2017471399376
+          },
+          "start_distance_m": {
+            "count": 60,
+            "min": 5019.397163928404,
+            "p10": 5038.67734428294,
+            "p50": 5052.6970033539,
+            "p90": 5076.1763143801045,
+            "max": 5093.576146279807,
+            "mean": 5056.003639678843
+          }
+        }
+      },
+      "sustained_high_speed_curve_raw_target_count": 188,
+      "braking_zones": {
+        "length_m": {
+          "count": 382,
+          "min": 7.508744143703666,
+          "p10": 35.83353665775525,
+          "p50": 78.10620380017212,
+          "p90": 122.6458984279459,
+          "max": 148.0507335917423,
+          "mean": 79.30279794994328
+        },
+        "mean_decel_mps2": {
+          "count": 382,
+          "min": 0.0,
+          "p10": 12.359190660635324,
+          "p50": 21.679676611409008,
+          "p90": 26.458353535609767,
+          "max": 34.338388167310235,
+          "mean": 19.982135218599016
+        },
+        "min_speed_kph": {
+          "count": 382,
+          "min": 67.26428708571429,
+          "p10": 85.97469128,
+          "p50": 194.04643017142857,
+          "p90": 224.21150604800002,
+          "max": 320.0,
+          "mean": 167.76614495321328
+        },
+        "speed_drop_kph": {
+          "count": 382,
+          "min": 0.0,
+          "p10": 33.42709454857144,
+          "p50": 97.757812,
+          "p90": 235.90000000000003,
+          "max": 266.0187472,
+          "mean": 114.39354091066105
+        },
+        "start_distance_m": {
+          "count": 382,
+          "min": 168.90917673564445,
+          "p10": 786.3361747962665,
+          "p50": 2444.9053560866214,
+          "p90": 5009.337608641786,
+          "max": 5676.276798567226,
+          "mean": 2709.185240110646
+        },
+        "start_speed_kph": {
+          "count": 382,
+          "min": 77.0,
+          "p10": 237.20000000000002,
+          "p50": 299.0,
+          "p90": 332.0,
+          "max": 347.0,
+          "mean": 282.15968586387436
+        }
+      },
+      "corner_min_exit_speeds": {
+        "entry_speed_kph": {
+          "count": 360,
+          "min": 161.34678808854972,
+          "p10": 189.3112411440011,
+          "p50": 262.538701026765,
+          "p90": 297.30644279933955,
+          "max": 328.77352671779016,
+          "mean": 256.9645616876535
+        },
+        "exit_speed_kph": {
+          "count": 360,
+          "min": 204.37820311919685,
+          "p10": 211.6073962924356,
+          "p50": 242.57681373791206,
+          "p90": 250.52667697387596,
+          "max": 256.9773257598021,
+          "mean": 235.084488806452
+        },
+        "lateral_g_p75": {
+          "count": 360,
+          "min": 1.1438637842667552,
+          "p10": 1.4830753886515526,
+          "p50": 3.090936675094653,
+          "p90": 4.759334201320937,
+          "max": 6.550308818837625,
+          "mean": 3.0773672149829285
+        },
+        "lateral_g_p90": {
+          "count": 360,
+          "min": 1.8497352812852201,
+          "p10": 2.203928697051552,
+          "p50": 4.060641965512093,
+          "p90": 5.689615066547579,
+          "max": 10.412275601766396,
+          "mean": 3.946123063539761
+        },
+        "min_speed_kph": {
+          "count": 360,
+          "min": 60.0,
+          "p10": 72.0,
+          "p50": 185.0,
+          "p90": 206.0,
+          "max": 219.0,
+          "mean": 159.36388888888888
+        }
+      }
+    }
+  }
+}

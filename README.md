@@ -148,13 +148,13 @@ PPO is still real and useful as infrastructure, but blind PPO is not the current
 
 Detailed learned-policy goal docs:
 
-- `docs/CurrentPhysicsLearnedPolicyPlan.md`
-- `docs/PhysicsV2LearnedPolicyPlan.md`
+- `archive/docs/CurrentPhysicsLearnedPolicyPlan.md`
+- `archive/docs/PhysicsV2LearnedPolicyPlan.md`
 
 Detailed achievement reports:
 
-- `RL1-Achieved.md`
-- `PhysicsV2-Achieved.md`
+- `archive/docs/RL1-Achieved.md`
+- `archive/docs/PhysicsV2-Achieved.md`
 
 ## Setup
 
@@ -275,11 +275,11 @@ Use focused checks first when changing a small area, then broaden to the full se
 ## Repository Layout
 
 - `src/f1rl/`: simulator, learning, search, replay, telemetry, and tooling code.
-- `tests/`: unit, parity, backend, replay, and CLI smoke tests.
+- `tools/tests/`: unit, parity, backend, replay, and CLI smoke tests.
 - `tools/`: focused diagnostic scripts.
-- `assets/`, `imgs/`: visual assets and track images.
+- `assets/`: visual assets, track images, reference data, and archived README GIFs.
 - `archive/`: historical plans, old docs, old media, and legacy snapshots.
-- `artifacts/`: ignored local artifact root.
+- `artifacts/`: local artifact root for replay telemetry, runs, datasets, learned checkpoints, and calibration output.
 - `artifacts/highlights/`: final local replay/highlight root, organized as Physics 1 CPU ES, Physics 1 GPU ES, Physics 1 GPU RL, Physics 2 GPU ES, and Physics 2 GPU RL.
 - `D:\f1-rl-artifacts\archives\physics-v2-20260606\`: compressed cold storage for V2 bulk runs, datasets, checkpoints, calibration trees, and superseded highlights.
 - `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\`: compressed cold storage for bulk RL1 runs, datasets, checkpoints, and full GPU ES telemetry.
@@ -310,9 +310,8 @@ Root markdown is intentionally minimal:
 
 - `README.md`: public overview and commands.
 - `Documentation.md`: concise live status.
-- `AGENTS.md`: agent operating rules.
 
-Older markdown plans and writeups are archived under `archive/repo-cleanup-20260605/`.
+Older markdown plans and writeups are archived under `archive/`.
 
 ## Current Caveats
 

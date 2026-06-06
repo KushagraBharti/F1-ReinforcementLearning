@@ -1,0 +1,32 @@
+{
+  "kind": "f1rl_full_generation_highlight_reel",
+  "created_at": "2026-06-05T10:01:41.342630+00:00",
+  "output_dir": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\full-generation-reel-20260605",
+  "cpu": {
+    "source_run": "evolution-speed-150x60-20260604-0501",
+    "path": "artifacts/highlights/full-generation-reel-20260605/cpu-es-150x60",
+    "generations": [
+      0,
+      5,
+      10,
+      29,
+      49,
+      59
+    ],
+    "trace_count": 900
+  },
+  "gpu": {
+    "source_run": "gpu-speed-speedprofiles-2000x150-25k-20260605",
+    "path": "artifacts/highlights/full-generation-reel-20260605/gpu-es-2000x150",
+    "generations": [
+      0,
+      14,
+      20,
+      61,
+      72,
+      143
+    ],
+    "trace_count": 12000
+  },
+  "replay_note": "Replay the cpu-es-150x60 or gpu-es-2000x150 subdirectories; each has a manifest.json."
+}

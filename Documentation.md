@@ -35,7 +35,7 @@ Storage:
 - Physics 2 GPU ES: `artifacts\highlights\physics2\gpu-es`
 - Physics 2 GPU RL: `artifacts\highlights\physics2\gpu-rl`
 - V2 bulk archive: `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`
-- Full V2 achievement report: `PhysicsV2-Achieved.md`
+- Full V2 achievement report: `archive/docs/PhysicsV2-Achieved.md`
 
 Previous V1 milestones:
 
@@ -66,7 +66,7 @@ Physics V2 handoff status:
 - PyTorch GPU V2 and Warp fused V2 parity tests pass under the recalibrated contract.
 - Tiny V2 fused GPU parity smoke under the manual-approved balance retune wrote `artifacts\runs\v2-manual-balance-fix-gpu-parity-smoke-20260606` with v2.0.10 metadata, `gpu_parity_status=passed`, max CPU/GPU progress delta about `0.00020m`, and `0` reason/valid-lap mismatches.
 - Tiny V2 persistent-controller parity smoke wrote `artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605` with `gpu_kernel_backend=warp_persistent_controller_open`, `gpu_parity_status=passed`, `0` CPU replay reason mismatches, and `0` valid-lap mismatches.
-- `tests/test_v2_metadata_contracts.py` now exercises V2 metadata across CPU evolution summaries/checkpoints/bridge/selected telemetry, CPU postcheck summaries/manifests/rows, ES dataset export, BC/SAC policy checkpoints, policy eval manifests, policy swarm manifests, loaded telemetry rows, and the V1-labeled transfer export guard. `tests/test_policy_io.py` also covers V2 PPO eval config reconstruction from `run_metadata.json`.
+- `tools/tests/test_v2_metadata_contracts.py` now exercises V2 metadata across CPU evolution summaries/checkpoints/bridge/selected telemetry, CPU postcheck summaries/manifests/rows, ES dataset export, BC/SAC policy checkpoints, policy eval manifests, policy swarm manifests, loaded telemetry rows, and the V1-labeled transfer export guard. `tools/tests/test_policy_io.py` also covers V2 PPO eval config reconstruction from `run_metadata.json`.
 - The `127.183s` scripted lap is a conservative V2 scripted smoke/debug baseline only, not `scripted_threshold`; it is archived with the other superseded V2 bulk artifacts.
 - Any V2 `1000x5` or `1000x10` ES artifacts created before this recalibration are exploratory/pre-recalibration only and must not be used for target, dataset, threshold, or promotion decisions.
 - Post-retune validation passed on 2026-06-06 for this gate: manual headless V2 ghost section smoke wrote `artifacts\runs\manual-headless-20260606-012833-seed7-300975100`, flying-start smoke wrote `artifacts\runs\manual-headless-20260606-012839-seed7-378636300`, `ruff check .`, `pyright src/f1rl`, full `pytest -q`, `f1-hardware-check --json --warp-smoke`, focused V2 pytest, and V2 fused GPU parity smoke passed.
@@ -116,7 +116,7 @@ The threshold source is FastF1 `79.327s` from `artifacts\highlights\physics2\cal
 Final validation passed on 2026-06-06:
 
 ```powershell
-uv run --no-sync pytest -q tests/test_physics.py tests/test_gpu_physics.py tests/test_calibration.py tests/test_telemetry.py
+uv run --no-sync pytest -q tools/tests/test_physics.py tools/tests/test_gpu_physics.py tools/tests/test_calibration.py tools/tests/test_telemetry.py
 uv run --no-sync python -m f1rl.manual --headless --physics-model v2 --max-steps 3 --seed 1
 uv run --no-sync python -m f1rl.calibration --json
 uv run --no-sync python -m f1rl.fastf1_calibration summarize assets\reference\monza_2024_Q_VER_telemetry.csv --output artifacts\calibration\fastf1-summary-smoke.json
@@ -134,16 +134,16 @@ uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-
 uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused-controller --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 1 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type controller --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
 uv run --no-sync python -m f1rl.replay artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused\selected_telemetry --headless --limit 1
 uv run --no-sync python -m f1rl.replay artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused-controller\selected_telemetry --headless --limit 1
-uv run --no-sync pytest -q tests/test_physics.py tests/test_gpu_physics.py tests/test_calibration.py tests/test_gpu_evolution_backend.py
-uv run --no-sync pytest -q tests/test_calibration.py tests/test_physics.py tests/test_gpu_physics.py
+uv run --no-sync pytest -q tools/tests/test_physics.py tools/tests/test_gpu_physics.py tools/tests/test_calibration.py tools/tests/test_gpu_evolution_backend.py
+uv run --no-sync pytest -q tools/tests/test_calibration.py tools/tests/test_physics.py tools/tests/test_gpu_physics.py
 uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-recalibration-gpu-parity-smoke-20260605 --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
 uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-manual-balance-fix-gpu-parity-smoke-20260606 --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
 uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605 --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-static-batch-size 4 --gpu-cpu-replay-top-k 2 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 60 --target-progress-m 506 --no-target-termination --action-set straight --observation-profile base --max-steps 8 --population 4 --generations 1 --elite-count 1 --random-immigrants 0 --top-k 2 --workers 1 --genome-type controller --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
 uv run --no-sync python -m f1rl.replay artifacts\runs\v2-recalibration-gpu-parity-smoke-20260605\selected_telemetry --headless --limit 1
 uv run --no-sync python -m f1rl.replay artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605\selected_telemetry --headless --limit 1
 uv run --no-sync python -m f1rl.replay artifacts\highlights\physics2\gpu-es\telemetry --headless --limit 1
-uv run --no-sync pytest -q tests/test_v2_metadata_contracts.py
-uv run --no-sync pytest -q tests/test_scripted_replay.py tests/test_gpu_ppo.py tests/test_benchmark.py tests/test_policy_train_smoke.py
+uv run --no-sync pytest -q tools/tests/test_v2_metadata_contracts.py
+uv run --no-sync pytest -q tools/tests/test_scripted_replay.py tools/tests/test_gpu_ppo.py tools/tests/test_benchmark.py tools/tests/test_policy_train_smoke.py
 uv run --no-sync ruff check .
 uv run --no-sync pyright src/f1rl
 uv run --no-sync pytest -q
@@ -254,13 +254,13 @@ For iteration, single-source datasets can be used to preserve a promising line. 
 
 Detailed goal docs:
 
-- `docs/CurrentPhysicsLearnedPolicyPlan.md`: current physics v1 ES data -> transition dataset -> BC -> SAC -> learned policy.
-- `docs/PhysicsV2LearnedPolicyPlan.md`: FastF1-calibrated physics v2 -> GPU ES v2 -> v2 dataset -> SAC learned policy v2.
+- `archive/docs/CurrentPhysicsLearnedPolicyPlan.md`: current physics v1 ES data -> transition dataset -> BC -> SAC -> learned policy.
+- `archive/docs/PhysicsV2LearnedPolicyPlan.md`: FastF1-calibrated physics v2 -> GPU ES v2 -> v2 dataset -> SAC learned policy v2.
 
 Detailed achievement reports:
 
-- `RL1-Achieved.md`: V1 learned-policy achievement.
-- `PhysicsV2-Achieved.md`: post-RL1 V2 physics, GPU ES, and learned-policy achievement.
+- `archive/docs/RL1-Achieved.md`: V1 learned-policy achievement.
+- `archive/docs/PhysicsV2-Achieved.md`: post-RL1 V2 physics, GPU ES, and learned-policy achievement.
 
 ## Important Commands
 
@@ -328,8 +328,8 @@ Keep root clean:
 - Put transition datasets under `artifacts/datasets/`.
 - Put learned-policy checkpoints and evals under `artifacts/learned/`.
 - Put calibration output and FastF1 cache data under `artifacts/calibration/` and `artifacts/fastf1-cache/`.
-- Keep only small demo media in root when directly referenced by README.
-- Archive old root documents under `archive/`.
+- Keep small demo media under `assets/`.
+- Archive long-form plans and achievement reports under `archive/docs/`.
 
 Current local artifact policy after final highlight restore:
 
@@ -367,14 +367,13 @@ Root markdown is intentionally limited to:
 
 - `README.md`
 - `Documentation.md`
-- `AGENTS.md`
 
-Archived root markdown from the previous planning phase lives under:
+Archived long-form docs and plans live under:
 
-`archive/repo-cleanup-20260605/docs/`
+`archive/docs/`
 
 Archived root media that is no longer referenced by README lives under:
 
-`archive/repo-cleanup-20260605/media/`
+`assets/gifs/`
 
 Do not restore long transcript-style status logs to `Documentation.md`.

@@ -1,0 +1,21 @@
+{
+  "kind": "f1rl_v2_final_policy_promotion_highlight",
+  "created_at": "2026-06-06T09:08:51.337714+00:00",
+  "physics_model": "v2",
+  "physics_version": "physics_v2.0.10-fastf1-manual-balance-fix",
+  "physics_calibration_id": "monza_2022_2024_fastf1_multilap_v2_manual_balance_fix",
+  "threshold_source": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\NOR_lap011\\summary.json",
+  "scripted_threshold_s": 79.327,
+  "promotion_lap_s": 77.68333333333334,
+  "trace_count": 1,
+  "traces": [
+    {
+      "rank": 0,
+      "selection_reason": "promoted_sac_best_policy_cpu_eval",
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\learned_policy_promotion\\policy-eval-episode-000-steps.jsonl.gz",
+      "source_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\learned\\v2-sac-fastf1-independent-conservative-initialeval-20260606\\promotion_cpu_eval\\selected_telemetry\\policy-eval-episode-000-steps.jsonl.gz",
+      "valid_lap": true,
+      "lap_time_s": 77.68333333333334
+    }
+  ]
+}

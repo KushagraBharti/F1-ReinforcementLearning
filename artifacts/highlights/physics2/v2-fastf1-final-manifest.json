@@ -1,0 +1,81 @@
+{
+  "kind": "f1rl_v2_final_highlight_manifest",
+  "created_at": "2026-06-06T09:08:51.383714+00:00",
+  "physics_model": "v2",
+  "physics_version": "physics_v2.0.10-fastf1-manual-balance-fix",
+  "physics_calibration_id": "monza_2022_2024_fastf1_multilap_v2_manual_balance_fix",
+  "fastf1_threshold": {
+    "scripted_threshold_s": 79.327,
+    "source": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\NOR_lap011\\summary.json",
+    "driver": "NOR",
+    "session": "2024 Italian GP Qualifying",
+    "lap": 11,
+    "local_summary_copy": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\calibration\\summary.json"
+  },
+  "highlight_sets": [
+    {
+      "name": "gpu_es_selected_cpu_rerank",
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\gpu_es_selected_cpu_rerank",
+      "manifest": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\gpu_es_selected_cpu_rerank\\manifest.json",
+      "trace_count": 5,
+      "fastest_cpu_verified_lap_s": 77.68333333333334
+    },
+    {
+      "name": "learned_policy_promotion",
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\learned_policy_promotion",
+      "manifest": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\learned_policy_promotion\\manifest.json",
+      "trace_count": 1,
+      "fastest_cpu_verified_lap_s": 77.68333333333334
+    },
+    {
+      "name": "learned_policy_swarm_1000",
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\learned_policy_swarm_1000",
+      "manifest": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\learned_policy_swarm_1000\\manifest.json",
+      "trace_count": 1000,
+      "notes": "Deterministic best-policy swarm uses hardlinked replay traces when start noise is zero."
+    }
+  ],
+  "total_replay_traces": 1006,
+  "gif_exports": [
+    {
+      "name": "gpu_es_cpu_rerank_best_4x",
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\gifs\\gpu-es-cpu-rerank-best-4x.gif",
+      "source_trace": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\gpu_es_selected_cpu_rerank\\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz",
+      "speed": 4.0,
+      "fps": 12,
+      "frames": 234,
+      "bytes": 808380
+    },
+    {
+      "name": "learned_policy_promotion_4x",
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\gifs\\learned-policy-promotion-4x.gif",
+      "source_trace": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\telemetry\\learned_policy_promotion\\policy-eval-episode-000-steps.jsonl.gz",
+      "speed": 4.0,
+      "fps": 12,
+      "frames": 234,
+      "bytes": 807023
+    }
+  ],
+  "calibration_files": [
+    {
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\calibration\\fastf1-v2-manual-balance-fix-20260606.json",
+      "source_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\calibration\\fastf1-v2-manual-balance-fix-20260606.json",
+      "bytes": 134971
+    },
+    {
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\calibration\\fastf1-multilap-20260605-manifest.json",
+      "source_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\calibration\\fastf1-multilap-20260605\\manifest.json",
+      "bytes": 59351
+    },
+    {
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\calibration\\summary.json",
+      "source_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\NOR_lap011\\summary.json",
+      "bytes": 27642
+    },
+    {
+      "path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\highlights\\v2-fastf1-final-20260606\\calibration\\lap_metadata.json",
+      "source_path": "C:\\Users\\kushagra\\OneDrive\\Documents\\CS Projects\\F1-ReinforcementLearning\\artifacts\\calibration\\fastf1-multilap-20260605\\monza_2024_Q\\NOR_lap011\\lap_metadata.json",
+      "bytes": 1553
+    }
+  ]
+}
