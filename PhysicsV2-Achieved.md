@@ -1296,6 +1296,584 @@ That means the local repo and D drive complement each other:
 - local: curated replay/highlight set;
 - D drive: original bulk artifact history.
 
+## Long Process And Decision Log
+
+This section records the long process behind the final V2 result. The final numbers alone can make the work look linear. It was not linear. The successful V2 pipeline came from repeated correction of bad assumptions, manual driving failures, calibration target mistakes, CPU/GPU drift checks, search-speed concerns, dataset/control-mode mismatches, and storage cleanup.
+
+The important pattern was:
+
+```text
+implement a narrow capability
+  -> run the smallest check that can falsify it
+  -> inspect the mismatch
+  -> fix the contract, not the symptom
+  -> rerun parity/calibration/manual checks
+  -> only then scale the next stage
+```
+
+The project deliberately stopped several times before ES/RL because the physics or target definition was not yet trustworthy.
+
+### The First Mistake: Treating A Debug Lap Like A Benchmark
+
+Early V2 had a conservative scripted/debug lap around `127.183s`. It was useful as a smoke test because it proved:
+
+- V2 could run;
+- telemetry could be written;
+- replay could load the run;
+- the simulator could finish a lap under some V2 configuration.
+
+It was not a benchmark.
+
+The mistake was that this number briefly started to look like a `scripted_threshold`. That would have invalidated the goal. A `127s` target is far slower than FastF1 Monza qualifying pace, and any ES/RL result against that threshold would have been measuring the wrong thing.
+
+The correction was strict:
+
+- reclassify `127.183s` as smoke/debug only;
+- stop all scaled ES/RL;
+- return to FastF1 calibration;
+- require the final threshold to come from the fastest selected FastF1 Monza calibration lap;
+- document that the `127.183s` lap is invalid as a threshold.
+
+That correction produced the final threshold:
+
+```text
+scripted_threshold_s: 79.327
+source: 2024 Italian GP Qualifying NOR lap 11
+```
+
+The important point is that this was not a minor documentation wording change. It changed the entire success condition:
+
+```text
+wrong target: beat 127.183s
+correct ES target: <= 86.327s
+correct learned-policy target: <= 79.327s
+```
+
+The final V2 result only counts because it is evaluated against the corrected FastF1-derived threshold.
+
+### The Second Mistake: Aggregate Calibration Was Not Enough
+
+The first calibration work matched broad values such as:
+
+- lap time scale;
+- top speed;
+- mean speed;
+- braking-zone distances;
+- gear/RPM plausibility;
+- lateral-g envelope.
+
+That was still not enough. The first serious manual failure was understeer in a sustained-radius sweeping corner.
+
+The car could pass aggregate checks while still feeling wrong because the problem was not simply "total grip too low." The problem was local and dynamic:
+
+- front axle response;
+- yaw response;
+- front/rear lateral force balance;
+- steering authority at speed;
+- slip-angle behavior around peak;
+- tire scrub drag when the front was sliding;
+- load sensitivity and weight transfer;
+- the speed/curvature demand of the reference line.
+
+The manual screenshot showed a long sweeping section where the car could not naturally hold the intended arc. The key user feedback was:
+
+```text
+the car is very understeery
+front end does not bite
+car cannot hold the intended arc naturally
+this is not just driver skill
+```
+
+That forced a change in calibration strategy. The project stopped looking only at whole-lap statistics and added section-level sustained-corner diagnostics.
+
+The diagnostic requirement became:
+
+- identify the sustained section from telemetry/reference curvature, not just from a screenshot;
+- start before the corner;
+- run controlled speeds such as `150`, `180`, `200`, `220`, `230`, `240`, and `250 kph`;
+- compare actual curvature to target/reference curvature;
+- report lateral error and heading error;
+- report steering saturation;
+- report front/rear slip angles;
+- report front/rear lateral force;
+- report lateral-g;
+- report throttle/brake;
+- report tire saturation;
+- report off-track/collision/track-limit state.
+
+That changed both tooling and physics. Manual mode gained section starts, ghost alignment, and reset behavior for repeatable manual testing. QC gained sustained-corner diagnostics. Calibration gained sustained-section distributions rather than just lap-level summaries.
+
+### The Understeer Fix Overshot
+
+The first understeer fix moved in the right direction but went too far. It gave the front end enough bite, but the whole car became too easy.
+
+Manual feedback then changed from:
+
+```text
+cannot hold the sustained arc
+```
+
+to:
+
+```text
+I can beat the reference ghost too easily
+```
+
+This was a serious failure. The FastF1 reference is not a magic ghost, but it is a real reference telemetry target. Under calibrated V2 physics, a normal keyboard/manual attempt should not casually beat a `79s` FastF1-style lap. If the user could consistently run ahead of the ghost without very precise braking, lift, turn-in, apex, and throttle timing, then the physics were too forgiving.
+
+The project therefore did not proceed to ES. It performed a conservative-retune ablation.
+
+The parameters under suspicion were:
+
+- `front_peak_mu`;
+- `front_cornering_stiffness_n_per_rad`;
+- `steering_speed_sensitivity`;
+- `tire_scrub_drag`;
+- `post_peak_falloff`;
+- `load_sensitivity`;
+- `rear_slip_steer_coupling`;
+- robust lateral-g margin;
+- low-speed mechanical grip scaling.
+
+The key lesson was that front bite and overall difficulty are different. The car needed enough front response to avoid the original understeer, while still punishing excess speed, bad turn-in, over-saturation, and poor line.
+
+### Manual Retune Was The Real Calibration Gate
+
+The manual retune was long because each change affected multiple parts of the car:
+
+- high-speed cornering;
+- low-speed cornering;
+- acceleration;
+- braking;
+- steering response;
+- track-limit robustness;
+- FastF1 ghost gap.
+
+Manual feedback came in stages.
+
+First, the user reported that the car was still too easy:
+
+```text
+im still able to beat the reference car consistently
+lean more towards the harder side
+still too easy
+go much much much harder
+change more than just one thing
+```
+
+This led to broad global tightening, not a track-section cheat. The goal was not to make one corner harder by special-casing section `02/03`. The goal was to make the global V2 physics less forgiving while preserving the understeer fix.
+
+The retune direction was:
+
+- increase tire scrub drag so sliding cost more speed;
+- increase post-peak falloff so exceeding the tire peak was punished;
+- increase load sensitivity so grip did not scale too generously;
+- reduce helpful rear-slip steering coupling;
+- reduce low-speed mechanical grip;
+- tune front/rear stiffness and peak mu balance;
+- preserve high-speed front bite;
+- preserve plausible terminal speed and braking distance.
+
+Then feedback narrowed by speed regime:
+
+```text
+high speed corners are good, slow speed corners still too easy
+high speed still a bit too easy, low speed way too easy
+high speed maybe 5% harder, low speed 15-20% harder
+high speed maybe 10% harder, low speed 20% harder
+high speed pretty much perfect, low speed still a good while to go
+high speed maybe another 20%, low speed probably another 60%, feel free to overshoot
+```
+
+That is why V2 ended with separate low-speed and high-speed mechanical grip scaling:
+
+```text
+mechanical_grip_low_speed_scale: 0.1925
+mechanical_grip_high_speed_scale: 0.70
+mechanical_grip_transition_mps: 80.0
+```
+
+The final balance was not simply "lower all grip." High-speed and low-speed behavior were deliberately separated because manual feedback said high speed and low speed were not failing in the same way.
+
+### Longitudinal Tuning Came After Cornering
+
+Once turning was close, a new issue became visible:
+
+```text
+my acceleration is slower than the reference car
+my braking is also less powerful than the reference car
+```
+
+That feedback changed the focus from lateral dynamics to longitudinal dynamics. The parameters involved were:
+
+- `engine_power_w`;
+- `drivetrain_efficiency`;
+- `power_min_speed_mps`;
+- `max_drive_g`;
+- `max_brake_g`;
+- `brake_bias_front`;
+- `brake_lock_threshold`;
+- `brake_lock_min_speed_mps`;
+- `brake_lock_steer_loss`;
+- `drag_coefficient`;
+- `rolling_resistance_mps2`;
+- `max_speed_mps`.
+
+The later manual feedback became more specific:
+
+```text
+high speed corners - perfect, leave untouched
+low speed corners - make about 30% harder
+acceleration - reference still accelerates faster than me
+brake - pretty much perfect now
+```
+
+Then:
+
+```text
+high speed corners - perfect, leave untouched
+low speed corners - make 10% easier
+acceleration - reference is 10% faster than me
+brake - a lil too sensitive compared to the reference agent, ease it by like 10%
+```
+
+That final loop is why the final V2 tune combines:
+
+- relatively strict low-speed mechanical grip;
+- high-speed cornering left near the accepted balance;
+- raised acceleration capability;
+- softened braking from the too-sensitive intermediate state.
+
+The final approved version was:
+
+```text
+physics_v2.0.10-fastf1-manual-balance-fix
+```
+
+### Manual Usability Fixes Were Part Of The Physics Gate
+
+Two non-physics manual-mode problems also had to be fixed because they affected the human handoff:
+
+1. Left/right steering was reversed from the user's screen perspective.
+2. The HUD blocked important track area.
+
+The steering fix was permanent in `src\f1rl\render.py`. The tests assert that pressing left produces the intended screen response.
+
+The HUD moved to the right side using `_hud_origin`, keeping the left-side driving line visible. That was not cosmetic. Manual gate feedback depends on the user being able to see the line, ghost, and car path without the telemetry overlay covering the corner.
+
+Related tests:
+
+- `tests\test_render.py::test_manual_keyboard_left_right_are_swapped_for_screen_controls`
+- `tests\test_render.py::test_manual_keyboard_combined_left_right_controls_are_swapped`
+- `tests\test_render.py::test_hud_origin_uses_free_right_side_when_available`
+- `tests\test_render.py::test_hud_origin_falls_back_to_margin_for_small_windows`
+
+### Calibration Data Grew Because One Lap Was Too Brittle
+
+The first FastF1 source was the local 2024 Monza Q VER fastest-lap CSV. It provided useful exact telemetry, but a single lap was too narrow for global physics calibration.
+
+The expanded FastF1 dataset reduced the risk of overfitting V2 to one driver's one qualifying lap. It included:
+
+```text
+years: 2024, 2023, 2022
+sessions: Q, FP2, FP3
+drivers: VER, NOR, PIA, LEC, SAI, HAM, RUS
+selected clean dry laps: 60
+```
+
+The important implementation detail is that both raw and processed forms were kept:
+
+- raw car data from `get_car_data()`;
+- raw position data from `get_pos_data()`;
+- processed `get_telemetry().add_distance()` output;
+- per-lap metadata;
+- per-lap summaries;
+- multi-lap manifests and section distributions.
+
+That allowed calibration to inspect both direct FastF1 channels and interpolated/merged telemetry. The processed distance-based telemetry was useful, but the raw data preserved the ability to audit interpolation artifacts.
+
+OpenF1 was then added as an independent sanity check. It did not replace FastF1 because it did not provide the same integrated calibration workflow, but it helped check that speed and lap-time ranges were not artifacts of one library.
+
+### CPU/GPU Parity Was Treated As A Promotion Gate
+
+V2 had to run on GPU because large ES depends on GPU throughput. But the project did not allow GPU to become the oracle.
+
+The implementation therefore had several layers:
+
+1. CPU V2 in `src\f1rl\physics.py`.
+2. Torch GPU V2 in `src\f1rl\gpu_physics.py`.
+3. Warp fused V2 in `src\f1rl\gpu_fused_warp.py`.
+4. Persistent-controller V2 support in the Warp path.
+5. CPU replay/postcheck in `src\f1rl\evolution_postcheck.py`.
+
+Parity was checked at multiple scales:
+
+- unit/parity tests;
+- tiny fused GPU parity smoke;
+- persistent-controller parity smoke;
+- selected CPU postcheck/rerank;
+- broad-pool mismatch accounting.
+
+The final broad-pool mismatch is deliberately documented because hiding it would make the result less trustworthy:
+
+```text
+pool_reason_mismatches: 13
+pool_valid_lap_mismatches: 12
+```
+
+The selected result passed:
+
+```text
+selected reason mismatches: 0
+selected valid-lap mismatches: 0
+```
+
+That is the correct standard for promotion. The broad-pool caveat says the GPU path is fast enough to propose good candidates, but CPU replay remains necessary.
+
+### GPU ES Was Staged Because Speed And Artifact Growth Both Mattered
+
+There was a performance concern during ES:
+
+```text
+before GPU runs specifically were about 1-2 seconds per generation
+there is no reason for it to be this slow
+```
+
+The investigation separated rollout speed from artifact/reproduction overhead. The important observation was that raw GPU rollout generations were still roughly in the expected range after setup, but postcheck, telemetry compression, reproduction, and larger candidate bookkeeping could dominate wall time.
+
+The final staged run used:
+
+```text
+population: 1000
+generations: 5 -> 10 -> 25 -> 50
+max_steps: 15000
+```
+
+The user explicitly corrected the step horizon:
+
+```text
+way more than 9000 steps bro... do atleast 15000
+```
+
+That was adopted. The final ES, dataset export, policy eval, and SAC promotion used `max_steps=15000` where full-lap validity required it.
+
+The staged approach mattered because the goal was not "run the biggest thing possible." It was:
+
+- prove the GPU V2 pipeline works;
+- keep telemetry compressed;
+- watch parity;
+- CPU-rerank winners;
+- scale only when the previous stage was healthy.
+
+The final selected V2 ES winner exceeded both the ES target and the learned-policy threshold:
+
+```text
+FastF1 threshold: 79.327s
+ES target: 86.327s
+CPU-verified ES winner: 77.6833s
+```
+
+The result was surprising but accepted because it passed CPU V2 postcheck and replay. The documentation caveat remains important: this is a result inside the calibrated simulator, not a real-world claim.
+
+### Dataset Export Was Not Just File Conversion
+
+The V2 dataset export had to preserve provenance:
+
+- source run path;
+- selected telemetry manifest;
+- CPU-replayed source candidates;
+- physics model;
+- physics version;
+- calibration id;
+- observation profile;
+- source candidate bucket;
+- per-source lap outcome;
+- action schema.
+
+The export also had to avoid V1/V2 mixing. A V2 learned-policy dataset built from V1 trajectories would have made the final result ambiguous.
+
+The final dataset was intentionally small enough to inspect but broad enough to include:
+
+- valid laps;
+- early failures;
+- mid-frontier examples;
+- multiple source candidates.
+
+The key learning discovery was action-space related. Dominance control assumed throttle/brake exclusivity or priority. The V2 ES source line used meaningful simultaneous throttle and brake, so independent control was required.
+
+This changed the learned-policy route from:
+
+```text
+dominance BC/SAC -> first-chicane failure
+```
+
+to:
+
+```text
+independent-control source-3 BC -> valid CPU V2 lap
+```
+
+### SAC Success Was A Workflow Fix, Not A Large RL Breakthrough
+
+The final saved policy is in the SAC workflow, but the decisive improvement was recognizing that SAC fine-tuning could degrade a strong BC initialization.
+
+The first conservative SAC updates did not improve the already-valid BC policy. The step `512` eval failed to complete a valid lap.
+
+The fix was to make `sac_train.py` evaluate the initial BC checkpoint at step `0` before updates and preserve it as `best_policy.pt` if it passed CPU eval.
+
+That is why the final SAC result should be described carefully:
+
+- it is a saved SAC workflow checkpoint;
+- it preserves and promotes the valid initial BC policy;
+- it proves the BC/SAC workflow can carry a V2 learned policy through CPU V2 promotion;
+- it does not prove that the later 512-step SAC update improved the policy.
+
+This is still the correct project-native learned-policy path because the final artifact is a neural policy checkpoint loaded and evaluated through the learned-policy infrastructure, not an ES replay file.
+
+### Replay And GIF Export Were Also Part Of Completion
+
+The goal required replayable highlights and exact-pygame GIFs. The repo already had pygame replay, but it did not have an exact GIF export mode.
+
+The final implementation added:
+
+```text
+--export-gif
+--gif-fps
+```
+
+to:
+
+```text
+src\f1rl\replay.py
+```
+
+The important design choice was to call:
+
+```text
+PygameRenderer.render(..., human=False)
+```
+
+and save those frames. That keeps the GIF source identical to the replay/manual renderer path. It avoids a second custom visualization that might draw a different track, different car orientation, or different HUD.
+
+The final GIFs are therefore inspection artifacts, not marketing renders:
+
+- they show what the pygame replay renderer shows;
+- they use the real replay telemetry;
+- they run at `4x`;
+- they are local under the final V2 highlight tree.
+
+### Storage Cleanup Was A Required Deliverable
+
+The V2 work produced several GB of local artifacts:
+
+- calibration trees;
+- run outputs;
+- selected telemetry;
+- datasets;
+- learned checkpoints;
+- evals;
+- swarms;
+- GIFs.
+
+Leaving all of that in local `artifacts` would have violated the goal. The final cleanup deliberately split:
+
+```text
+local repo: curated final V2 highlights only
+D drive: bulk archive
+```
+
+Before removal, the bulk archive was created with `tar --zstd`, listed, and counted:
+
+```text
+archive: D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst
+entry_count: 5010
+```
+
+Only after that did local cleanup remove bulk directories. The final local artifact tree retained:
+
+```text
+artifacts\highlights\v2-fastf1-final-20260606
+```
+
+This matters for future work because reproduction has two modes:
+
+1. Replay final highlights locally without restoring anything.
+2. Restore the D-drive archive for original run/dataset/checkpoint provenance.
+
+### Why The Final Result Is Stronger Than A Single Fast Lap
+
+The final `77.6833s` number appears twice:
+
+- CPU-reranked V2 GPU ES winner;
+- learned-policy CPU V2 promotion.
+
+That could be misread as "the policy is just the ES lap." The more precise interpretation is:
+
+- GPU ES found a strong source trajectory under V2.
+- CPU V2 replay/rerank promoted that trajectory.
+- V2 dataset export converted CPU-replayed behavior into a transition dataset.
+- Independent-control BC reproduced the source behavior as a neural policy.
+- SAC workflow preserved/evaluated the valid BC initialization.
+- CPU V2 policy eval confirmed the neural checkpoint could complete the same normal-start lap.
+
+The final learned policy is still a neural policy checkpoint. It is not replaying the JSONL file directly during eval. The replay file is written after the policy drives the simulator.
+
+### Why The Result Needs Guardrails
+
+The final lap is faster than the FastF1 threshold. That is acceptable as a simulator result but dangerous if worded loosely.
+
+The correct wording is:
+
+```text
+The saved learned policy completes a CPU MonzaSim lap under explicit calibrated physics_v2 in 77.6833s, against a FastF1-derived simulator benchmark threshold of 79.327s.
+```
+
+The incorrect wording would be:
+
+```text
+The AI is faster than real F1 at Monza.
+```
+
+That second statement is not supported. The simulator is a simplified top-down 2D model. FastF1 data calibrates and constrains the model, but it does not make the simulator physically identical to a real F1 car, real track surface, real tyres, real aero, real driver control, or real FIA timing conditions.
+
+The achievement is still meaningful because the project set a clear internal standard and met it:
+
+- explicit physics version;
+- FastF1/OpenF1 calibration evidence;
+- manual approval;
+- CPU/GPU parity;
+- CPU-reranked ES;
+- V2-only dataset;
+- learned-policy checkpoint;
+- CPU V2 promotion;
+- replayable highlights;
+- exact-pygame GIFs;
+- archived bulk artifacts;
+- passing validation;
+- committed and pushed code.
+
+### What Future Work Should Not Undo
+
+Future work should not:
+
+- use `127.183s` as any V2 threshold;
+- use the `116.2167s` controller lap as the V2 benchmark;
+- train V2 policies from V1 data without explicit transfer labeling;
+- trust raw GPU winners without CPU replay;
+- change V2 physics to make learning easier after the threshold has been established;
+- remove the manual-gate context from the docs;
+- replace exact pygame GIFs with approximate plotting;
+- leave bulk artifacts local after experiments finish.
+
+Future improvements should focus on:
+
+- better ES scoring;
+- stronger CPU/GPU parity at broad-pool scale;
+- more diverse CPU-verified V2 datasets;
+- better learned-policy generalization beyond a source-3 clone;
+- SAC settings that improve after the BC initialization instead of degrading it;
+- better tooling for restoring archived artifacts when deeper provenance is needed.
+
 ## File-By-File Implementation Notes
 
 The final commit touched `48` files.
