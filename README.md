@@ -5,11 +5,13 @@ Top-down 2D Monza simulator, replay system, PPO training harness, evolutionary s
 The project started as a Gymnasium/SB3 PPO driving experiment. PPO infrastructure works, but the strongest result now comes from verified GPU evolutionary search data distilled and fine-tuned into a learned SAC policy, with CPU `MonzaSim` as the promotion oracle.
 
 <p align="center">
-  <img src="./pygame-window-gen49-fastest-89s-all-150-cars-slow.gif" alt="89 second evolved Monza lap replay" width="900" />
+  <strong>1) Physics 1 GPU ES</strong><br />
+  <img src="./artifacts/highlights/physics1/gpu-es/gifs/gpu-es-2000x150-all6-stratified150.gif" alt="Physics 1 GPU ES replay reel" width="900" />
 </p>
 
 <p align="center">
-  <img src="./pygame-window-fastest-81s-lap-2000x150.gif" alt="CPU-verified 81.2 second Monza lap replay" width="900" />
+  <strong>2) Physics 2 GPU RL</strong><br />
+  <img src="./artifacts/highlights/physics2/gpu-rl/gifs/learned-policy-promotion-4x.gif" alt="Physics 2 GPU RL learned policy replay" width="900" />
 </p>
 
 ## Current Result
@@ -19,12 +21,12 @@ Physics V2 is the active result. V1 remains the default simulator unless `--phys
 FastF1-calibrated V2 learned-policy lap:
 
 - FastF1 threshold: `79.327s` from 2024 Italian GP Qualifying NOR lap 11.
-- Local threshold summary: `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json`
+- Local threshold summary: `artifacts\highlights\physics2\calibration\summary.json`
 - Training path: CPU-reranked V2 GPU ES data -> independent-control BC -> project-native PyTorch SAC workflow with initial BC promotion preserved.
 - CPU `MonzaSim` promotion result: `1/1` valid normal-start lap, `77.6833s`.
-- Local promoted replay: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`
-- Local learned-policy swarm: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_swarm_1000`
-- Local GIF: `artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif`
+- Local promoted replay: `artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`
+- Local learned-policy swarm: `artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_swarm_1000`
+- Local GIF: `artifacts\highlights\physics2\gpu-rl\gifs\learned-policy-promotion-4x.gif`
 
 Best V2 evolved source lap:
 
@@ -34,13 +36,21 @@ Best V2 evolved source lap:
 - Backend: GPU fused evolutionary search, CPU postcheck/rerank oracle
 - Best CPU-verified selected lap: `77.6833s`
 - Source candidate: generation `46`, candidate `724`
-- Local replay: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`
-- Local GIF: `artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif`
+- Local replay: `artifacts\highlights\physics2\gpu-es\telemetry\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`
+- Local GIF: `artifacts\highlights\physics2\gpu-es\gifs\gpu-es-cpu-rerank-best-4x.gif`
 
 V2 bulk storage:
 
-- Local final highlights: `artifacts\highlights\v2-fastf1-final-20260606`
+- Local final highlights: `artifacts\highlights`
 - D-drive bulk archive: `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`
+
+Final local highlight buckets:
+
+- Physics 1 CPU ES: `artifacts\highlights\physics1\cpu-es`
+- Physics 1 GPU ES: `artifacts\highlights\physics1\gpu-es`
+- Physics 1 GPU RL: `artifacts\highlights\physics1\gpu-rl`
+- Physics 2 GPU ES: `artifacts\highlights\physics2\gpu-es`
+- Physics 2 GPU RL: `artifacts\highlights\physics2\gpu-rl`
 
 Earlier V1 milestones were a CPU-evolution result around `89s`, a broad GPU ES `81.233s` result, and a promoted V1 learned-policy lap at `79.750s`; those artifacts are archived under `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605`.
 
@@ -68,12 +78,12 @@ Current V2 gate status:
 - Post-retune validation for the current manual-approved gate passed: manual headless V2 ghost section smoke at `artifacts\runs\manual-headless-20260606-012833-seed7-300975100`, flying-start smoke at `artifacts\runs\manual-headless-20260606-012839-seed7-378636300`, `ruff check .`, `pyright src/f1rl`, full `pytest -q`, `f1-hardware-check --json --warp-smoke`, focused V2 pytest, and V2 fused GPU parity smoke.
 - V2 manual handoff checklist: `artifacts\runs\qc-20260606-012846\manual_qc_checklist.md`.
 - Manual gate failed on v2.0.3 through v2.0.9 for handling/longitudinal feel. The current v2.0.10 keeps the manually approved high-speed cornering balance, slightly eases low-speed grip from v2.0.9, raises acceleration, and softens braking per manual feedback. The user approved the manual check on 2026-06-06.
-- V2 `scripted_threshold` is established from the fastest selected FastF1 Monza calibration lap, not from the slower simulator reference controller: `79.327s` from 2024 Monza Qualifying NOR lap 11, McLaren, SOFT, track status `1`. The local summary copy is `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json`; the original calibration tree is archived under `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`. The staged GPU ES target is CPU-verified `<=86.327s` (`scripted_threshold + 7s`).
+- V2 `scripted_threshold` is established from the fastest selected FastF1 Monza calibration lap, not from the slower simulator reference controller: `79.327s` from 2024 Monza Qualifying NOR lap 11, McLaren, SOFT, track status `1`. The local summary copy is `artifacts\highlights\physics2\calibration\summary.json`; the original calibration tree is archived under `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`. The staged GPU ES target is CPU-verified `<=86.327s` (`scripted_threshold + 7s`).
 - CPU V2 reference-control baseline `artifacts\runs\reference-control-20260606-022941-seed7-987680600` replay-loaded as valid (`116.2167s`, zero collisions/off-track), but it is not the threshold; the original run is now in the D-drive archive.
-- V2 GPU ES reached the CPU-verified target on 2026-06-06. Run `artifacts\runs\v2-gpu-es-fastf1-1000x5-15000-20260606` was staged from `1000x5` through `1000x50` with `max_steps=15000`; selected CPU-rerank parity passed with `0` selected reason/valid-lap mismatches. The best CPU-verified selected V2 lap is `77.6833s` from generation `46`, candidate `724`; local replay copy: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`. The broader raw GPU pool still failed parity (`13` reason mismatches, `12` valid-lap mismatches in the final `512` pool), so raw GPU winners remain proposal data only.
+- V2 GPU ES reached the CPU-verified target on 2026-06-06. Run `artifacts\runs\v2-gpu-es-fastf1-1000x5-15000-20260606` was staged from `1000x5` through `1000x50` with `max_steps=15000`; selected CPU-rerank parity passed with `0` selected reason/valid-lap mismatches. The best CPU-verified selected V2 lap is `77.6833s` from generation `46`, candidate `724`; local replay copy: `artifacts\highlights\physics2\gpu-es\telemetry\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`. The broader raw GPU pool still failed parity (`13` reason mismatches, `12` valid-lap mismatches in the final `512` pool), so raw GPU winners remain proposal data only.
 - V2 dataset export from CPU-replayed V2 trajectories wrote `artifacts\datasets\v2-es-policy-dataset-fastf1-1000x50-20260606`: `16` source candidates, `50128` transitions, `8` valid laps, fastest source lap `77.65s`, physics `physics_v2.0.10-fastf1-manual-balance-fix`.
-- V2 learned-policy target is met by the saved SAC workflow checkpoint `artifacts\learned\v2-sac-fastf1-independent-conservative-initialeval-20260606\best_policy.pt`, now archived on `D:\`. CPU V2 promotion eval wrote `1/1` valid lap at `77.6833s`, under the `79.327s` FastF1 threshold; local replay copy: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`.
-- Final V2 highlights are local under `artifacts\highlights\v2-fastf1-final-20260606`: `1006` replay traces total (`5` CPU-reranked GPU ES traces, `1` promoted learned-policy trace, `1000` deterministic best-policy swarm entries), plus exact-pygame `4x` GIFs at `artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif` and `artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif`.
+- V2 learned-policy target is met by the saved SAC workflow checkpoint `artifacts\learned\v2-sac-fastf1-independent-conservative-initialeval-20260606\best_policy.pt`, now archived on `D:\`. CPU V2 promotion eval wrote `1/1` valid lap at `77.6833s`, under the `79.327s` FastF1 threshold; local replay copy: `artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`.
+- Final V2 highlights are local under `artifacts\highlights\physics2`: `1006` replay traces total (`5` CPU-reranked GPU ES traces, `1` promoted learned-policy trace, `1000` deterministic best-policy swarm entries), plus exact-pygame `4x` GIFs at `artifacts\highlights\physics2\gpu-es\gifs\gpu-es-cpu-rerank-best-4x.gif` and `artifacts\highlights\physics2\gpu-rl\gifs\learned-policy-promotion-4x.gif`.
 - Manual mode now swaps left/right steering keys in the renderer to match the observed on-screen car response, and the HUD is right-aligned in free screen space rather than covering the left-side driving line.
 
 Manual V2 test command:
@@ -170,25 +180,25 @@ uv run --no-sync python -m f1rl.manual
 Replay selected telemetry:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --speed 4
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion" --speed 4
 ```
 
 Headless replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion" --headless --limit 1
 ```
 
 Curated V2 GPU ES replay:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank" --sort score --speed 4
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-es\telemetry" --sort score --speed 4
 ```
 
 V2 exact-pygame GIF export:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz" --export-gif "artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif" --speed 4 --gif-fps 12
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz" --export-gif "artifacts\highlights\physics2\gpu-rl\gifs\learned-policy-promotion-4x.gif" --speed 4 --gif-fps 12
 ```
 
 The reproduction commands below expect archived bulk folders to be restored first. For V2, restore from `D:\f1-rl-artifacts\archives\physics-v2-20260606`; for legacy V1/RL1, restore from `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605`. The replay commands above work from the current local V2 highlight set.
@@ -210,7 +220,7 @@ uv run --no-sync python -m f1rl.policy_eval --policy artifacts\learned\v1-sac-lp
 Policy swarm replay:
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_swarm_1000" --by-checkpoint --speed 4
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_swarm_1000" --by-checkpoint --speed 4
 ```
 
 Evolution search help:
@@ -270,17 +280,22 @@ Use focused checks first when changing a small area, then broaden to the full se
 - `assets/`, `imgs/`: visual assets and track images.
 - `archive/`: historical plans, old docs, old media, and legacy snapshots.
 - `artifacts/`: ignored local artifact root.
-- `artifacts/highlights/v2-fastf1-final-20260606/`: current local V2 final replay telemetry, calibration summaries, manifest, and GIFs.
+- `artifacts/highlights/`: final local replay/highlight root, organized as Physics 1 CPU ES, Physics 1 GPU ES, Physics 1 GPU RL, Physics 2 GPU ES, and Physics 2 GPU RL.
 - `D:\f1-rl-artifacts\archives\physics-v2-20260606\`: compressed cold storage for V2 bulk runs, datasets, checkpoints, calibration trees, and superseded highlights.
 - `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605\`: compressed cold storage for bulk RL1 runs, datasets, checkpoints, and full GPU ES telemetry.
 
-After the V2 cleanup pass, the local repo intentionally keeps only curated V2 final highlight artifacts. New runs should still write under `artifacts/runs/`, datasets under `artifacts/datasets/`, learned checkpoints under `artifacts/learned/`, calibration output under `artifacts/calibration/`, and FastF1 cache data under `artifacts/fastf1-cache/`; compress and offload bulk outputs when they are no longer actively being debugged.
+After the final highlight restore, the local repo intentionally keeps curated replay artifacts for the five headline buckets. New runs should still write under `artifacts/runs/`, datasets under `artifacts/datasets/`, learned checkpoints under `artifacts/learned/`, calibration output under `artifacts/calibration/`, and FastF1 cache data under `artifacts/fastf1-cache/`; compress and offload bulk outputs when they are no longer actively being debugged.
 
 Current local highlight storage:
 
 | Set | Local path | Files | Size |
 |---|---|---:|---:|
-| V2 final ES/learned telemetry, calibration summaries, and GIFs | `artifacts\highlights\v2-fastf1-final-20260606` | 1017 | `1.97 GB` |
+| Physics 1 CPU ES | `artifacts\highlights\physics1\cpu-es` | 908 | `0.45 GiB` |
+| Physics 1 GPU ES, reduced stratified local set | `artifacts\highlights\physics1\gpu-es` | 909 | `0.68 GiB` |
+| Physics 1 GPU RL | `artifacts\highlights\physics1\gpu-rl` | 1011 | `1.57 GiB` |
+| Physics 2 GPU ES | `artifacts\highlights\physics2\gpu-es` | 7 | `0.01 GiB` |
+| Physics 2 GPU RL | `artifacts\highlights\physics2\gpu-rl` | 1005 | `1.96 GiB` |
+| Physics 2 calibration summaries | `artifacts\highlights\physics2\calibration` | 4 | `<0.01 GiB` |
 
 Important D archives:
 

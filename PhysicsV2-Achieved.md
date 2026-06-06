@@ -83,7 +83,7 @@ selected parity mismatches: 0 reason, 0 valid-lap
 The final local replay/highlight root is:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606
+artifacts\highlights\physics2
 ```
 
 The final local highlights contain:
@@ -185,7 +185,7 @@ All of those are complete as of commit `1c09889`.
 Root manifest:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\manifest.json
+artifacts\highlights\physics2\manifest.json
 ```
 
 Important fields:
@@ -204,7 +204,7 @@ total_replay_traces: 1006
 Local threshold summary:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json
+artifacts\highlights\physics2\calibration\summary.json
 ```
 
 Fields:
@@ -229,7 +229,7 @@ That original bulk path has been archived to `D:\`.
 Local copied V2 calibration report:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\calibration\fastf1-v2-manual-balance-fix-20260606.json
+artifacts\highlights\physics2\calibration\fastf1-v2-manual-balance-fix-20260606.json
 ```
 
 Key final V2 metadata inside `physics_models.v2`:
@@ -260,7 +260,7 @@ max_sustained_corner_reference_p95_abs_lateral_error_m: 17.94986390116031
 Local manifest:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\manifest.json
+artifacts\highlights\physics2\gpu-es\telemetry\manifest.json
 ```
 
 Top selected trace:
@@ -281,7 +281,7 @@ physics_version: physics_v2.0.10-fastf1-manual-balance-fix
 Local top selected telemetry:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz
+artifacts\highlights\physics2\gpu-es\telemetry\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz
 ```
 
 ### Learned Policy Promotion Manifest
@@ -289,7 +289,7 @@ artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rera
 Local manifest:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\manifest.json
+artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\manifest.json
 ```
 
 Important fields:
@@ -308,7 +308,7 @@ valid_lap: true
 Local promoted telemetry:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz
+artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz
 ```
 
 ### Learned Policy Swarm Manifest
@@ -316,7 +316,7 @@ artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion
 Local swarm manifest:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_swarm_1000\manifest.json
+artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_swarm_1000\manifest.json
 ```
 
 Important fields:
@@ -338,7 +338,7 @@ The final manifest notes that the deterministic best-policy swarm uses hardlinke
 GPU ES GIF:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif
+artifacts\highlights\physics2\gpu-es\gifs\gpu-es-cpu-rerank-best-4x.gif
 ```
 
 Properties:
@@ -354,7 +354,7 @@ source_trace: postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-st
 Learned policy GIF:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif
+artifacts\highlights\physics2\gpu-rl\gifs\learned-policy-promotion-4x.gif
 ```
 
 Properties:
@@ -374,43 +374,43 @@ Both GIFs were exported through the pygame replay renderer path, not through an 
 Replay the learned policy promotion:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --speed 4
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion" --speed 4
 ```
 
 Replay the learned-policy 1000-car swarm:
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_swarm_1000" --by-checkpoint --speed 4
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_swarm_1000" --by-checkpoint --speed 4
 ```
 
 Replay the curated CPU-reranked V2 GPU ES traces:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank" --sort score --speed 4
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-es\telemetry" --sort score --speed 4
 ```
 
 Headless learned-policy replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion" --headless --limit 1
 ```
 
 Headless V2 ES replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-es\telemetry" --headless --limit 1
 ```
 
 Export the learned-policy GIF again:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz" --export-gif "artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif" --speed 4 --gif-fps 12
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz" --export-gif "artifacts\highlights\physics2\gpu-rl\gifs\learned-policy-promotion-4x.gif" --speed 4 --gif-fps 12
 ```
 
 Export the GPU ES GIF again:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz" --export-gif "artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif" --speed 4 --gif-fps 12
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-es\telemetry\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz" --export-gif "artifacts\highlights\physics2\gpu-es\gifs\gpu-es-cpu-rerank-best-4x.gif" --speed 4 --gif-fps 12
 ```
 
 ## Storage State
@@ -426,7 +426,7 @@ artifacts\highlights
 Final local V2 highlight root:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606
+artifacts\highlights\physics2
 ```
 
 Local highlight size:
@@ -482,8 +482,8 @@ max_abs_error: 0.0
 The final documentation cleanup can be validated with smaller doc/replay checks because it does not change code:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --headless --limit 1
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics2\gpu-es\telemetry" --headless --limit 1
 ```
 
 ## Phase 0: Where V2 Started
@@ -1036,7 +1036,7 @@ termination_reason: lap_complete
 The selected trace is local:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz
+artifacts\highlights\physics2\gpu-es\telemetry\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz
 ```
 
 The important conceptual result is not just the `77.6833s` number. It is that the result came through the trusted path:
@@ -1213,7 +1213,7 @@ artifacts\learned\v2-sac-fastf1-independent-conservative-initialeval-20260606\pr
 Local replay copy:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz
+artifacts\highlights\physics2\gpu-rl\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz
 ```
 
 Promotion result:
@@ -1248,7 +1248,7 @@ This is the final V2 learned-policy achievement.
 The final local highlights were curated into:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606
+artifacts\highlights\physics2
 ```
 
 The three replay sets are:
@@ -1280,7 +1280,7 @@ The goal was:
 Final local:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606
+artifacts\highlights\physics2
 ```
 
 Final archive:
@@ -1792,7 +1792,7 @@ entry_count: 5010
 Only after that did local cleanup remove bulk directories. The final local artifact tree retained:
 
 ```text
-artifacts\highlights\v2-fastf1-final-20260606
+artifacts\highlights\physics2
 ```
 
 This matters for future work because reproduction has two modes:

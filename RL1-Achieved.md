@@ -63,13 +63,13 @@ control_mode: dominance
 The replay command for the promoted CPU-eval laps is:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry"
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics1\gpu-rl\telemetry\promotion_cpu_eval\selected_telemetry"
 ```
 
 The policy swarm replay command is:
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\physics1\gpu-rl\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
 ```
 
 ## Final Storage State
@@ -94,9 +94,9 @@ Current local split:
 The three local replay sets are:
 
 ```text
-artifacts\highlights\full-generation-reel-20260605\cpu-es-150x60
-artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150
-artifacts\highlights\learned-policy-replays-20260605\telemetry
+artifacts\highlights\physics1\cpu-es\telemetry
+artifacts\highlights\physics1\gpu-es\telemetry
+artifacts\highlights\physics1\gpu-rl\telemetry
 ```
 
 The local GPU ES replay set is intentionally reduced to `6 x 150 = 900` stratified traces. The full `6 x 2000 = 12000` GPU ES replay set is preserved on external storage:
@@ -877,7 +877,7 @@ uv run --no-sync python -m f1rl.policy_eval `
 The user-facing replay command is:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry"
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics1\gpu-rl\telemetry\promotion_cpu_eval\selected_telemetry"
 ```
 
 Promotion eval facts:
@@ -943,7 +943,7 @@ artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\policy_swarm_1000\mani
 The replay command is:
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\physics1\gpu-rl\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
 ```
 
 Swarm facts:
@@ -1363,7 +1363,7 @@ uv run --no-sync python -m f1rl.policy_eval `
 ### Replay The Promoted Laps
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry"
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\physics1\gpu-rl\telemetry\promotion_cpu_eval\selected_telemetry"
 ```
 
 ### Policy Swarm Eval
@@ -1385,7 +1385,7 @@ uv run --no-sync python -m f1rl.policy_swarm_eval `
 ### Replay The Policy Swarm
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\physics1\gpu-rl\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
 ```
 
 ### Validation
@@ -1402,8 +1402,8 @@ uv run --no-sync f1-hardware-check --json --warp-smoke
 Replay smoke checks were also reported against the promoted telemetry and sampled policy-swarm traces:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry --headless --limit 1
-uv run --no-sync python -m f1rl.policy_swarm_replay artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000 --by-checkpoint --headless --limit 3
+uv run --no-sync python -m f1rl.replay artifacts\highlights\physics1\gpu-rl\telemetry\promotion_cpu_eval\selected_telemetry --headless --limit 1
+uv run --no-sync python -m f1rl.policy_swarm_replay artifacts\highlights\physics1\gpu-rl\telemetry\policy_swarm_1000 --by-checkpoint --headless --limit 3
 ```
 
 Before claiming RL1 is still intact after future simulator, observation, policy, eval, or replay changes, rerun the CPU promotion check:

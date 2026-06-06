@@ -1,0 +1,62 @@
+{
+  "kind": "f1rl_final_highlights_manifest",
+  "created_at": "2026-06-06",
+  "local_root": "artifacts/highlights",
+  "buckets": [
+    {
+      "name": "Physics 1 CPU ES",
+      "path": "artifacts/highlights/physics1/cpu-es",
+      "telemetry": "artifacts/highlights/physics1/cpu-es/telemetry",
+      "gifs": "artifacts/highlights/physics1/cpu-es/gifs",
+      "files": 908,
+      "size_gib": 0.45
+    },
+    {
+      "name": "Physics 1 GPU ES",
+      "path": "artifacts/highlights/physics1/gpu-es",
+      "telemetry": "artifacts/highlights/physics1/gpu-es/telemetry",
+      "gifs": "artifacts/highlights/physics1/gpu-es/gifs",
+      "files": 909,
+      "size_gib": 0.68,
+      "local_set": "reduced stratified replay set",
+      "full_archive": "D:/f1-rl-artifacts/archives/rl1-postgoal-20260605/gpu-es-2000x150-full-12000-traces-20260605.tar.zst"
+    },
+    {
+      "name": "Physics 1 GPU RL",
+      "path": "artifacts/highlights/physics1/gpu-rl",
+      "telemetry": "artifacts/highlights/physics1/gpu-rl/telemetry",
+      "gifs": "artifacts/highlights/physics1/gpu-rl/gifs",
+      "files": 1011,
+      "size_gib": 1.57
+    },
+    {
+      "name": "Physics 2 GPU ES",
+      "path": "artifacts/highlights/physics2/gpu-es",
+      "telemetry": "artifacts/highlights/physics2/gpu-es/telemetry",
+      "gifs": "artifacts/highlights/physics2/gpu-es/gifs",
+      "files": 7,
+      "size_gib": 0.01
+    },
+    {
+      "name": "Physics 2 GPU RL",
+      "path": "artifacts/highlights/physics2/gpu-rl",
+      "telemetry": "artifacts/highlights/physics2/gpu-rl/telemetry",
+      "gifs": "artifacts/highlights/physics2/gpu-rl/gifs",
+      "files": 1005,
+      "size_gib": 1.96
+    }
+  ],
+  "extra_local": [
+    {
+      "name": "Physics 2 calibration summaries",
+      "path": "artifacts/highlights/physics2/calibration",
+      "files": 4,
+      "size_gib": 0.0
+    }
+  ],
+  "archives": {
+    "physics1_reduced_highlights": "D:/f1-rl-artifacts/archives/rl1-postgoal-20260605/artifacts-highlights-20260605-local-reduced-gpu-es.tar.zst",
+    "physics1_full_gpu_es": "D:/f1-rl-artifacts/archives/rl1-postgoal-20260605/gpu-es-2000x150-full-12000-traces-20260605.tar.zst",
+    "physics2_bulk": "D:/f1-rl-artifacts/archives/physics-v2-20260606/artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst"
+  }
+}
