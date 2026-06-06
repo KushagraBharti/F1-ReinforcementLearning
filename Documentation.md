@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-06.
 
-This is the concise live status file. Historical prompts, long plans, and transcript-derived notes are archived under `archive/`.
+This is the technical companion to the high-level `README.md`. It keeps live status, commands, validation notes, storage layout, and exact artifact paths. Historical prompts, long plans, and transcript-derived notes are archived under `archive/`.
 
 ## Scoreboard
 
