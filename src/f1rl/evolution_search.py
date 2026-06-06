@@ -152,6 +152,7 @@ class EvolutionGates:
 @dataclass(frozen=True, slots=True)
 class EvolutionSearchConfig:
     backend: str = "cpu"
+    physics_model: str = "v1"
     action_set: str = "racing"
     observation_profile: str = "racing_v2"
     max_steps: int = 600
@@ -353,6 +354,7 @@ def _max_steps_for_generation(config: EvolutionSearchConfig, generation: int) ->
 
 def _sim_config_for_generation(config: EvolutionSearchConfig, generation: int) -> SimConfig:
     return SimConfig(
+        physics_model=config.physics_model,
         max_steps=_max_steps_for_generation(config, generation),
         action_mode="continuous" if config.genome_type == "controller" else "discrete",
         action_set=config.action_set,
@@ -364,6 +366,8 @@ def _validate_config(config: EvolutionSearchConfig, gates: EvolutionGates) -> No
     if config.backend not in EVOLUTION_BACKENDS:
         valid = ", ".join(sorted(EVOLUTION_BACKENDS))
         raise ValueError(f"Unknown evolution backend {config.backend!r}; expected one of: {valid}")
+    if config.physics_model not in {"v1", "v2"}:
+        raise ValueError("physics_model must be one of: v1, v2")
     if config.gpu_engine not in GPU_ENGINES:
         valid = ", ".join(sorted(GPU_ENGINES))
         raise ValueError(f"Unknown GPU engine {config.gpu_engine!r}; expected one of: {valid}")
@@ -1811,6 +1815,9 @@ def _evaluate_task_with_sim(task: dict[str, Any], sim: MonzaSim | None = None) -
         "start_speed_kph": snapshot.speed_mps * 3.6,
         "genome": genome_to_dict(candidate.genome),
         "lineage": candidate.lineage,
+        "physics_model": task["sim_config"].physics_model,
+        "physics_version": task["sim_config"].physics_version,
+        "physics_calibration_id": task["sim_config"].physics_calibration_id,
         "best_progress_m": best_progress_m,
         "final_progress_m": final.get("monotonic_progress_m", snapshot.monotonic_progress_m),
         "remaining_m": max(0.0, task["gates"].target_progress_m - best_progress_m),
@@ -2723,6 +2730,10 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
         for threshold in (100, 300, 450, 650, 1000, 1220, 1500, 2000, 2400, 3000, 4000, 5000, 5500, 5793)
     }
     profile_leaders = {}
+    physics_metadata = {
+        key: ranked[0].get(key) if ranked else None
+        for key in ("physics_model", "physics_version", "physics_calibration_id")
+    }
     if ranked:
         for profile in ranked[0].get("profile_scores", {}):
             leader = max(ranked, key=lambda row: float(row.get("profile_scores", {}).get(profile, float("-inf"))))
@@ -2734,6 +2745,7 @@ def _generation_summary(generation: int, ranked: list[dict[str, Any]], elapsed_s
             }
     return {
         "generation": generation,
+        **physics_metadata,
         "population": len(ranked),
         "elapsed_s": elapsed_s,
         "candidates_per_second": len(ranked) / max(elapsed_s, 1e-9),
@@ -3374,12 +3386,14 @@ def _write_ppo_bridge(
         f"--curriculum-state-library-target-progress-m {gates.target_progress_m:.1f} "
         f"--action-set {config.action_set} "
         f"--observation-profile {config.observation_profile} "
+        f"--physics-model {config.physics_model} "
         "--device auto --require-gpu --vec-env subproc"
     )
     benchmark_command = (
         "uv run --no-sync python -m f1rl.benchmark --policies ppo --checkpoint latest "
         "--episodes 3 --max-steps 18000 --device auto "
         f"--action-set {config.action_set} --observation-profile {config.observation_profile} "
+        f"--physics-model {config.physics_model} "
         "--disable-scaffold-rewards --disable-training-assists"
     )
     replay_command = (
@@ -3387,10 +3401,14 @@ def _write_ppo_bridge(
         if selected_telemetry is not None
         else "No selected telemetry available."
     )
+    metadata_sim_config = _sim_config_for_generation(config, 0)
     bridge = {
         "kind": "evolution_to_ppo_bridge",
         "elite_state_library": str(elite_library_path),
         "source_state_library": str(state_library) if state_library is not None else None,
+        "physics_model": metadata_sim_config.physics_model,
+        "physics_version": metadata_sim_config.physics_version,
+        "physics_calibration_id": metadata_sim_config.physics_calibration_id,
         "config": asdict(config),
         "gates": asdict(gates),
         "top_attempts": top_rows,
@@ -3456,6 +3474,9 @@ def _write_summary(
         "kind": "elitist_evolutionary_search",
         "complete": complete,
         "stopped_early": stopped_early,
+        "physics_model": sim_config.physics_model,
+        "physics_version": sim_config.physics_version,
+        "physics_calibration_id": sim_config.physics_calibration_id,
         "sim_config": dataclass_to_dict(sim_config),
         "config": asdict(config),
         "gates": asdict(gates),
@@ -3953,6 +3974,9 @@ def run_evolution_search(
             "telemetry_selection": config.telemetry_selection,
             "telemetry_compression": config.telemetry_compression,
             "backend": config.backend,
+            "physics_model": sim_config.physics_model,
+            "physics_version": sim_config.physics_version,
+            "physics_calibration_id": sim_config.physics_calibration_id,
             "gpu_telemetry_mode": config.gpu_telemetry_mode if config.backend == "gpu" else None,
             "all_candidate_telemetry_dir": str(all_candidate_telemetry_dir)
             if config.telemetry_selection == "all"
@@ -4076,6 +4100,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segment-release-max-brake", type=float, default=0.1)
     parser.add_argument("--segment-release-max-throttle", type=float, default=0.1)
     parser.add_argument("--backend", choices=sorted(EVOLUTION_BACKENDS), default="cpu")
+    parser.add_argument("--physics-model", choices=("v1", "v2"), default="v1")
     parser.add_argument("--gpu-device", default="cuda")
     parser.add_argument("--gpu-engine", choices=sorted(GPU_ENGINES), default="eager")
     parser.add_argument(
@@ -4203,6 +4228,7 @@ def main(argv: list[str] | None = None) -> int:
 
     config = EvolutionSearchConfig(
         backend=args.backend,
+        physics_model=args.physics_model,
         action_set=args.action_set,
         observation_profile=args.observation_profile,
         max_steps=max(1, args.max_steps),

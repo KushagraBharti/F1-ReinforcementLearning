@@ -61,7 +61,12 @@ def test_reference_ghost_telemetry_keeps_finish_checkpoint_count(tmp_path: Path,
 
 def test_reference_control_short_run_writes_telemetry(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr("f1rl.reference_agent.ARTIFACTS_DIR", tmp_path)
-    root = run_reference_control(seed=3, steps=5, telemetry=True)
+    root = run_reference_control(seed=3, steps=5, telemetry=True, physics_model="v2")
     assert root is not None
     assert (root / "steps.jsonl").exists()
     assert (root / "episode_summary.json").exists()
+    summary = json.loads((root / "episode_summary.json").read_text(encoding="utf-8"))
+    first_row = json.loads((root / "steps.jsonl").read_text(encoding="utf-8").splitlines()[0])
+    assert summary["physics_model"] == "v2"
+    assert first_row["physics_model"] == "v2"
+    assert first_row["physics_version"].startswith("physics_v2.")

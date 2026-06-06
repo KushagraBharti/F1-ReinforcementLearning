@@ -236,6 +236,25 @@ def _row_at_index(trace: ReplayTrace, index: int) -> dict[str, Any]:
     return dict(trace.steps[min(index, len(trace.steps) - 1)])
 
 
+def _gif_replay_times(duration_s: float, *, speed: float, fps: int) -> list[float]:
+    if fps <= 0:
+        raise ValueError("gif fps must be positive")
+    if speed <= 0.0:
+        raise ValueError("speed must be positive")
+    duration_s = max(0.0, float(duration_s))
+    if duration_s == 0.0:
+        return [0.0]
+    replay_dt_s = speed / float(fps)
+    times: list[float] = []
+    replay_time_s = 0.0
+    while replay_time_s < duration_s:
+        times.append(replay_time_s)
+        replay_time_s += replay_dt_s
+    if not np.isclose(times[-1], duration_s):
+        times.append(duration_s)
+    return times
+
+
 def _ghost_from_row(row: dict[str, Any], *, index: int, label: str | None = None) -> RenderGhost:
     return RenderGhost(
         x=float(row["x"]),
@@ -448,6 +467,59 @@ def _render_trace_group(
     return "complete"
 
 
+def _export_trace_group_gif(
+    *,
+    renderer: PygameRenderer,
+    sim: MonzaSim,
+    traces: Sequence[ReplayTrace],
+    output_path: Path,
+    speed: float,
+    fps: int,
+    base_lines: Sequence[str],
+) -> None:
+    from PIL import Image
+
+    primary = traces[0]
+    duration_s = max(trace.duration_s for trace in traces)
+    frames = []
+    replay_times = _gif_replay_times(duration_s, speed=speed, fps=fps)
+    for replay_time_s in replay_times:
+        row = _row_at_time(primary, replay_time_s)
+        _apply_row(sim, row)
+        ghosts = [
+            _ghost_from_row(_row_at_time(trace, replay_time_s), index=idx, label=_trace_candidate_label(trace, idx))
+            for idx, trace in enumerate(traces[1:], 1)
+        ]
+        frame = renderer.render(
+            sim,
+            human=False,
+            ghosts=ghosts,
+            extra_lines=[
+                *base_lines,
+                f"gif x{speed:.2f}",
+                f"replay {replay_time_s:6.2f}s",
+                f"cars {len(traces)}",
+            ],
+        )
+        frames.append(Image.fromarray(frame))
+    if not frames:
+        raise ValueError("no GIF frames generated")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    duration_ms = max(1, int(round(1000.0 / float(fps))))
+    frames[0].save(
+        output_path,
+        save_all=True,
+        append_images=frames[1:],
+        duration=duration_ms,
+        loop=0,
+    )
+    print(
+        "gif_exported "
+        f"path={output_path} frames={len(frames)} speed={speed:.3f} fps={fps} duration={duration_s:.3f}s"
+    )
+
+
 def _pause_between_groups(
     *,
     renderer: PygameRenderer,
@@ -534,9 +606,15 @@ def run_replay_paths(
     by_generation: bool = False,
     generation_limit: int | None = None,
     generation_pause_s: float = 0.75,
+    export_gif_path: Path | None = None,
+    gif_fps: int = 15,
 ) -> int:
     if speed <= 0.0:
         raise ValueError("speed must be positive")
+    if gif_fps <= 0:
+        raise ValueError("gif fps must be positive")
+    if export_gif_path is not None and by_generation:
+        raise ValueError("GIF export does not support --by-generation")
     controls = ReplayControls(speed=speed)
     trace_paths = _resolve_replay_paths(paths, limit=limit, sort_by=sort_by)
     metadata_by_path = _metadata_for_inputs(paths)
@@ -627,6 +705,23 @@ def run_replay_paths(
         return 0
 
     traces = [_load_trace(path, metadata=metadata_by_path.get(path.resolve(), {})) for path in trace_paths]
+    if export_gif_path is not None:
+        sim = MonzaSim(SimConfig())
+        renderer = PygameRenderer(sim.track, sim.config)
+        try:
+            _export_trace_group_gif(
+                renderer=renderer,
+                sim=sim,
+                traces=traces,
+                output_path=export_gif_path,
+                speed=speed,
+                fps=gif_fps,
+                base_lines=[],
+            )
+        finally:
+            renderer.close()
+        return 0
+
     if headless:
         if by_generation:
             groups = _group_traces_by_generation(traces, generation_limit=generation_limit)
@@ -690,6 +785,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="name",
         help="Directory replay ordering; best-progress uses selected_telemetry/manifest.json when present.",
     )
+    parser.add_argument(
+        "--export-gif",
+        type=Path,
+        help="Write an animated GIF using the same pygame renderer as interactive replay.",
+    )
+    parser.add_argument("--gif-fps", type=int, default=15, help="Output GIF frame rate; default is 15.")
     return parser.parse_args(argv)
 
 
@@ -705,6 +806,8 @@ def main(argv: list[str] | None = None) -> int:
         by_generation=args.by_generation,
         generation_limit=args.generation_limit,
         generation_pause_s=args.generation_pause_s,
+        export_gif_path=args.export_gif,
+        gif_fps=args.gif_fps,
     )
 
 

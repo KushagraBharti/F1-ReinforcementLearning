@@ -15,6 +15,7 @@ from f1rl.config import (
     REPO_ROOT,
     AssistConfig,
     CarParams,
+    PhysicsV2Params,
     RewardConfig,
     SensorConfig,
     SimConfig,
@@ -123,8 +124,10 @@ def sim_config_from_metadata(metadata: dict[str, Any], *, max_steps: int | None 
     sensors = SensorConfig(**_dataclass_kwargs(SensorConfig, raw_config.get("sensors")))
     reward = RewardConfig(**_dataclass_kwargs(RewardConfig, raw_config.get("reward")))
     assist = AssistConfig(**_dataclass_kwargs(AssistConfig, raw_config.get("assist")))
+    physics_v2 = PhysicsV2Params(**_dataclass_kwargs(PhysicsV2Params, raw_config.get("physics_v2")))
     kwargs = _dataclass_kwargs(SimConfig, raw_config)
     kwargs.pop("car", None)
+    kwargs.pop("physics_v2", None)
     kwargs.pop("sensors", None)
     kwargs.pop("reward", None)
     kwargs.pop("assist", None)
@@ -134,7 +137,7 @@ def sim_config_from_metadata(metadata: dict[str, Any], *, max_steps: int | None 
         kwargs["car_image"] = _resolve_path(kwargs["car_image"])
     if "lookahead_m" in kwargs:
         kwargs["lookahead_m"] = tuple(float(value) for value in kwargs["lookahead_m"])
-    sim_config = SimConfig(car=car, sensors=sensors, reward=reward, assist=assist, **kwargs)
+    sim_config = SimConfig(car=car, physics_v2=physics_v2, sensors=sensors, reward=reward, assist=assist, **kwargs)
     if max_steps is not None:
         sim_config = replace(sim_config, max_steps=max_steps)
     return sim_config

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import torch
 
-from f1rl.config import CarParams
+from f1rl.config import CarParams, PhysicsV2Params
 from f1rl.physics import CarState
 from f1rl.state_snapshot import StateSnapshot
 from f1rl.track_model import TrackSpec
@@ -32,6 +32,8 @@ def normalize_device(device: str) -> torch.device:
 
 @dataclass(frozen=True, slots=True)
 class GpuCarParams:
+    physics_model: str
+    mass: float
     wheelbase_m: float
     max_steer_deg: float
     steer_response: float
@@ -47,10 +49,67 @@ class GpuCarParams:
     steering_speed_sensitivity: float
     max_speed_mps: float
     dt: float
+    v2_calibration_id: str
+    v2_version: str
+    v2_max_steer_deg: float
+    v2_steer_response: float
+    v2_steering_speed_sensitivity: float
+    v2_front_weight_distribution: float
+    v2_cg_height_m: float
+    v2_track_width_m: float
+    v2_front_axle_distance_m: float
+    v2_rear_axle_distance_m: float
+    v2_front_cornering_stiffness_n_per_rad: float
+    v2_rear_cornering_stiffness_n_per_rad: float
+    v2_front_peak_mu: float
+    v2_rear_peak_mu: float
+    v2_mechanical_grip_low_speed_scale: float
+    v2_mechanical_grip_high_speed_scale: float
+    v2_mechanical_grip_transition_mps: float
+    v2_tire_shape_c: float
+    v2_slip_angle_peak_deg: float
+    v2_rear_slip_steer_coupling: float
+    v2_post_peak_falloff: float
+    v2_load_sensitivity: float
+    v2_aero_downforce_n_per_mps2: float
+    v2_aero_balance_front: float
+    v2_engine_power_w: float
+    v2_drivetrain_efficiency: float
+    v2_power_min_speed_mps: float
+    v2_max_drive_g: float
+    v2_max_brake_g: float
+    v2_brake_bias_front: float
+    v2_brake_lock_threshold: float
+    v2_brake_lock_min_speed_mps: float
+    v2_brake_lock_steer_loss: float
+    v2_drag_coefficient: float
+    v2_rolling_resistance_mps2: float
+    v2_max_speed_mps: float
+    v2_gear_ratios: tuple[float, ...]
+    v2_final_drive_ratio: float
+    v2_wheel_radius_m: float
+    v2_idle_rpm: float
+    v2_shift_up_rpm: float
+    v2_shift_down_rpm: float
+    v2_max_rpm: float
+    v2_torque_peak_rpm: float
+    v2_torque_peak_nm: float
+    v2_torque_low_rpm_factor: float
+    v2_torque_high_rpm_factor: float
+    v2_tire_scrub_drag: float
+    v2_surface_mu: float
 
 
-def gpu_car_params_from_cpu(params: CarParams) -> GpuCarParams:
+def gpu_car_params_from_cpu(
+    params: CarParams,
+    *,
+    physics_model: str = "v1",
+    physics_v2: PhysicsV2Params | None = None,
+) -> GpuCarParams:
+    v2 = physics_v2 or PhysicsV2Params()
     return GpuCarParams(
+        physics_model=str(physics_model),
+        mass=float(params.mass),
         wheelbase_m=float(params.wheelbase_m),
         max_steer_deg=float(params.max_steer_deg),
         steer_response=float(params.steer_response),
@@ -66,6 +125,55 @@ def gpu_car_params_from_cpu(params: CarParams) -> GpuCarParams:
         steering_speed_sensitivity=float(params.steering_speed_sensitivity),
         max_speed_mps=float(params.max_speed_mps),
         dt=float(params.dt),
+        v2_calibration_id=v2.calibration_id,
+        v2_version=v2.version,
+        v2_max_steer_deg=float(v2.max_steer_deg),
+        v2_steer_response=float(v2.steer_response),
+        v2_steering_speed_sensitivity=float(v2.steering_speed_sensitivity),
+        v2_front_weight_distribution=float(v2.front_weight_distribution),
+        v2_cg_height_m=float(v2.cg_height_m),
+        v2_track_width_m=float(v2.track_width_m),
+        v2_front_axle_distance_m=float(v2.front_axle_distance_m),
+        v2_rear_axle_distance_m=float(v2.rear_axle_distance_m),
+        v2_front_cornering_stiffness_n_per_rad=float(v2.front_cornering_stiffness_n_per_rad),
+        v2_rear_cornering_stiffness_n_per_rad=float(v2.rear_cornering_stiffness_n_per_rad),
+        v2_front_peak_mu=float(v2.front_peak_mu),
+        v2_rear_peak_mu=float(v2.rear_peak_mu),
+        v2_mechanical_grip_low_speed_scale=float(v2.mechanical_grip_low_speed_scale),
+        v2_mechanical_grip_high_speed_scale=float(v2.mechanical_grip_high_speed_scale),
+        v2_mechanical_grip_transition_mps=float(v2.mechanical_grip_transition_mps),
+        v2_tire_shape_c=float(v2.tire_shape_c),
+        v2_slip_angle_peak_deg=float(v2.slip_angle_peak_deg),
+        v2_rear_slip_steer_coupling=float(v2.rear_slip_steer_coupling),
+        v2_post_peak_falloff=float(v2.post_peak_falloff),
+        v2_load_sensitivity=float(v2.load_sensitivity),
+        v2_aero_downforce_n_per_mps2=float(v2.aero_downforce_n_per_mps2),
+        v2_aero_balance_front=float(v2.aero_balance_front),
+        v2_engine_power_w=float(v2.engine_power_w),
+        v2_drivetrain_efficiency=float(v2.drivetrain_efficiency),
+        v2_power_min_speed_mps=float(v2.power_min_speed_mps),
+        v2_max_drive_g=float(v2.max_drive_g),
+        v2_max_brake_g=float(v2.max_brake_g),
+        v2_brake_bias_front=float(v2.brake_bias_front),
+        v2_brake_lock_threshold=float(v2.brake_lock_threshold),
+        v2_brake_lock_min_speed_mps=float(v2.brake_lock_min_speed_mps),
+        v2_brake_lock_steer_loss=float(v2.brake_lock_steer_loss),
+        v2_drag_coefficient=float(v2.drag_coefficient),
+        v2_rolling_resistance_mps2=float(v2.rolling_resistance_mps2),
+        v2_max_speed_mps=float(v2.max_speed_mps),
+        v2_gear_ratios=tuple(float(item) for item in v2.gear_ratios),
+        v2_final_drive_ratio=float(v2.final_drive_ratio),
+        v2_wheel_radius_m=float(v2.wheel_radius_m),
+        v2_idle_rpm=float(v2.idle_rpm),
+        v2_shift_up_rpm=float(v2.shift_up_rpm),
+        v2_shift_down_rpm=float(v2.shift_down_rpm),
+        v2_max_rpm=float(v2.max_rpm),
+        v2_torque_peak_rpm=float(v2.torque_peak_rpm),
+        v2_torque_peak_nm=float(v2.torque_peak_nm),
+        v2_torque_low_rpm_factor=float(v2.torque_low_rpm_factor),
+        v2_torque_high_rpm_factor=float(v2.torque_high_rpm_factor),
+        v2_tire_scrub_drag=float(v2.tire_scrub_drag),
+        v2_surface_mu=float(v2.surface_mu),
     )
 
 

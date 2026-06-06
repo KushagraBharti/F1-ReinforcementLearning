@@ -1,6 +1,6 @@
 # Documentation
 
-Last updated: 2026-06-05.
+Last updated: 2026-06-06.
 
 This is the concise live status file. Historical prompts, long plans, and transcript-derived notes are archived under `archive/`.
 
@@ -8,41 +8,35 @@ This is the concise live status file. Historical prompts, long plans, and transc
 
 Best current learned-policy result:
 
-- SAC policy path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\best_policy.pt`
-- Dataset manifest path inside archive: `artifacts\datasets\v1-es-policy-dataset-learned-v1-sac79p750-broad-16\dataset_manifest.json`
-- BC checkpoint path inside archive: `artifacts\learned\v1-bc-lpv1-sac79p750-broad16\best_policy.pt`
-- SAC promotion eval path inside archive: `artifacts\learned\v1-sac-lpv1-sac79p750-broad16-stable-v1\promotion_cpu_eval\eval_summary.json`
-- CPU oracle result: `3/3` valid normal-start laps, fastest `79.750s`, average `79.750s`
-- Local replay telemetry: `artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry`
-- Local policy swarm: `artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000`
+- Physics model: explicit `v2`; V1 remains the default unless selected.
+- FastF1 threshold: `79.327s` from 2024 Italian GP Qualifying NOR lap 11.
+- CPU oracle result: `1/1` valid normal-start lap, `77.6833s`.
+- Local replay telemetry: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`
+- Local policy swarm: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_swarm_1000`
+- Local GIF: `artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif`
 
-Best evolved source result:
+Best current evolved source result:
 
-- Run path inside archive: `artifacts\runs\actor-injected-lpv1-sac80p050-push-20260605-0910`
-- Backend: GPU fused evolutionary search with learned actor injection
-- CPU-replayed source lap: `79.750s`
-- Source candidate: generation `0`, candidate `334`
+- Run path inside archive: `artifacts\runs\v2-gpu-es-fastf1-1000x5-15000-20260606`
+- Backend: GPU fused evolutionary search with CPU postcheck/rerank
+- Search staging: `1000x5 -> 1000x10 -> 1000x25 -> 1000x50`
+- Max steps: `15000`
+- CPU-verified selected lap: `77.6833s`
+- Source candidate: generation `46`, candidate `724`
+- Local replay telemetry: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`
+- Local GIF: `artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif`
 
-Previous broad evolved result:
+Storage:
 
-- Run: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605`
-- Scale: `2000 x 150 = 300,000` candidates
-- Backend: GPU fused evolutionary search
-- Max steps: `25000`
-- Target termination: disabled
-- Fastest selected valid lap: `81.233s`
-- CPU-verified selected candidate: generation `143`, candidate `1864`
-- CPU verification reason: `lap_complete`
-- Reason mismatches: `0`
-- Valid-lap mismatches: `0`
-- Max final-progress delta in selected CPU verification: about `0.0306m`
-- Archived selected telemetry path: `artifacts\runs\gpu-speed-speedprofiles-2000x150-25k-20260605\selected_telemetry_summary_top`
-- Local curated replay telemetry: `artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150`
+- Current local V2 highlights: `artifacts\highlights\v2-fastf1-final-20260606`
+- V2 bulk archive: `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`
 
-Previous milestone:
+Previous V1 milestones:
 
 - CPU evolutionary search reached about `89s`.
-- The README keeps both the 89s GIF and the newer 81.2s GIF.
+- Broad V1 GPU ES reached `81.233s`.
+- Promoted V1 learned policy reached `79.750s`.
+- Legacy V1/RL1 artifacts are archived under `D:\f1-rl-artifacts\archives\rl1-postgoal-20260605`.
 
 PPO status:
 
@@ -50,6 +44,105 @@ PPO status:
 - GPU PPO exists as a separate experimental path.
 - No PPO policy is currently the headline result.
 - The old blind PPO loop should not be resumed as the primary path.
+
+Physics V2 handoff status:
+
+- `physics_model=v1` remains the default simulator behavior.
+- `physics_model=v2` is now explicit in `SimConfig`, telemetry, scripted runs, benchmark runs, SB3/GPU PPO smoke metadata, evolution summaries, selected telemetry manifests, postcheck summaries, dataset manifests, policy evals, and policy swarm manifests.
+- CPU V2 includes a FastF1 Monza-calibrated contract id: `monza_2022_2024_fastf1_multilap_v2_manual_balance_fix`.
+- FastF1 calibration tools include offline `summarize`, `summarize-multi`, and `compare` commands plus live `fetch`/`fetch-multi` paths. The current multi-lap dataset is `artifacts\calibration\fastf1-multilap-20260605`, with manifest `manifest.json` and section distributions `section_distribution_summary.json`.
+- The multi-lap FastF1 calibration dataset contains `60` selected clean dry laps from Monza `2024`, `2023`, and `2022` Q/FP2/FP3 for VER/NOR/PIA/LEC/SAI/HAM/RUS where available. It keeps raw `get_car_data()` and `get_pos_data()` CSVs plus processed `get_telemetry().add_distance()` CSVs for each selected lap. There were `5` rejected/skipped entries and `0` session errors.
+- OpenF1 is now an independent sanity-check path, not the primary calibration source. Current artifact: `artifacts\calibration\openf1-monza-crosscheck-20260605\manifest.json` with `42` selected Monza 2024/2023 Q/FP2/FP3 laps and `3` explicit 2022 skips because OpenF1 returned 404 for those sessions. Summary: lap p50 `80.8025s`, max-speed p90 `349.0 kph`, speed-trap p90 `345.0 kph`.
+- The single checked-in reference lap remains 2024 Italian GP Qualifying VER fastest lap: `79.662s`, `5745.669m`, max speed `348.0 kph`, mean speed `259.914 kph`, p10/p50/p90 speed `142.0 / 274.0 / 336.19 kph`, gear range `2..8`; it is no longer the only calibration target.
+- Current V2 report path is `artifacts\calibration\fastf1-v2-manual-balance-fix-20260606.json`. Current metrics: terminal-speed error `+3.0 kph`, acceleration trace p95 MAE about `1.15 m/s^2`, braking-zone distance MAE about `15.5m`, robust corner lateral-g margin min about `-0.45g`, robust margin mean about `+0.21g`, sustained-corner reference control pass rate `0.333`, max sustained-corner p95 lateral error about `17.95m`, minimum sustained p75/p90 margins `-2.173/-2.811`, gear match rate `1.0`, mean absolute RPM error under `9`.
+- Multi-lap sustained-section clusters are now distance-based. Current p50 start/end and speed/lateral-g distributions: section 01 `2424.9..2590.4m`, speed p50/p90 `215.3/222.9 kph`, lateral-g p90 p50/p90 `5.15/5.85`; section 02 `2780.8..2885.5m`, `198.3/205.1 kph`, `4.74/5.29g`; section 03 `3952.9..4035.8m`, `216.0/249.8 kph`, `3.73/4.51g`; section 04 `5052.7..5317.4m`, `228.9/235.7 kph`, `5.35/6.15g`.
+- The focused sustained-corner diagnostic now starts before each section and reports reference-speed and controlled-speed runs at `150/180/200/220/230/240/250 kph`, including lateral error, heading error, steering saturation, actual/reference curvature, lateral-g, slip angles, front/rear lateral force, throttle/brake, tire saturation, and track-limit/off-track state.
+- PyTorch GPU V2 and Warp fused V2 parity tests pass under the recalibrated contract.
+- Tiny V2 fused GPU parity smoke under the manual-approved balance retune wrote `artifacts\runs\v2-manual-balance-fix-gpu-parity-smoke-20260606` with v2.0.10 metadata, `gpu_parity_status=passed`, max CPU/GPU progress delta about `0.00020m`, and `0` reason/valid-lap mismatches.
+- Tiny V2 persistent-controller parity smoke wrote `artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605` with `gpu_kernel_backend=warp_persistent_controller_open`, `gpu_parity_status=passed`, `0` CPU replay reason mismatches, and `0` valid-lap mismatches.
+- `tests/test_v2_metadata_contracts.py` now exercises V2 metadata across CPU evolution summaries/checkpoints/bridge/selected telemetry, CPU postcheck summaries/manifests/rows, ES dataset export, BC/SAC policy checkpoints, policy eval manifests, policy swarm manifests, loaded telemetry rows, and the V1-labeled transfer export guard. `tests/test_policy_io.py` also covers V2 PPO eval config reconstruction from `run_metadata.json`.
+- The `127.183s` scripted lap is a conservative V2 scripted smoke/debug baseline only, not `scripted_threshold`; it is archived with the other superseded V2 bulk artifacts.
+- Any V2 `1000x5` or `1000x10` ES artifacts created before this recalibration are exploratory/pre-recalibration only and must not be used for target, dataset, threshold, or promotion decisions.
+- Post-retune validation passed on 2026-06-06 for this gate: manual headless V2 ghost section smoke wrote `artifacts\runs\manual-headless-20260606-012833-seed7-300975100`, flying-start smoke wrote `artifacts\runs\manual-headless-20260606-012839-seed7-378636300`, `ruff check .`, `pyright src/f1rl`, full `pytest -q`, `f1-hardware-check --json --warp-smoke`, focused V2 pytest, and V2 fused GPU parity smoke passed.
+- V2 manual handoff checklist: `artifacts\runs\qc-20260606-012846\manual_qc_checklist.md`.
+- Manual V2 handoff is approved for v2.0.10 as of 2026-06-06. v2.0.3 through v2.0.9 failed or were superseded for handling/longitudinal feel. v2.0.10 keeps the manually approved high-speed cornering balance, slightly eases low-speed grip from v2.0.9, raises acceleration, and softens braking. Manual left/right key mapping is intentionally swapped in the renderer so the keyboard matches the on-screen car response, and the HUD is right-aligned in free screen space instead of covering the left-side driving line.
+- V2 `scripted_threshold` is now established from the fastest selected FastF1 Monza calibration lap, not the old scripted debug lap or the slower simulator reference controller: `79.327s` from 2024 Monza Qualifying NOR lap 11, McLaren, SOFT, track status `1`. Local summary copy: `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json`; original calibration tree: `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`. The V2 ES target is CPU-verified `<=86.327s` (`scripted_threshold + 7s`).
+- CPU V2 reference-control baseline `artifacts\runs\reference-control-20260606-022941-seed7-987680600` replay-loaded as valid (`116.2167s`, zero collisions/off-track), but it is not the threshold; the original run is in the D-drive archive.
+- V2 staged GPU ES target is met. Run `artifacts\runs\v2-gpu-es-fastf1-1000x5-15000-20260606` was started as `1000x5`, resumed through `1000x50`, and kept `max_steps=15000`. Final CPU postcheck/rerank used `candidate_pool_size=512`; selected parity passed with `0` selected reason mismatches and `0` selected valid-lap mismatches. The trusted selected winner is generation `46`, candidate `724`, CPU-verified `77.6833s`; local replay copy: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`.
+- Raw GPU proposals are still not promotion data: the final broad pool postcheck failed parity with `13` reason mismatches and `12` valid-lap mismatches. CPU postcheck/rerank remains mandatory.
+- V2 dataset `artifacts\datasets\v2-es-policy-dataset-fastf1-1000x50-20260606` was exported by CPU replay from V2 source candidates: `16` candidates, `50128` transitions, `8` valid laps, fastest source lap `77.65s`, mean valid lap `85.925s`, V2 metadata `physics_v2.0.10-fastf1-manual-balance-fix`.
+- V2 learned-policy target is met. BC with `control-mode independent` over source `3` produced a checkpoint that CPU-evaluated at `77.6833s`. SAC now preserves and evaluates the initial BC policy before updates; conservative SAC output promoted at `77.6833s` under CPU V2, below the FastF1 threshold `79.327s`. Original checkpoints/evals are in the D-drive archive; local replay copy: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`.
+- Final V2 highlights are local under `artifacts\highlights\v2-fastf1-final-20260606`: `1006` replay traces total (`5` CPU-reranked GPU ES traces, `1` promoted learned-policy trace, `1000` deterministic best-policy swarm entries), plus exact-pygame `4x` GIFs at `artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif` and `artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif`.
+
+Manual V2 handoff command:
+
+```powershell
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --flying-start
+```
+
+Focused sustained-corner manual commands:
+
+```powershell
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_01 --start-section-lead-in-m 120
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_02 --start-section-lead-in-m 120
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_03 --start-section-lead-in-m 120
+```
+
+`--start-section` aligns the FastF1 ghost to the matching reference time/distance. Manual reset reuses the same section start. Mid-lap telemetry summaries now report run-local `distance_traveled_m`; lap sectors already passed before the section start are left blank instead of producing bogus sector speeds. Latest section-start headless smoke: `artifacts\runs\manual-headless-20260606-012833-seed7-300975100`.
+
+Manual sustained-corner telemetry can be summarized with QC:
+
+```powershell
+uv run --no-sync python -m f1rl.qc --telemetry artifacts\runs\manual-headless-20260606-012833-seed7-300975100 --output-dir artifacts\runs --max-telemetry-files 1
+```
+
+Latest QC path before threshold recording: `artifacts\runs\qc-20260606-012846`. Its automated `manual_gate` block reports `scripted_threshold_status=unset` because it was generated before the FastF1 threshold correction. The user manually approved v2.0.10 on 2026-06-06. The QC section-smoke diagnostic is metadata/checklist evidence only because the headless manual smoke runs straight; use the local copied report `artifacts\highlights\v2-fastf1-final-20260606\calibration\fastf1-v2-manual-balance-fix-20260606.json` for handling-balance metrics. V2 highlight curation, exact-pygame GIF export, bulk offload, and final validation are complete; commit/push remain.
+
+FastF1 threshold and CPU controller baseline after manual approval:
+
+```powershell
+uv run --no-sync python -m f1rl.reference_agent --mode control --physics-model v2 --steps 9000 --seed 7
+uv run --no-sync f1-replay artifacts\runs\reference-control-20260606-022941-seed7-987680600\steps.jsonl --headless
+```
+
+The threshold source is FastF1 `79.327s` from `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json` locally, with the original source preserved in the D-drive archive. The CPU controller baseline wrote `artifacts\runs\reference-control-20260606-022941-seed7-987680600`, replay-loaded headlessly, and records `lap_time_s=116.2167`; it is baseline evidence only. Earlier post-manual attempts are superseded failed diagnostics: `artifacts\runs\reference-control-20260606-014926-seed7-381937500` failed `off_track` at `14.0s`, and `artifacts\runs\scripted-20260606-014937-seed7-461099600` failed `collision` at `104.0s`; those original run artifacts are archived on `D:\`.
+
+Final validation passed on 2026-06-06:
+
+```powershell
+uv run --no-sync pytest -q tests/test_physics.py tests/test_gpu_physics.py tests/test_calibration.py tests/test_telemetry.py
+uv run --no-sync python -m f1rl.manual --headless --physics-model v2 --max-steps 3 --seed 1
+uv run --no-sync python -m f1rl.calibration --json
+uv run --no-sync python -m f1rl.fastf1_calibration summarize assets\reference\monza_2024_Q_VER_telemetry.csv --output artifacts\calibration\fastf1-summary-smoke.json
+uv run --no-sync python -m f1rl.fastf1_calibration fetch-multi --years 2024,2023,2022 --sessions Q,FP2,FP3 --drivers VER,NOR,PIA,LEC,SAI,HAM,RUS --output-dir artifacts\calibration\fastf1-multilap-20260605 --max-laps-per-driver 1
+uv run --no-sync python -m f1rl.fastf1_calibration summarize-multi --output-dir artifacts\calibration\fastf1-multilap-20260605
+uv run --no-sync python -m f1rl.fastf1_calibration compare --physics-model v2 --multi-summary artifacts\calibration\fastf1-multilap-20260605\section_distribution_summary.json --output artifacts\calibration\fastf1-v2-manual-balance-fix-20260606.json
+uv run --no-sync python -m f1rl.openf1_crosscheck --years 2024,2023,2022 --sessions Q,FP2,FP3 --drivers VER,NOR,PIA,LEC,SAI,HAM,RUS --output-dir artifacts\calibration\openf1-monza-crosscheck-20260605 --request-delay-s 1.0
+uv run --no-sync python -m f1rl.scripted --physics-model v2 --steps 3 --no-telemetry
+uv run --no-sync python -m f1rl.benchmark --policies scripted --episodes 1 --max-steps 3 --physics-model v2 --telemetry none
+uv run --no-sync python -m f1rl.train --physics-model v2 --timesteps 8 --seed 9 --n-envs 1 --max-steps 8 --device cpu --checkpoint-every 8 --eval-every 0 --telemetry none --run-name v2-train-cli-smoke --n-steps 4 --batch-size 4 --n-epochs 1
+uv run --no-sync python -m f1rl.gpu_ppo --output-dir artifacts\runs\v2-gpu-ppo-cli-smoke --device cpu --physics-model v2 --timesteps 8 --n-envs 2 --n-steps 4 --batch-size 4 --n-epochs 1 --hidden-size 32 --max-steps 8 --observation-profile base --start-speed-kph 60 --target-progress-m 6 --terminate-at-target --cpu-eval-episodes 1 --cpu-eval-max-steps 8
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-evolution-smoke-gear-rpm-cpu --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-eager --backend gpu --gpu-engine eager --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused-controller --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 1 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type controller --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.replay artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused\selected_telemetry --headless --limit 1
+uv run --no-sync python -m f1rl.replay artifacts\runs\v2-evolution-smoke-gear-rpm-gpu-fused-controller\selected_telemetry --headless --limit 1
+uv run --no-sync pytest -q tests/test_physics.py tests/test_gpu_physics.py tests/test_calibration.py tests/test_gpu_evolution_backend.py
+uv run --no-sync pytest -q tests/test_calibration.py tests/test_physics.py tests/test_gpu_physics.py
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-recalibration-gpu-parity-smoke-20260605 --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-manual-balance-fix-gpu-parity-smoke-20260606 --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 80 --target-progress-m 510 --action-set straight --observation-profile base --max-steps 24 --population 8 --generations 2 --elite-count 2 --random-immigrants 1 --top-k 2 --workers 1 --genome-type phase --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.evolution_search --output-dir artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605 --backend gpu --gpu-engine fused --gpu-run-mode parity --gpu-device cuda --gpu-dtype float32 --gpu-static-batch-size 4 --gpu-cpu-replay-top-k 2 --gpu-collision-mode exact_grid --physics-model v2 --start-progress-m 500 --start-speed-kph 60 --target-progress-m 506 --no-target-termination --action-set straight --observation-profile base --max-steps 8 --population 4 --generations 1 --elite-count 1 --random-immigrants 0 --top-k 2 --workers 1 --genome-type controller --scoring-profiles max_progress,clean_exit --progress-every-generation --telemetry-compression gzip
+uv run --no-sync python -m f1rl.replay artifacts\runs\v2-recalibration-gpu-parity-smoke-20260605\selected_telemetry --headless --limit 1
+uv run --no-sync python -m f1rl.replay artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605\selected_telemetry --headless --limit 1
+uv run --no-sync python -m f1rl.replay artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank --headless --limit 1
+uv run --no-sync pytest -q tests/test_v2_metadata_contracts.py
+uv run --no-sync pytest -q tests/test_scripted_replay.py tests/test_gpu_ppo.py tests/test_benchmark.py tests/test_policy_train_smoke.py
+uv run --no-sync ruff check .
+uv run --no-sync pyright src/f1rl
+uv run --no-sync pytest -q
+uv run --no-sync f1-hardware-check --json --warp-smoke
+```
 
 ## Current Architecture
 
@@ -163,31 +256,31 @@ Detailed goal docs:
 Replay the current best selected telemetry:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry"
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --speed 4
 ```
 
 Headless replay smoke:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\promotion_cpu_eval\selected_telemetry" --headless --limit 1
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion" --headless --limit 1
 ```
 
 Replay the promoted policy swarm:
 
 ```powershell
-uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\learned-policy-replays-20260605\telemetry\policy_swarm_1000" --by-checkpoint --speed 1
+uv run --no-sync python -m f1rl.policy_swarm_replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_swarm_1000" --by-checkpoint --speed 4
 ```
 
-Replay curated CPU ES:
+Replay curated V2 GPU ES selected traces:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\full-generation-reel-20260605\cpu-es-150x60" --by-generation --generation-limit 150 --sort score --speed 2
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank" --sort score --speed 4
 ```
 
-Replay curated GPU ES:
+Export an exact-pygame 4x GIF:
 
 ```powershell
-uv run --no-sync python -m f1rl.replay "artifacts\highlights\full-generation-reel-20260605\gpu-es-2000x150" --by-generation --generation-limit 150 --sort score --speed 2
+uv run --no-sync python -m f1rl.replay "artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz" --export-gif "artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif" --speed 4 --gif-fps 12
 ```
 
 CPU evolution smoke:
@@ -227,24 +320,21 @@ Keep root clean:
 - Keep only small demo media in root when directly referenced by README.
 - Archive old root documents under `archive/`.
 
-Current local artifact policy after RL1 cleanup:
+Current local artifact policy after V2 cleanup:
 
-- Keep curated replay telemetry and GIFs local under `artifacts\highlights`.
-- Keep bulk runs, datasets, checkpoints, and old artifacts compressed on `D:`.
-- Keep the full `12k` GPU ES replay set on `D:` only; local GPU ES is the reduced `6 x 150 = 900` trace stratified set.
+- Keep curated V2 final replay telemetry, calibration summaries, manifests, and GIFs local under `artifacts\highlights\v2-fastf1-final-20260606`.
+- Keep bulk V2 runs, datasets, checkpoints, calibration trees, superseded highlights, and old artifacts compressed on `D:`.
+- Keep legacy RL1 highlights and full GPU ES replay sets on `D:` only unless explicitly restored for comparison.
 
 Current local highlight split:
 
 | Set | Files | Size |
 |---|---:|---:|
-| CPU ES telemetry | 907 | `0.43 GB` |
-| GPU ES telemetry, reduced local stratified set | 907 | `0.65 GB` |
-| RL telemetry | 1005 | `1.55 GB` |
-| All local highlights, including GIFs | 2830 | `2.70 GB` |
+| V2 final ES/learned telemetry, calibration summaries, and GIFs | 1017 | `1.97 GB` |
 
 Important archive directory:
 
-`D:\f1-rl-artifacts\archives\rl1-postgoal-20260605`
+`D:\f1-rl-artifacts\archives\physics-v2-20260606`
 
 Important verified archives:
 
@@ -253,6 +343,7 @@ Important verified archives:
 - `artifacts-runs-20260605.tar.zst`: bulk run artifacts, `8.06 GB`.
 - `artifacts-learned-20260605.tar.zst`: learned checkpoints/evals, `4.90 GB`.
 - `artifacts-datasets-20260605.tar.zst`: transition datasets, `0.14 GB`.
+- `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`: V2 bulk archive excluding the current local final highlight tree.
 
 ## Root Documentation Policy
 

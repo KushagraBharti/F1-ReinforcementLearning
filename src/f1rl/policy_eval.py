@@ -71,8 +71,8 @@ def evaluate_policy(
     seed: int,
     device: str,
 ) -> dict[str, Any]:
-    if physics_model != "v1":
-        raise ValueError("Current learned-policy eval only supports physics_model='v1'.")
+    if physics_model not in {"v1", "v2"}:
+        raise ValueError("physics_model must be one of: v1, v2")
     torch_device = torch.device(device if device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu"))
     actor, normalizer, metadata = load_policy_checkpoint(policy, device=torch_device)
     sim_config = SimConfig(
@@ -80,6 +80,7 @@ def evaluate_policy(
         action_mode="continuous",
         action_set="racing",
         observation_profile=observation_profile,
+        physics_model=physics_model,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     trace_rows: list[dict[str, Any]] = []
@@ -155,6 +156,8 @@ def evaluate_policy(
         "policy_metadata": metadata,
         "output_dir": str(output_dir),
         "physics_model": physics_model,
+        "physics_version": sim_config.physics_version,
+        "physics_calibration_id": sim_config.physics_calibration_id,
         "sim_config": dataclass_to_dict(sim_config),
         "deterministic": deterministic,
         "normal_start": normal_start,
@@ -174,6 +177,9 @@ def evaluate_policy(
     manifest = {
         "kind": "f1rl_policy_eval_manifest",
         "backend": "cpu_policy_eval",
+        "physics_model": physics_model,
+        "physics_version": sim_config.physics_version,
+        "physics_calibration_id": sim_config.physics_calibration_id,
         "trace_count": len(trace_rows),
         "traces": trace_rows,
     }

@@ -11,10 +11,11 @@ from pathlib import Path
 import numpy as np
 
 from f1rl.calibration import REFERENCE_CSV, load_targets
-from f1rl.config import ARTIFACTS_DIR, SimConfig
+from f1rl.config import ARTIFACTS_DIR, PHYSICS_MODELS, SimConfig
 from f1rl.geometry import sample_polyline_at, wrap_radians
 from f1rl.sim import MonzaSim
 from f1rl.telemetry import REWARD_COMPONENT_KEYS, StepTelemetry, TelemetryWriter
+from f1rl.track_sections import section_for_progress
 
 
 @dataclass(slots=True)
@@ -35,6 +36,10 @@ class ReferenceProfile:
         wrapped = float(distance_m % self.distance_max_m)
         return float(np.interp(wrapped, self.distance_m, self.speed_kph))
 
+    def time_at(self, distance_m: float) -> float:
+        clamped = float(np.clip(distance_m, float(self.distance_m[0]), self.distance_max_m))
+        return float(np.interp(clamped, self.distance_m, self.time_s))
+
     def throttle_at(self, distance_m: float) -> float:
         wrapped = float(distance_m % self.distance_max_m)
         return float(np.interp(wrapped, self.distance_m, self.throttle))
@@ -54,6 +59,29 @@ class ReferencePose:
     speed_kph: float
     throttle: float
     brake: float
+
+
+V2_REFERENCE_LOOKAHEAD_BASE_M = 16.0
+V2_REFERENCE_LOOKAHEAD_SPEED_SCALE = 0.10
+V2_REFERENCE_LATERAL_GAIN = 0.60
+V2_REFERENCE_SPEED_SCALE = 1.04
+V2_REFERENCE_SPEED_MARGIN_KPH = 10.0
+V2_REFERENCE_LATERAL_PENALTY_KPH_PER_M = 7.0
+V2_REFERENCE_HEADING_PENALTY_KPH_PER_RAD = 55.0
+V2_REFERENCE_BRAKE_GAIN_KPH = 42.0
+V2_REFERENCE_THROTTLE_GAIN_KPH = 38.0
+V2_REFERENCE_LATERAL_RECOVERY_BRAKE = 0.025
+V2_REFERENCE_SPEED_CAPS_KPH = {
+    "start_finish_straight": 376.0,
+    "rettifilo_chicane": 146.0,
+    "curva_grande_roggia_run": 336.0,
+    "roggia_chicane": 163.0,
+    "lesmo_1": 221.0,
+    "lesmo_2_serraglio": 228.0,
+    "ascari_approach": 341.0,
+    "ascari_chicane": 186.0,
+    "parabolica_finish": 224.0,
+}
 
 
 def parse_timedelta_seconds(value: str) -> float:
@@ -249,6 +277,8 @@ def run_reference_ghost(*, seed: int, telemetry: bool = True, profile_path: Path
 
 
 def pure_pursuit_controls(sim: MonzaSim, profile: ReferenceProfile) -> tuple[float, float, float]:
+    if sim.config.physics_model == "v2":
+        return v2_reference_controls(sim, profile)
     progress_m = sim.state.monotonic_progress_m
     speed_kph = sim.state.speed_mps * 3.6
     lookahead_m = float(np.clip(35.0 + speed_kph * 0.33, 45.0, 165.0))
@@ -278,11 +308,78 @@ def pure_pursuit_controls(sim: MonzaSim, profile: ReferenceProfile) -> tuple[flo
     return throttle, brake, steer
 
 
+def v2_reference_controls(sim: MonzaSim, profile: ReferenceProfile) -> tuple[float, float, float]:
+    progress_m = sim.state.monotonic_progress_m
+    speed_kph = sim.state.speed_mps * 3.6
+    _, _, _, signed_lateral_error_m = sim._track_errors()
+
+    lookahead_m = float(
+        np.clip(
+            V2_REFERENCE_LOOKAHEAD_BASE_M
+            + speed_kph * V2_REFERENCE_LOOKAHEAD_SPEED_SCALE
+            - abs(signed_lateral_error_m) * 1.2,
+            14.0,
+            95.0,
+        )
+    )
+    target = centerline_point_at(sim, progress_m + lookahead_m)
+    dx = float(target[0] - sim.state.x)
+    dy = float(target[1] - sim.state.y)
+    pursuit_error = wrap_radians(float(np.arctan2(-dy, dx)) - sim.state.heading_rad)
+    lateral_correction = float(
+        np.arctan2(
+            V2_REFERENCE_LATERAL_GAIN * signed_lateral_error_m,
+            max(sim.state.speed_mps, 8.0),
+        )
+    )
+    steer_error = pursuit_error + lateral_correction
+    steer = float(np.clip(steer_error / np.deg2rad(sim.config.car.max_steer_deg), -1.0, 1.0))
+
+    profile_scale = profile.distance_max_m / sim.track.length_m
+    reference_speed_kph = min(
+        profile.speed_at((progress_m + ahead_m) * profile_scale)
+        for ahead_m in (0.0, 45.0, 90.0, 140.0, 210.0, 300.0)
+    )
+    section_name = section_for_progress(progress_m).name
+    section_cap_kph = V2_REFERENCE_SPEED_CAPS_KPH.get(section_name, 260.0)
+    target_speed_kph = min(
+        reference_speed_kph * V2_REFERENCE_SPEED_SCALE + V2_REFERENCE_SPEED_MARGIN_KPH,
+        section_cap_kph,
+    )
+    target_speed_kph -= max(0.0, abs(signed_lateral_error_m) - 3.0) * V2_REFERENCE_LATERAL_PENALTY_KPH_PER_M
+    target_speed_kph -= abs(pursuit_error) * V2_REFERENCE_HEADING_PENALTY_KPH_PER_RAD
+    target_speed_kph = float(np.clip(target_speed_kph, 55.0, 350.0))
+
+    speed_error_kph = target_speed_kph - speed_kph
+    if speed_error_kph > 5.0 and abs(pursuit_error) < 0.8 and abs(signed_lateral_error_m) < 8.0:
+        throttle = float(np.clip(speed_error_kph / V2_REFERENCE_THROTTLE_GAIN_KPH, 0.10, 1.0))
+        brake = 0.0
+    elif speed_error_kph < -1.5:
+        throttle = 0.0
+        brake = float(np.clip(-speed_error_kph / V2_REFERENCE_BRAKE_GAIN_KPH, 0.04, 1.0))
+    else:
+        throttle = 0.10 if abs(pursuit_error) < 0.35 and abs(signed_lateral_error_m) < 5.0 else 0.0
+        brake = 0.0
+
+    if abs(signed_lateral_error_m) > 7.0:
+        throttle = 0.0
+        brake = max(
+            brake,
+            min(0.35, V2_REFERENCE_LATERAL_RECOVERY_BRAKE * abs(signed_lateral_error_m)),
+        )
+    return throttle, brake, steer
+
+
 def run_reference_control(
-    *, seed: int, steps: int, telemetry: bool = True, profile_path: Path = REFERENCE_CSV
+    *,
+    seed: int,
+    steps: int,
+    telemetry: bool = True,
+    profile_path: Path = REFERENCE_CSV,
+    physics_model: str = "v1",
 ) -> Path | None:
     profile = load_reference_profile(profile_path)
-    sim = MonzaSim(SimConfig(max_steps=steps, no_progress_limit_steps=600))
+    sim = MonzaSim(SimConfig(max_steps=steps, no_progress_limit_steps=600, physics_model=physics_model))
     sim.reset(seed=seed)
     sim.state.speed_mps = profile.speed_at(0.0) / 3.6
     writer = TelemetryWriter(ARTIFACTS_DIR, mode="reference-control", seed=seed, lap_length_m=sim.track.length_m) if telemetry else None
@@ -319,6 +416,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--steps", type=int, default=7200)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--profile", type=Path, default=REFERENCE_CSV)
+    parser.add_argument("--physics-model", choices=sorted(PHYSICS_MODELS), default="v1")
     parser.add_argument("--no-telemetry", action="store_true")
     return parser.parse_args(argv)
 
@@ -333,6 +431,7 @@ def main(argv: list[str] | None = None) -> int:
             steps=args.steps,
             telemetry=not args.no_telemetry,
             profile_path=args.profile,
+            physics_model=args.physics_model,
         )
     return 0
 

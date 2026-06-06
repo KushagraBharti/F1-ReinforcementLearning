@@ -736,6 +736,59 @@ def test_gpu_fused_controller_backend_writes_verified_artifacts(tmp_path: Path) 
 
 @pytest.mark.skipif(
     not torch.cuda.is_available() or not warp_status().cuda_available,
+    reason="Fused GPU V2 evolution smoke requires CUDA and Warp CUDA support",
+)
+def test_gpu_fused_v2_controller_backend_uses_persistent_kernel_and_verifies(tmp_path: Path) -> None:
+    output_dir = run_evolution_search(
+        output_dir=tmp_path / "gpu-fused-v2-controller",
+        config=EvolutionSearchConfig(
+            backend="gpu",
+            gpu_device="cuda",
+            gpu_engine="fused",
+            gpu_dtype="float32",
+            gpu_static_batch_size=4,
+            gpu_collision_mode="exact_grid",
+            gpu_cpu_replay_top_k=2,
+            physics_model="v2",
+            action_set="straight",
+            observation_profile="base",
+            max_steps=8,
+            population=4,
+            generations=1,
+            elite_count=1,
+            random_immigrants=0,
+            seed=109,
+            top_k=2,
+            workers=1,
+            genome_type="controller",
+            scoring_profiles=("max_progress", "clean_exit"),
+        ),
+        gates=EvolutionGates(target_progress_m=506.0, terminate_at_target_progress=False),
+        start_progress_m=500.0,
+        start_speed_kph=60.0,
+    )
+
+    attempts = _attempt_rows(output_dir / "attempts.jsonl")
+    summary = json.loads((output_dir / "evolution_summary.json").read_text(encoding="utf-8"))
+    generation = summary["generation_summaries"][0]
+    manifest = json.loads((output_dir / "selected_telemetry" / "manifest.json").read_text(encoding="utf-8"))
+
+    assert len(attempts) == 4
+    assert generation["physics_model"] == "v2"
+    assert generation["physics_version"].startswith("physics_v2.")
+    assert generation["gpu_engine"] == "fused"
+    assert generation["gpu_kernel_backend"] == "warp_persistent_controller_open"
+    assert generation["gpu_parity_status"] == "passed"
+    assert generation["gpu_cpu_top_replay_reason_mismatches"] == 0
+    assert generation["gpu_cpu_top_replay_valid_lap_mismatches"] == 0
+    assert any(row.get("physics_model") == "v2" for row in attempts)
+    assert manifest["physics_model"] == "v2"
+    assert manifest["trace_count"] == 2
+    assert load_steps(Path(manifest["traces"][0]["path"]))
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available() or not warp_status().cuda_available,
     reason="Fused GPU production-mode smoke requires CUDA and Warp CUDA support",
 )
 def test_gpu_fused_production_mode_skips_default_replay_and_telemetry(tmp_path: Path) -> None:

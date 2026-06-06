@@ -25,6 +25,7 @@ from torch.distributions import Normal
 from f1rl.config import (
     ARTIFACTS_DIR,
     MONZA_LENGTH_METERS,
+    PHYSICS_MODELS,
     SimConfig,
     build_sim_config,
     dataclass_to_dict,
@@ -66,6 +67,7 @@ class GpuPPOConfig:
     max_grad_norm: float = 0.5
     hidden_size: int = 128
     max_steps: int = 6000
+    physics_model: str = "v1"
     observation_profile: str = "racing_v2"
     continuous_action_scheme: str = "drive_brake"
     start_speed_kph: float = 0.0
@@ -451,6 +453,7 @@ def train_gpu_ppo(config: GpuPPOConfig) -> Path:
     run_dir.mkdir(parents=True, exist_ok=True)
     sim_config = build_sim_config(
         max_steps=config.max_steps,
+        physics_model=config.physics_model,
         action_mode="continuous",
         continuous_action_scheme=config.continuous_action_scheme,
         observation_profile=config.observation_profile,
@@ -585,6 +588,9 @@ def train_gpu_ppo(config: GpuPPOConfig) -> Path:
         "dtype": config.dtype,
         "torch_version": torch.__version__,
         "torch_cuda_version": torch.version.cuda,
+        "physics_model": sim_config.physics_model,
+        "physics_version": sim_config.physics_version,
+        "physics_calibration_id": sim_config.physics_calibration_id,
         "compile_policy_requested": policy.compile_requested,
         "compile_policy_enabled": policy.compile_enabled,
         "compile_policy_error": policy.compile_error,
@@ -677,6 +683,9 @@ def evaluate_policy_on_cpu(
     best_progress = max((summary["final_progress_m"] for summary in summaries), default=0.0)
     return {
         "backend": "cpu_replay",
+        "physics_model": sim_config.physics_model,
+        "physics_version": sim_config.physics_version,
+        "physics_calibration_id": sim_config.physics_calibration_id,
         "episodes": summaries,
         "best_progress_m": best_progress,
         "completed_laps": sum(1 for summary in summaries if summary["completed_lap"]),
@@ -709,6 +718,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-grad-norm", type=float, default=0.5)
     parser.add_argument("--hidden-size", type=int, default=128)
     parser.add_argument("--max-steps", type=int, default=6000)
+    parser.add_argument("--physics-model", choices=sorted(PHYSICS_MODELS), default="v1")
     parser.add_argument("--observation-profile", default="racing_v2")
     parser.add_argument("--continuous-action-scheme", default="drive_brake")
     parser.add_argument("--start-speed-kph", type=float, default=0.0)
@@ -746,6 +756,7 @@ def main(argv: list[str] | None = None) -> int:
             max_grad_norm=max(0.0, args.max_grad_norm),
             hidden_size=max(16, args.hidden_size),
             max_steps=max(1, args.max_steps),
+            physics_model=args.physics_model,
             observation_profile=args.observation_profile,
             continuous_action_scheme=args.continuous_action_scheme,
             start_speed_kph=max(0.0, args.start_speed_kph),

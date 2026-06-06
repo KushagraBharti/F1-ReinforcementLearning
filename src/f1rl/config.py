@@ -73,6 +73,59 @@ class CarParams:
 
 
 @dataclass(slots=True)
+class PhysicsV2Params:
+    calibration_id: str = "monza_2022_2024_fastf1_multilap_v2_manual_balance_fix"
+    version: str = "physics_v2.0.10-fastf1-manual-balance-fix"
+    max_steer_deg: float = 20.0
+    steer_response: float = 8.0
+    steering_speed_sensitivity: float = 0.000445
+    front_weight_distribution: float = 0.46
+    cg_height_m: float = 0.32
+    track_width_m: float = 1.60
+    front_axle_distance_m: float = 1.72
+    rear_axle_distance_m: float = 1.88
+    front_cornering_stiffness_n_per_rad: float = 197_000.0
+    rear_cornering_stiffness_n_per_rad: float = 161_000.0
+    front_peak_mu: float = 3.28
+    rear_peak_mu: float = 3.12
+    mechanical_grip_low_speed_scale: float = 0.1925
+    mechanical_grip_high_speed_scale: float = 0.70
+    mechanical_grip_transition_mps: float = 80.0
+    tire_shape_c: float = 1.35
+    slip_angle_peak_deg: float = 9.5
+    rear_slip_steer_coupling: float = 0.15
+    post_peak_falloff: float = 0.270
+    load_sensitivity: float = 0.065
+    aero_downforce_n_per_mps2: float = 6.35
+    aero_balance_front: float = 0.49
+    engine_power_w: float = 792_000.0
+    drivetrain_efficiency: float = 0.88
+    power_min_speed_mps: float = 18.0
+    max_drive_g: float = 2.42
+    max_brake_g: float = 3.015
+    brake_bias_front: float = 0.57
+    brake_lock_threshold: float = 0.90
+    brake_lock_min_speed_mps: float = 28.0
+    brake_lock_steer_loss: float = 0.45
+    drag_coefficient: float = 0.00082
+    rolling_resistance_mps2: float = 0.23
+    max_speed_mps: float = 97.5
+    gear_ratios: tuple[float, ...] = (4.45, 2.61, 2.06, 1.59, 1.41, 1.22, 1.08, 0.963)
+    final_drive_ratio: float = 4.6
+    wheel_radius_m: float = 0.335
+    idle_rpm: float = 4_000.0
+    shift_up_rpm: float = 11_500.0
+    shift_down_rpm: float = 7_600.0
+    max_rpm: float = 13_500.0
+    torque_peak_rpm: float = 10_500.0
+    torque_peak_nm: float = 560.0
+    torque_low_rpm_factor: float = 0.72
+    torque_high_rpm_factor: float = 0.88
+    tire_scrub_drag: float = 1.20
+    surface_mu: float = 1.0
+
+
+@dataclass(slots=True)
 class RewardConfig:
     progress_scale: float = 0.08
     finish_bonus: float = 100.0
@@ -189,6 +242,9 @@ class AssistConfig:
 class SimConfig:
     track_path: Path = MONZA_ASSET_DIR / "track_spec.npz"
     car_image: Path = IMAGES_DIR / "ferrari.png"
+    physics_model: str = "v1"
+    physics_version: str = "physics_v1.0.0"
+    physics_calibration_id: str | None = None
     max_steps: int = 3600
     action_mode: str = "discrete"
     action_set: str = "legacy"
@@ -202,9 +258,23 @@ class SimConfig:
     launch_guard_throttle: float = 0.22
     lookahead_m: tuple[float, ...] = (40.0, 90.0, 160.0, 280.0)
     car: CarParams = field(default_factory=CarParams)
+    physics_v2: PhysicsV2Params = field(default_factory=PhysicsV2Params)
     sensors: SensorConfig = field(default_factory=SensorConfig)
     reward: RewardConfig = field(default_factory=RewardConfig)
     assist: AssistConfig = field(default_factory=AssistConfig)
+
+    def __post_init__(self) -> None:
+        if self.physics_model not in PHYSICS_MODELS:
+            valid = ", ".join(sorted(PHYSICS_MODELS))
+            raise ValueError(f"physics_model must be one of: {valid}.")
+        if self.physics_model == "v2":
+            if self.physics_version == "physics_v1.0.0":
+                self.physics_version = self.physics_v2.version
+            if self.physics_calibration_id is None:
+                self.physics_calibration_id = self.physics_v2.calibration_id
+        else:
+            if self.physics_calibration_id is None:
+                self.physics_calibration_id = None
 
 
 def build_reward_config(overrides: dict[str, float | None] | None = None) -> RewardConfig:
@@ -287,6 +357,7 @@ def disable_training_assists(config: SimConfig) -> SimConfig:
 
 def build_sim_config(
     *,
+    physics_model: str = "v1",
     max_steps: int = 3600,
     action_mode: str = "discrete",
     action_set: str = "legacy",
@@ -298,6 +369,9 @@ def build_sim_config(
     reward_overrides: dict[str, float | None] | None = None,
     assist_overrides: dict[str, bool | float | None] | None = None,
 ) -> SimConfig:
+    if physics_model not in PHYSICS_MODELS:
+        valid = ", ".join(sorted(PHYSICS_MODELS))
+        raise ValueError(f"physics_model must be one of: {valid}.")
     if action_mode not in ACTION_MODES:
         valid = ", ".join(sorted(ACTION_MODES))
         raise ValueError(f"action_mode must be one of: {valid}.")
@@ -308,7 +382,11 @@ def build_sim_config(
     if observation_profile not in OBSERVATION_PROFILES:
         valid = ", ".join(sorted(OBSERVATION_PROFILES))
         raise ValueError(f"Unknown observation profile {observation_profile!r}; expected one of: {valid}")
+    physics_v2 = PhysicsV2Params()
     return SimConfig(
+        physics_model=physics_model,
+        physics_version="physics_v1.0.0" if physics_model == "v1" else physics_v2.version,
+        physics_calibration_id=None if physics_model == "v1" else physics_v2.calibration_id,
         max_steps=max_steps,
         action_mode=action_mode,
         action_set=action_set,
@@ -317,6 +395,7 @@ def build_sim_config(
         launch_guard_progress_m=launch_guard_progress_m,
         launch_guard_min_speed_kph=launch_guard_min_speed_kph,
         launch_guard_throttle=launch_guard_throttle,
+        physics_v2=physics_v2,
         reward=build_reward_config(reward_overrides),
         assist=build_assist_config(assist_overrides),
     )
@@ -365,6 +444,7 @@ ActionSpec = tuple[str, float, float, float]
 DriveSpec = tuple[str, float, float]
 SteerSpec = tuple[str, float]
 DEFAULT_ACTION_SET = "legacy"
+PHYSICS_MODELS = frozenset({"v1", "v2"})
 ACTION_MODES = frozenset({"continuous", "discrete", "multidiscrete"})
 CONTINUOUS_ACTION_SCHEMES = frozenset({"drive_brake", "exclusive_throttle_bias", "throttle_bias"})
 OBSERVATION_PROFILES = frozenset({"base", "brake", "guidance", "racing", "racing_release", "racing_v2", "learned_policy_v1"})

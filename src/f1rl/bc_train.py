@@ -156,6 +156,9 @@ def train_bc(
         "observation_profile": data.manifest.get("observation_profile"),
         "observation_dim": int(obs.shape[1]),
         "observation_feature_schema": data.manifest.get("observation_feature_schema"),
+        "physics_model": data.manifest.get("physics_model", "v1"),
+        "physics_version": data.manifest.get("physics_version"),
+        "physics_calibration_id": data.manifest.get("physics_calibration_id"),
         "device": str(torch_device),
         "epochs": epochs,
         "batch_size": batch_size,
@@ -213,13 +216,32 @@ def train_bc(
             }
             metrics_file.write(json.dumps(row) + "\n")
             checkpoint_path = output_dir / "checkpoints" / f"bc_epoch_{epoch:04d}.pt"
-            metadata = {"stage": "bc", "epoch": epoch, "metrics": row, "config": config}
+            metadata = {
+                "stage": "bc",
+                "epoch": epoch,
+                "metrics": row,
+                "config": config,
+                "physics_model": config["physics_model"],
+                "physics_version": config["physics_version"],
+                "physics_calibration_id": config["physics_calibration_id"],
+            }
             save_policy_checkpoint(checkpoint_path, actor=actor, normalizer=normalizer, metadata=metadata)
             if val_loss <= best_val:
                 best_val = val_loss
                 save_policy_checkpoint(best_path, actor=actor, normalizer=normalizer, metadata=metadata)
     final_path = output_dir / "final_policy.pt"
-    save_policy_checkpoint(final_path, actor=actor, normalizer=normalizer, metadata={"stage": "bc", "config": config})
+    save_policy_checkpoint(
+        final_path,
+        actor=actor,
+        normalizer=normalizer,
+        metadata={
+            "stage": "bc",
+            "config": config,
+            "physics_model": config["physics_model"],
+            "physics_version": config["physics_version"],
+            "physics_calibration_id": config["physics_calibration_id"],
+        },
+    )
     print(f"bc_train_complete best_policy={best_path} best_val_loss={best_val:.6f}")
     return best_path
 

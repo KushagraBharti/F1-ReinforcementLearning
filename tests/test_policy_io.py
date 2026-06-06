@@ -55,6 +55,31 @@ def test_resolve_ppo_eval_config_loads_run_metadata_from_checkpoint(tmp_path: Pa
     assert resolved.sim_config.assist.overspeed_turn_in_terminate is True
 
 
+def test_resolve_ppo_eval_config_preserves_v2_physics_metadata(tmp_path: Path) -> None:
+    run_root = tmp_path / "v2-metadata-run"
+    checkpoint = run_root / "checkpoints" / "ppo_monza_100_steps.zip"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"fake")
+    sim_config = SimConfig(
+        max_steps=123,
+        action_mode="continuous",
+        observation_profile="base",
+        physics_model="v2",
+    )
+    (run_root / "run_metadata.json").write_text(
+        json.dumps({"run_id": run_root.name, "sim_config": dataclass_to_dict(sim_config)}),
+        encoding="utf-8",
+    )
+
+    resolved = resolve_ppo_eval_config(checkpoint, max_steps=777, metadata_mode="require", root=tmp_path)
+
+    assert resolved.sim_config.max_steps == 777
+    assert resolved.sim_config.physics_model == "v2"
+    assert resolved.sim_config.physics_version == sim_config.physics_version
+    assert resolved.sim_config.physics_calibration_id == sim_config.physics_calibration_id
+    assert resolved.sim_config.physics_calibration_id == resolved.sim_config.physics_v2.calibration_id
+
+
 def test_resolve_ppo_eval_config_accepts_artifact_directory(tmp_path: Path) -> None:
     run_root = tmp_path / "artifact-run"
     best_model = run_root / "best_model.zip"

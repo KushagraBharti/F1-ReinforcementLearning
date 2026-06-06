@@ -18,6 +18,7 @@ def test_gpu_ppo_cpu_device_smoke_writes_policy_and_cpu_eval(tmp_path: Path) -> 
             n_epochs=1,
             hidden_size=32,
             max_steps=8,
+            physics_model="v2",
             observation_profile="base",
             start_speed_kph=60.0,
             target_progress_m=6.0,
@@ -32,8 +33,11 @@ def test_gpu_ppo_cpu_device_smoke_writes_policy_and_cpu_eval(tmp_path: Path) -> 
 
     assert training_summary["backend"] == "gpu_ppo"
     assert training_summary["device"] == "cpu"
+    assert training_summary["physics_model"] == "v2"
+    assert training_summary["physics_version"].startswith("physics_v2.")
     assert training_summary["timesteps_collected"] == 8
     assert Path(training_summary["policy_path"]).exists()
     assert cpu_eval["backend"] == "cpu_replay"
+    assert cpu_eval["physics_model"] == "v2"
     assert cpu_eval["episodes"]
     assert (run_dir / "cpu_eval_episode_000.jsonl").exists()

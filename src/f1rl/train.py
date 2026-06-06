@@ -18,6 +18,7 @@ from f1rl.config import (
     ARTIFACTS_DIR,
     CONTINUOUS_ACTION_SCHEMES,
     OBSERVATION_PROFILES,
+    PHYSICS_MODELS,
     ActionSpec,
     actions_for_action_set,
     build_sim_config,
@@ -55,11 +56,13 @@ def _make_env(
     launch_guard_min_speed_kph: float = 0.0,
     launch_guard_throttle: float = 0.22,
     assist_overrides: dict[str, bool | float | None] | None = None,
+    physics_model: str = "v1",
 ):
     def factory() -> MonzaEnv:
         env = MonzaEnv(
             build_sim_config(
                 max_steps=max_steps,
+                physics_model=physics_model,
                 action_mode=action_mode,
                 action_set=action_set,
                 continuous_action_scheme=continuous_action_scheme,
@@ -749,6 +752,7 @@ def run_model_rollouts(
     launch_guard_min_speed_kph: float = 0.0,
     launch_guard_throttle: float = 0.22,
     assist_overrides: dict[str, bool | float | None] | None = None,
+    physics_model: str = "v1",
 ) -> list[dict[str, Any]]:
     metrics: list[dict[str, Any]] = []
     curriculum_sampler: CurriculumSampler | None = None
@@ -758,6 +762,7 @@ def run_model_rollouts(
         sim = MonzaSim(
             build_sim_config(
                 max_steps=max_steps,
+                physics_model=physics_model,
                 action_mode=action_mode,
                 action_set=action_set,
                 continuous_action_scheme=continuous_action_scheme,
@@ -814,6 +819,7 @@ class TrainingEvalCallback:
         launch_guard_min_speed_kph: float = 0.0,
         launch_guard_throttle: float = 0.22,
         assist_overrides: dict[str, bool | float | None] | None = None,
+        physics_model: str = "v1",
     ) -> None:
         try:
             from stable_baselines3.common.callbacks import BaseCallback
@@ -847,6 +853,7 @@ class TrainingEvalCallback:
         self.launch_guard_min_speed_kph = launch_guard_min_speed_kph
         self.launch_guard_throttle = launch_guard_throttle
         self.assist_overrides = assist_overrides
+        self.physics_model = physics_model
         self.last_eval = 0
         self.best_score = float("-inf")
         self.eval_root = run_root / "eval"
@@ -883,6 +890,7 @@ class TrainingEvalCallback:
             launch_guard_min_speed_kph=self.launch_guard_min_speed_kph,
             launch_guard_throttle=self.launch_guard_throttle,
             assist_overrides=self.assist_overrides,
+            physics_model=self.physics_model,
         )
         mean_reward = sum(row["total_reward"] for row in metrics) / len(metrics)
         mean_progress = sum(row["best_progress_m"] for row in metrics) / len(metrics)
@@ -908,6 +916,7 @@ class TrainingEvalCallback:
                 launch_guard_min_speed_kph=self.launch_guard_min_speed_kph,
                 launch_guard_throttle=self.launch_guard_throttle,
                 assist_overrides=self.assist_overrides,
+                physics_model=self.physics_model,
             )
         segment_source = segment_metrics or metrics
         segment_rate = sum(1 for row in segment_source if row["segment_complete"]) / len(segment_source)
@@ -1023,6 +1032,7 @@ def run_training(
     sde_sample_freq: int = -1,
     reward_scaffold_final_scale: float | None = None,
     reward_scaffold_schedule_timesteps: int | None = None,
+    physics_model: str = "v1",
 ) -> Path:
     try:
         from stable_baselines3 import PPO
@@ -1096,6 +1106,7 @@ def run_training(
             launch_guard_min_speed_kph,
             launch_guard_throttle,
             assist_overrides,
+            physics_model=physics_model,
         ),
         n_envs=n_envs,
         seed=seed,
@@ -1248,6 +1259,7 @@ def run_training(
             launch_guard_min_speed_kph=launch_guard_min_speed_kph,
             launch_guard_throttle=launch_guard_throttle,
             assist_overrides=assist_overrides,
+            physics_model=physics_model,
         )
         callbacks.append(
             eval_callback.callback
@@ -1256,12 +1268,28 @@ def run_training(
     metadata_scaffold_initial_scale = (
         1.0 if metadata_scaffold_initial_value is None else float(metadata_scaffold_initial_value)
     )
+    metadata_sim_config = build_sim_config(
+        max_steps=max_steps,
+        physics_model=physics_model,
+        action_mode=action_mode,
+        action_set=action_set,
+        continuous_action_scheme=continuous_action_scheme,
+        observation_profile=observation_profile,
+        launch_guard_progress_m=launch_guard_progress_m,
+        launch_guard_min_speed_kph=launch_guard_min_speed_kph,
+        launch_guard_throttle=launch_guard_throttle,
+        reward_overrides=reward_overrides,
+        assist_overrides=assist_overrides,
+    )
     metadata = {
         "run_id": run_id,
         "seed": seed,
         "timesteps": timesteps,
         "n_envs": n_envs,
         "max_steps": max_steps,
+        "physics_model": metadata_sim_config.physics_model,
+        "physics_version": metadata_sim_config.physics_version,
+        "physics_calibration_id": metadata_sim_config.physics_calibration_id,
         "device": resolved_device,
         "require_gpu": require_gpu,
         "vec_env": vec_env,
@@ -1304,13 +1332,9 @@ def run_training(
         "normalize_reward_clip": normalize_reward_clip,
         "initial_checkpoint": str(initial_checkpoint_path),
         "ppo_hyperparams": ppo_hyperparams,
-        "scaffold_rewards_enabled": scaffold_rewards_enabled(
-            build_sim_config(max_steps=max_steps, reward_overrides=reward_overrides).reward
-        ),
-        "training_assists_enabled": training_assists_enabled(
-            build_sim_config(max_steps=max_steps, assist_overrides=assist_overrides).assist
-        ),
-        "assist_config": dataclass_to_dict(build_sim_config(max_steps=max_steps, assist_overrides=assist_overrides).assist),
+        "scaffold_rewards_enabled": scaffold_rewards_enabled(metadata_sim_config.reward),
+        "training_assists_enabled": training_assists_enabled(metadata_sim_config.assist),
+        "assist_config": dataclass_to_dict(metadata_sim_config.assist),
         "scaffold_reward_schedule": {
             "initial_scale": metadata_scaffold_initial_scale,
             "final_scale": reward_scaffold_final_scale,
@@ -1318,20 +1342,7 @@ def run_training(
         }
         if reward_scaffold_final_scale is not None
         else None,
-        "sim_config": dataclass_to_dict(
-            build_sim_config(
-                max_steps=max_steps,
-                action_mode=action_mode,
-                action_set=action_set,
-                continuous_action_scheme=continuous_action_scheme,
-                observation_profile=observation_profile,
-                launch_guard_progress_m=launch_guard_progress_m,
-                launch_guard_min_speed_kph=launch_guard_min_speed_kph,
-                launch_guard_throttle=launch_guard_throttle,
-                reward_overrides=reward_overrides,
-                assist_overrides=assist_overrides,
-            )
-        ),
+        "sim_config": dataclass_to_dict(metadata_sim_config),
     }
     metadata_path = run_root / "run_metadata.json"
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
@@ -1380,6 +1391,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--n-envs", type=int, default=2)
     parser.add_argument("--max-steps", type=int, default=600)
+    parser.add_argument("--physics-model", choices=sorted(PHYSICS_MODELS), default="v1")
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--require-gpu", action="store_true")
     parser.add_argument("--checkpoint-every", type=int, default=256)
@@ -1531,6 +1543,7 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
         n_envs=args.n_envs,
         max_steps=args.max_steps,
+        physics_model=args.physics_model,
         device=args.device,
         checkpoint_every=args.checkpoint_every,
         require_gpu=args.require_gpu,

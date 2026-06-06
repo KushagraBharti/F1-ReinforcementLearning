@@ -218,6 +218,239 @@ def _physics_kernel() -> Any:
 
 
 @lru_cache(maxsize=1)
+def _physics_v2_kernel() -> Any:
+    wp = require_warp()
+
+    @wp.kernel
+    def _apply_physics_v2_kernel(
+        x_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        y_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        heading_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        speed_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        yaw_rate_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        steering_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        elapsed_steps_in: wp.array(dtype=wp.int64),  # type: ignore[valid-type]
+        throttle_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        brake_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        steer_in: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        x_out: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        y_out: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        heading_out: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        speed_out: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        yaw_rate_out: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        steering_out: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        elapsed_steps_out: wp.array(dtype=wp.int64),  # type: ignore[valid-type]
+        movement_x0: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        movement_y0: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        movement_x1: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        movement_y1: wp.array(dtype=wp.float32),  # type: ignore[valid-type]
+        mass: float,
+        wheelbase_m: float,
+        max_steer_rad: float,
+        steer_response: float,
+        steering_speed_sensitivity: float,
+        dt: float,
+        meters_per_pixel: float,
+        front_weight_distribution: float,
+        cg_height_m: float,
+        track_width_m: float,
+        front_axle_distance_m: float,
+        rear_axle_distance_m: float,
+        front_cornering_stiffness_n_per_rad: float,
+        rear_cornering_stiffness_n_per_rad: float,
+        front_peak_mu: float,
+        rear_peak_mu: float,
+        mechanical_grip_low_speed_scale: float,
+        mechanical_grip_high_speed_scale: float,
+        mechanical_grip_transition_mps: float,
+        tire_shape_c: float,
+        slip_angle_peak_rad: float,
+        rear_slip_steer_coupling: float,
+        post_peak_falloff: float,
+        load_sensitivity: float,
+        aero_downforce_n_per_mps2: float,
+        aero_balance_front: float,
+        engine_power_w: float,
+        drivetrain_efficiency: float,
+        power_min_speed_mps: float,
+        max_drive_g: float,
+        max_brake_g: float,
+        brake_lock_threshold: float,
+        brake_lock_min_speed_mps: float,
+        brake_lock_steer_loss: float,
+        drag_coefficient: float,
+        rolling_resistance_mps2: float,
+        max_speed_mps: float,
+        gear_ratio_1: float,
+        gear_ratio_2: float,
+        gear_ratio_3: float,
+        gear_ratio_4: float,
+        gear_ratio_5: float,
+        gear_ratio_6: float,
+        gear_ratio_7: float,
+        gear_ratio_8: float,
+        final_drive_ratio: float,
+        wheel_radius_m: float,
+        idle_rpm: float,
+        shift_up_rpm: float,
+        max_rpm: float,
+        torque_peak_rpm: float,
+        torque_low_rpm_factor: float,
+        torque_high_rpm_factor: float,
+        tire_scrub_drag: float,
+        surface_mu: float,
+    ) -> None:
+        tid = wp.tid()
+        throttle = wp.clamp(throttle_in[tid], 0.0, 1.0)
+        brake = wp.clamp(brake_in[tid], 0.0, 1.0)
+        steer = wp.clamp(steer_in[tid], -1.0, 1.0)
+        vehicle_mass = wp.float32(mass)
+        wheelbase = wp.float32(wheelbase_m)
+        max_steer = wp.float32(max_steer_rad)
+        steer_rate = wp.float32(steer_response)
+        steer_speed_sensitivity = wp.float32(steering_speed_sensitivity)
+        step_dt = wp.float32(dt)
+        meters_px = wp.float32(meters_per_pixel)
+        gravity = wp.float32(9.81)
+
+        speed = wp.max(speed_in[tid], 0.0)
+        target_steering = steer * max_steer
+        steering_delta = target_steering - steering_in[tid]
+        max_delta = steer_rate * step_dt
+        steering = steering_in[tid] + wp.clamp(steering_delta, -max_delta, max_delta)
+
+        wheel_lock = brake >= brake_lock_threshold and speed >= brake_lock_min_speed_mps
+        effective_steering = steering / (1.0 + steer_speed_sensitivity * speed * speed)
+        if wheel_lock:
+            effective_steering = effective_steering * wp.clamp(1.0 - brake_lock_steer_loss * brake, 0.0, 1.0)
+
+        previous_lateral_accel = wp.abs(speed * yaw_rate_in[tid])
+        static_front = vehicle_mass * gravity * front_weight_distribution
+        static_rear = vehicle_mass * gravity - static_front
+        aero_total = aero_downforce_n_per_mps2 * speed * speed
+        aero_front = aero_total * aero_balance_front
+        aero_rear = aero_total - aero_front
+        lateral_unload = wp.abs(vehicle_mass * previous_lateral_accel * cg_height_m / wp.max(track_width_m, 1.0e-6)) * 0.12
+        front_load = wp.max(static_front + aero_front - lateral_unload * front_weight_distribution, 1.0)
+        rear_load = wp.max(static_rear + aero_rear - lateral_unload * (1.0 - front_weight_distribution), 1.0)
+        reference_front = vehicle_mass * gravity * front_weight_distribution
+        reference_rear = vehicle_mass * gravity - reference_front
+
+        front_slip = wp.atan2(yaw_rate_in[tid] * front_axle_distance_m, wp.max(wp.abs(speed), 1.0e-3)) - effective_steering
+        rear_slip = (
+            -wp.atan2(yaw_rate_in[tid] * rear_axle_distance_m, wp.max(wp.abs(speed), 1.0e-3))
+            - rear_slip_steer_coupling * effective_steering
+        )
+        grip_t = wp.clamp(speed / wp.max(mechanical_grip_transition_mps, 1.0e-6), 0.0, 1.0)
+        grip_smooth_t = grip_t * grip_t * (3.0 - 2.0 * grip_t)
+        mechanical_grip_scale = mechanical_grip_low_speed_scale + (
+            mechanical_grip_high_speed_scale - mechanical_grip_low_speed_scale
+        ) * grip_smooth_t
+
+        front_load_ratio = front_load / wp.max(reference_front, 1.0)
+        front_mu = front_peak_mu * mechanical_grip_scale * surface_mu * (
+            1.0 - load_sensitivity * wp.max(front_load_ratio - 1.0, 0.0)
+        )
+        front_peak_force = wp.max(front_mu * front_load, 1.0)
+        front_b = front_cornering_stiffness_n_per_rad / wp.max(tire_shape_c * front_peak_force, 1.0e-6)
+        front_force = front_peak_force * wp.sin(tire_shape_c * wp.atan(front_b * front_slip))
+        front_excess = wp.clamp((wp.abs(front_slip) - slip_angle_peak_rad) / wp.max(slip_angle_peak_rad, 1.0e-6), 0.0, 1.0)
+        front_force = front_force * (1.0 - post_peak_falloff * front_excess)
+
+        rear_load_ratio = rear_load / wp.max(reference_rear, 1.0)
+        rear_mu = rear_peak_mu * mechanical_grip_scale * surface_mu * (
+            1.0 - load_sensitivity * wp.max(rear_load_ratio - 1.0, 0.0)
+        )
+        rear_peak_force = wp.max(rear_mu * rear_load, 1.0)
+        rear_b = rear_cornering_stiffness_n_per_rad / wp.max(tire_shape_c * rear_peak_force, 1.0e-6)
+        rear_force = rear_peak_force * wp.sin(tire_shape_c * wp.atan(rear_b * rear_slip))
+        rear_excess = wp.clamp((wp.abs(rear_slip) - slip_angle_peak_rad) / wp.max(slip_angle_peak_rad, 1.0e-6), 0.0, 1.0)
+        rear_force = rear_force * (1.0 - post_peak_falloff * rear_excess)
+
+        lateral_capacity = (wp.abs(front_force) + wp.abs(rear_force)) / wp.max(vehicle_mass, 1.0e-6)
+        requested_yaw = speed / wp.max(wheelbase, 1.0e-6) * wp.tan(effective_steering)
+        requested_lateral = wp.abs(speed * requested_yaw)
+        lateral_accel = wp.min(requested_lateral, lateral_capacity)
+        yaw_rate = wp.float32(0.0)
+        if wp.abs(effective_steering) > 1.0e-6 and speed > 1.0e-6:
+            yaw_rate = wp.sign(requested_yaw) * lateral_accel / wp.max(speed, 1.0e-6)
+        else:
+            lateral_accel = wp.float32(0.0)
+
+        total_peak_force = (
+            front_peak_mu * mechanical_grip_scale * front_load * surface_mu
+            + rear_peak_mu * mechanical_grip_scale * rear_load * surface_mu
+        )
+        total_accel_limit = total_peak_force / wp.max(vehicle_mass, 1.0e-6)
+        longitudinal_capacity = wp.sqrt(wp.max(total_accel_limit * total_accel_limit - lateral_accel * lateral_accel, 0.0))
+
+        wheel_rps = wp.max(speed, 0.0) / wp.max(2.0 * 3.141592653589793 * wheel_radius_m, 1.0e-6)
+        rpm = wp.clamp(wheel_rps * gear_ratio_1 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+        if rpm > shift_up_rpm:
+            rpm = wp.clamp(wheel_rps * gear_ratio_2 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+            if rpm > shift_up_rpm:
+                rpm = wp.clamp(wheel_rps * gear_ratio_3 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+                if rpm > shift_up_rpm:
+                    rpm = wp.clamp(wheel_rps * gear_ratio_4 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+                    if rpm > shift_up_rpm:
+                        rpm = wp.clamp(wheel_rps * gear_ratio_5 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+                        if rpm > shift_up_rpm:
+                            rpm = wp.clamp(wheel_rps * gear_ratio_6 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+                            if rpm > shift_up_rpm:
+                                rpm = wp.clamp(wheel_rps * gear_ratio_7 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+                                if rpm > shift_up_rpm:
+                                    rpm = wp.clamp(wheel_rps * gear_ratio_8 * final_drive_ratio * 60.0, idle_rpm, max_rpm)
+
+        torque_factor = wp.float32(1.0)
+        if rpm <= torque_peak_rpm:
+            low_span = wp.max(torque_peak_rpm - idle_rpm, 1.0)
+            low_ratio = wp.clamp((rpm - idle_rpm) / low_span, 0.0, 1.0)
+            torque_factor = torque_low_rpm_factor + (1.0 - torque_low_rpm_factor) * low_ratio
+        else:
+            high_span = wp.max(max_rpm - torque_peak_rpm, 1.0)
+            high_ratio = wp.clamp((rpm - torque_peak_rpm) / high_span, 0.0, 1.0)
+            torque_factor = 1.0 - (1.0 - torque_high_rpm_factor) * high_ratio
+
+        power_force = engine_power_w * drivetrain_efficiency * torque_factor / wp.max(speed, power_min_speed_mps)
+        drive_limit = wp.min(wp.min(max_drive_g * gravity, power_force / wp.max(vehicle_mass, 1.0e-6)), longitudinal_capacity)
+        brake_limit = wp.min(max_brake_g * gravity, longitudinal_capacity)
+        if wheel_lock:
+            brake_limit = brake_limit * 0.82
+
+        longitudinal_accel = throttle * drive_limit - brake * brake_limit
+        if throttle <= 1.0e-6 and brake <= 1.0e-6:
+            longitudinal_accel = longitudinal_accel - rolling_resistance_mps2
+        longitudinal_accel = longitudinal_accel - drag_coefficient * speed * speed
+        tire_saturation = wp.clamp(wp.max(wp.abs(front_slip), wp.abs(rear_slip)) / wp.max(slip_angle_peak_rad, 1.0e-6), 0.0, 3.0)
+        longitudinal_accel = longitudinal_accel - tire_scrub_drag * wp.max(tire_saturation - 1.0, 0.0)
+        speed = wp.clamp(speed + longitudinal_accel * step_dt, 0.0, max_speed_mps)
+
+        pi = 3.141592653589793
+        two_pi = 6.283185307179586
+        heading_raw = heading_in[tid] + yaw_rate * step_dt + pi
+        heading = heading_raw - two_pi * wp.floor(heading_raw / two_pi) - pi
+        distance_px = speed * step_dt / wp.max(meters_px, 1.0e-6)
+        dx = wp.cos(heading) * distance_px
+        dy = -wp.sin(heading) * distance_px
+        x_new = x_in[tid] + dx
+        y_new = y_in[tid] + dy
+
+        x_out[tid] = x_new
+        y_out[tid] = y_new
+        heading_out[tid] = heading
+        speed_out[tid] = speed
+        yaw_rate_out[tid] = yaw_rate
+        steering_out[tid] = steering
+        elapsed_steps_out[tid] = elapsed_steps_in[tid] + wp.int64(1)
+        movement_x0[tid] = x_in[tid]
+        movement_y0[tid] = y_in[tid]
+        movement_x1[tid] = x_new
+        movement_y1[tid] = y_new
+
+    return _apply_physics_v2_kernel
+
+
+@lru_cache(maxsize=1)
 def _local_projection_kernel() -> Any:
     wp = require_warp()
 
@@ -1512,6 +1745,10 @@ def apply_physics_warp_batch(
 ) -> tuple[GpuCarBatch, GpuMovementBatch]:
     """Apply one fused Warp physics step matching ``apply_physics_batch`` for CUDA float32 batches."""
 
+    if params.physics_model not in {"v1", "v2"}:
+        raise ValueError(f"Unsupported Warp fused physics_model={params.physics_model!r}.")
+    if params.physics_model == "v2" and len(params.v2_gear_ratios) != 8:
+        raise ValueError("Warp fused V2 physics expects exactly 8 gear ratios.")
     if state.dtype != torch.float32:
         raise ValueError("Warp fused physics currently supports torch.float32 state tensors only.")
     if state.device.type != "cuda":
@@ -1537,49 +1774,135 @@ def apply_physics_warp_batch(
     movement_y1 = torch.empty_like(state.y)
 
     wp = require_warp()
-    wp.launch(
-        _physics_kernel(),
-        dim=int(state.x.numel()),
-        inputs=[
-            wp.from_torch(state.x),
-            wp.from_torch(state.y),
-            wp.from_torch(state.heading_rad),
-            wp.from_torch(state.speed_mps),
-            wp.from_torch(state.steering),
-            wp.from_torch(state.elapsed_steps),
-            wp.from_torch(throttle),
-            wp.from_torch(brake),
-            wp.from_torch(steer),
-            wp.from_torch(x_out),
-            wp.from_torch(y_out),
-            wp.from_torch(heading_out),
-            wp.from_torch(speed_out),
-            wp.from_torch(yaw_rate_out),
-            wp.from_torch(steering_out),
-            wp.from_torch(elapsed_steps_out),
-            wp.from_torch(movement_x0),
-            wp.from_torch(movement_y0),
-            wp.from_torch(movement_x1),
-            wp.from_torch(movement_y1),
-            float(params.wheelbase_m),
-            float(params.max_steer_deg) * 3.141592653589793 / 180.0,
-            float(params.steer_response),
-            float(params.engine_accel_mps2),
-            float(params.brake_accel_mps2),
-            float(params.drag_coefficient),
-            float(params.rolling_resistance_mps2),
-            float(params.grip_g),
-            float(params.aero_grip_per_mps2),
-            float(params.max_grip_g),
-            float(params.max_drive_g),
-            float(params.max_brake_g),
-            float(params.steering_speed_sensitivity),
-            float(params.max_speed_mps),
-            float(params.dt),
-            float(meters_per_pixel.detach().cpu().item()),
-        ],
-        device=_warp_device_for_torch(state.device),
-    )
+    if params.physics_model == "v2":
+        gear_ratios = tuple(float(value) for value in params.v2_gear_ratios)
+        wp.launch(
+            _physics_v2_kernel(),
+            dim=int(state.x.numel()),
+            inputs=[
+                wp.from_torch(state.x),
+                wp.from_torch(state.y),
+                wp.from_torch(state.heading_rad),
+                wp.from_torch(state.speed_mps),
+                wp.from_torch(state.yaw_rate_rps),
+                wp.from_torch(state.steering),
+                wp.from_torch(state.elapsed_steps),
+                wp.from_torch(throttle),
+                wp.from_torch(brake),
+                wp.from_torch(steer),
+                wp.from_torch(x_out),
+                wp.from_torch(y_out),
+                wp.from_torch(heading_out),
+                wp.from_torch(speed_out),
+                wp.from_torch(yaw_rate_out),
+                wp.from_torch(steering_out),
+                wp.from_torch(elapsed_steps_out),
+                wp.from_torch(movement_x0),
+                wp.from_torch(movement_y0),
+                wp.from_torch(movement_x1),
+                wp.from_torch(movement_y1),
+                float(params.mass),
+                float(params.wheelbase_m),
+                float(params.v2_max_steer_deg) * 3.141592653589793 / 180.0,
+                float(params.v2_steer_response),
+                float(params.v2_steering_speed_sensitivity),
+                float(params.dt),
+                float(meters_per_pixel.detach().cpu().item()),
+                float(params.v2_front_weight_distribution),
+                float(params.v2_cg_height_m),
+                float(params.v2_track_width_m),
+                float(params.v2_front_axle_distance_m),
+                float(params.v2_rear_axle_distance_m),
+                float(params.v2_front_cornering_stiffness_n_per_rad),
+                float(params.v2_rear_cornering_stiffness_n_per_rad),
+                float(params.v2_front_peak_mu),
+                float(params.v2_rear_peak_mu),
+                float(params.v2_mechanical_grip_low_speed_scale),
+                float(params.v2_mechanical_grip_high_speed_scale),
+                float(params.v2_mechanical_grip_transition_mps),
+                float(params.v2_tire_shape_c),
+                math.radians(float(params.v2_slip_angle_peak_deg)),
+                float(params.v2_rear_slip_steer_coupling),
+                float(params.v2_post_peak_falloff),
+                float(params.v2_load_sensitivity),
+                float(params.v2_aero_downforce_n_per_mps2),
+                float(params.v2_aero_balance_front),
+                float(params.v2_engine_power_w),
+                float(params.v2_drivetrain_efficiency),
+                float(params.v2_power_min_speed_mps),
+                float(params.v2_max_drive_g),
+                float(params.v2_max_brake_g),
+                float(params.v2_brake_lock_threshold),
+                float(params.v2_brake_lock_min_speed_mps),
+                float(params.v2_brake_lock_steer_loss),
+                float(params.v2_drag_coefficient),
+                float(params.v2_rolling_resistance_mps2),
+                float(params.v2_max_speed_mps),
+                gear_ratios[0],
+                gear_ratios[1],
+                gear_ratios[2],
+                gear_ratios[3],
+                gear_ratios[4],
+                gear_ratios[5],
+                gear_ratios[6],
+                gear_ratios[7],
+                float(params.v2_final_drive_ratio),
+                float(params.v2_wheel_radius_m),
+                float(params.v2_idle_rpm),
+                float(params.v2_shift_up_rpm),
+                float(params.v2_max_rpm),
+                float(params.v2_torque_peak_rpm),
+                float(params.v2_torque_low_rpm_factor),
+                float(params.v2_torque_high_rpm_factor),
+                float(params.v2_tire_scrub_drag),
+                float(params.v2_surface_mu),
+            ],
+            device=_warp_device_for_torch(state.device),
+        )
+    else:
+        wp.launch(
+            _physics_kernel(),
+            dim=int(state.x.numel()),
+            inputs=[
+                wp.from_torch(state.x),
+                wp.from_torch(state.y),
+                wp.from_torch(state.heading_rad),
+                wp.from_torch(state.speed_mps),
+                wp.from_torch(state.steering),
+                wp.from_torch(state.elapsed_steps),
+                wp.from_torch(throttle),
+                wp.from_torch(brake),
+                wp.from_torch(steer),
+                wp.from_torch(x_out),
+                wp.from_torch(y_out),
+                wp.from_torch(heading_out),
+                wp.from_torch(speed_out),
+                wp.from_torch(yaw_rate_out),
+                wp.from_torch(steering_out),
+                wp.from_torch(elapsed_steps_out),
+                wp.from_torch(movement_x0),
+                wp.from_torch(movement_y0),
+                wp.from_torch(movement_x1),
+                wp.from_torch(movement_y1),
+                float(params.wheelbase_m),
+                float(params.max_steer_deg) * 3.141592653589793 / 180.0,
+                float(params.steer_response),
+                float(params.engine_accel_mps2),
+                float(params.brake_accel_mps2),
+                float(params.drag_coefficient),
+                float(params.rolling_resistance_mps2),
+                float(params.grip_g),
+                float(params.aero_grip_per_mps2),
+                float(params.max_grip_g),
+                float(params.max_drive_g),
+                float(params.max_brake_g),
+                float(params.steering_speed_sensitivity),
+                float(params.max_speed_mps),
+                float(params.dt),
+                float(meters_per_pixel.detach().cpu().item()),
+            ],
+            device=_warp_device_for_torch(state.device),
+        )
 
     return (
         GpuCarBatch(
@@ -2790,6 +3113,56 @@ def _persistent_controller_open_rollout_kernel() -> Any:
         steering_speed_sensitivity: float,
         max_speed_mps: float,
         dt: float,
+        physics_model_v2: bool,
+        mass: float,
+        v2_front_weight_distribution: float,
+        v2_cg_height_m: float,
+        v2_track_width_m: float,
+        v2_front_axle_distance_m: float,
+        v2_rear_axle_distance_m: float,
+        v2_front_cornering_stiffness_n_per_rad: float,
+        v2_rear_cornering_stiffness_n_per_rad: float,
+        v2_front_peak_mu: float,
+        v2_rear_peak_mu: float,
+        v2_mechanical_grip_low_speed_scale: float,
+        v2_mechanical_grip_high_speed_scale: float,
+        v2_mechanical_grip_transition_mps: float,
+        v2_tire_shape_c: float,
+        v2_slip_angle_peak_rad: float,
+        v2_rear_slip_steer_coupling: float,
+        v2_post_peak_falloff: float,
+        v2_load_sensitivity: float,
+        v2_aero_downforce_n_per_mps2: float,
+        v2_aero_balance_front: float,
+        v2_engine_power_w: float,
+        v2_drivetrain_efficiency: float,
+        v2_power_min_speed_mps: float,
+        v2_max_drive_g: float,
+        v2_max_brake_g: float,
+        v2_brake_lock_threshold: float,
+        v2_brake_lock_min_speed_mps: float,
+        v2_brake_lock_steer_loss: float,
+        v2_drag_coefficient: float,
+        v2_rolling_resistance_mps2: float,
+        v2_max_speed_mps: float,
+        v2_gear_ratio_1: float,
+        v2_gear_ratio_2: float,
+        v2_gear_ratio_3: float,
+        v2_gear_ratio_4: float,
+        v2_gear_ratio_5: float,
+        v2_gear_ratio_6: float,
+        v2_gear_ratio_7: float,
+        v2_gear_ratio_8: float,
+        v2_final_drive_ratio: float,
+        v2_wheel_radius_m: float,
+        v2_idle_rpm: float,
+        v2_shift_up_rpm: float,
+        v2_max_rpm: float,
+        v2_torque_peak_rpm: float,
+        v2_torque_low_rpm_factor: float,
+        v2_torque_high_rpm_factor: float,
+        v2_tire_scrub_drag: float,
+        v2_surface_mu: float,
         speed_target_min_kph: float,
         speed_target_max_kph: float,
         speed_target_heading_scale: float,
@@ -3082,34 +3455,183 @@ def _persistent_controller_open_rollout_kernel() -> Any:
                 steering_delta = target_steering - state_steering[row]
                 max_delta = steer_response * dt
                 steering = state_steering[row] + wp.clamp(steering_delta, -max_delta, max_delta)
-                effective_steering = steering / (1.0 + steering_speed_sensitivity * speed * speed)
-                grip = wp.clamp(grip_g + aero_grip_per_mps2 * speed * speed, grip_g, max_grip_g)
-                max_total_accel = grip * gravity
-                requested_lateral = wp.float32(0.0)
-                if wp.abs(effective_steering) > 1.0e-6 and speed > 1.0e-6:
+                yaw_rate = wp.float32(0.0)
+                if physics_model_v2:
+                    vehicle_mass = wp.float32(mass)
+                    effective_steering = steering / (1.0 + steering_speed_sensitivity * speed * speed)
+                    wheel_lock = brake >= v2_brake_lock_threshold and speed >= v2_brake_lock_min_speed_mps
+                    if wheel_lock:
+                        effective_steering = effective_steering * wp.clamp(1.0 - v2_brake_lock_steer_loss * brake, 0.0, 1.0)
+
+                    previous_lateral_accel = wp.abs(speed * state_yaw_rate_rps[row])
+                    static_front = vehicle_mass * gravity * v2_front_weight_distribution
+                    static_rear = vehicle_mass * gravity - static_front
+                    aero_total = v2_aero_downforce_n_per_mps2 * speed * speed
+                    aero_front = aero_total * v2_aero_balance_front
+                    aero_rear = aero_total - aero_front
+                    lateral_unload = (
+                        wp.abs(vehicle_mass * previous_lateral_accel * v2_cg_height_m / wp.max(v2_track_width_m, 1.0e-6))
+                        * 0.12
+                    )
+                    front_load = wp.max(static_front + aero_front - lateral_unload * v2_front_weight_distribution, 1.0)
+                    rear_load = wp.max(static_rear + aero_rear - lateral_unload * (1.0 - v2_front_weight_distribution), 1.0)
+                    reference_front = vehicle_mass * gravity * v2_front_weight_distribution
+                    reference_rear = vehicle_mass * gravity - reference_front
+
+                    front_slip = (
+                        wp.atan2(state_yaw_rate_rps[row] * v2_front_axle_distance_m, wp.max(wp.abs(speed), 1.0e-3))
+                        - effective_steering
+                    )
+                    rear_slip = -wp.atan2(
+                        state_yaw_rate_rps[row] * v2_rear_axle_distance_m,
+                        wp.max(wp.abs(speed), 1.0e-3),
+                    ) - v2_rear_slip_steer_coupling * effective_steering
+                    grip_t = wp.clamp(speed / wp.max(v2_mechanical_grip_transition_mps, 1.0e-6), 0.0, 1.0)
+                    grip_smooth_t = grip_t * grip_t * (3.0 - 2.0 * grip_t)
+                    mechanical_grip_scale = v2_mechanical_grip_low_speed_scale + (
+                        v2_mechanical_grip_high_speed_scale - v2_mechanical_grip_low_speed_scale
+                    ) * grip_smooth_t
+
+                    front_load_ratio = front_load / wp.max(reference_front, 1.0)
+                    front_mu = v2_front_peak_mu * mechanical_grip_scale * v2_surface_mu * (
+                        1.0 - v2_load_sensitivity * wp.max(front_load_ratio - 1.0, 0.0)
+                    )
+                    front_peak_force = wp.max(front_mu * front_load, 1.0)
+                    front_b = v2_front_cornering_stiffness_n_per_rad / wp.max(v2_tire_shape_c * front_peak_force, 1.0e-6)
+                    front_force = front_peak_force * wp.sin(v2_tire_shape_c * wp.atan(front_b * front_slip))
+                    front_excess = wp.clamp(
+                        (wp.abs(front_slip) - v2_slip_angle_peak_rad) / wp.max(v2_slip_angle_peak_rad, 1.0e-6),
+                        0.0,
+                        1.0,
+                    )
+                    front_force = front_force * (1.0 - v2_post_peak_falloff * front_excess)
+
+                    rear_load_ratio = rear_load / wp.max(reference_rear, 1.0)
+                    rear_mu = v2_rear_peak_mu * mechanical_grip_scale * v2_surface_mu * (
+                        1.0 - v2_load_sensitivity * wp.max(rear_load_ratio - 1.0, 0.0)
+                    )
+                    rear_peak_force = wp.max(rear_mu * rear_load, 1.0)
+                    rear_b = v2_rear_cornering_stiffness_n_per_rad / wp.max(v2_tire_shape_c * rear_peak_force, 1.0e-6)
+                    rear_force = rear_peak_force * wp.sin(v2_tire_shape_c * wp.atan(rear_b * rear_slip))
+                    rear_excess = wp.clamp(
+                        (wp.abs(rear_slip) - v2_slip_angle_peak_rad) / wp.max(v2_slip_angle_peak_rad, 1.0e-6),
+                        0.0,
+                        1.0,
+                    )
+                    rear_force = rear_force * (1.0 - v2_post_peak_falloff * rear_excess)
+
+                    lateral_capacity = (wp.abs(front_force) + wp.abs(rear_force)) / wp.max(vehicle_mass, 1.0e-6)
                     requested_yaw = speed / wp.max(wheelbase_m, 1.0e-6) * wp.tan(effective_steering)
                     requested_lateral = wp.abs(speed * requested_yaw)
-                lateral_accel = wp.min(requested_lateral, max_total_accel)
-                longitudinal_capacity = wp.sqrt(wp.max(max_total_accel * max_total_accel - lateral_accel * lateral_accel, 0.0))
-                if longitudinal_capacity < wp.float32(1.0e-2):
-                    longitudinal_capacity = wp.float32(0.0)
-                drive_static_limit = wp.min(engine_accel_mps2, max_drive_g * gravity)
-                brake_static_limit = wp.min(brake_accel_mps2, max_brake_g * gravity)
-                drive_limit = wp.min(drive_static_limit, longitudinal_capacity)
-                brake_limit = wp.min(brake_static_limit, longitudinal_capacity)
-                longitudinal_accel = throttle * drive_limit - brake * brake_limit
-                if throttle <= 1.0e-6 and brake <= 1.0e-6:
-                    longitudinal_accel = longitudinal_accel - rolling_resistance_mps2
-                longitudinal_accel = longitudinal_accel - drag_coefficient * speed * speed
-                speed = wp.clamp(speed + longitudinal_accel * dt, 0.0, max_speed_mps)
-                yaw_rate = wp.float32(0.0)
-                if wp.abs(effective_steering) > 1.0e-6 and speed > 1.0e-6:
-                    yaw_rate = speed / wp.max(wheelbase_m, 1.0e-6) * wp.tan(effective_steering)
-                    lateral_accel_after = wp.abs(speed * yaw_rate)
-                    grip_after = wp.clamp(grip_g + aero_grip_per_mps2 * speed * speed, grip_g, max_grip_g)
-                    max_lateral_after = grip_after * gravity
-                    if lateral_accel_after > max_lateral_after:
-                        yaw_rate = yaw_rate * max_lateral_after / wp.max(lateral_accel_after, 1.0e-6)
+                    lateral_accel = wp.min(requested_lateral, lateral_capacity)
+                    if wp.abs(effective_steering) > 1.0e-6 and speed > 1.0e-6:
+                        yaw_rate = wp.sign(requested_yaw) * lateral_accel / wp.max(speed, 1.0e-6)
+                    else:
+                        lateral_accel = wp.float32(0.0)
+
+                    total_peak_force = (
+                        v2_front_peak_mu * mechanical_grip_scale * front_load * v2_surface_mu
+                        + v2_rear_peak_mu * mechanical_grip_scale * rear_load * v2_surface_mu
+                    )
+                    total_accel_limit = total_peak_force / wp.max(vehicle_mass, 1.0e-6)
+                    longitudinal_capacity = wp.sqrt(
+                        wp.max(total_accel_limit * total_accel_limit - lateral_accel * lateral_accel, 0.0)
+                    )
+
+                    wheel_rps = wp.max(speed, 0.0) / wp.max(2.0 * pi * v2_wheel_radius_m, 1.0e-6)
+                    rpm = wp.clamp(wheel_rps * v2_gear_ratio_1 * v2_final_drive_ratio * 60.0, v2_idle_rpm, v2_max_rpm)
+                    if rpm > v2_shift_up_rpm:
+                        rpm = wp.clamp(wheel_rps * v2_gear_ratio_2 * v2_final_drive_ratio * 60.0, v2_idle_rpm, v2_max_rpm)
+                        if rpm > v2_shift_up_rpm:
+                            rpm = wp.clamp(wheel_rps * v2_gear_ratio_3 * v2_final_drive_ratio * 60.0, v2_idle_rpm, v2_max_rpm)
+                            if rpm > v2_shift_up_rpm:
+                                rpm = wp.clamp(wheel_rps * v2_gear_ratio_4 * v2_final_drive_ratio * 60.0, v2_idle_rpm, v2_max_rpm)
+                                if rpm > v2_shift_up_rpm:
+                                    rpm = wp.clamp(
+                                        wheel_rps * v2_gear_ratio_5 * v2_final_drive_ratio * 60.0,
+                                        v2_idle_rpm,
+                                        v2_max_rpm,
+                                    )
+                                    if rpm > v2_shift_up_rpm:
+                                        rpm = wp.clamp(
+                                            wheel_rps * v2_gear_ratio_6 * v2_final_drive_ratio * 60.0,
+                                            v2_idle_rpm,
+                                            v2_max_rpm,
+                                        )
+                                        if rpm > v2_shift_up_rpm:
+                                            rpm = wp.clamp(
+                                                wheel_rps * v2_gear_ratio_7 * v2_final_drive_ratio * 60.0,
+                                                v2_idle_rpm,
+                                                v2_max_rpm,
+                                            )
+                                            if rpm > v2_shift_up_rpm:
+                                                rpm = wp.clamp(
+                                                    wheel_rps * v2_gear_ratio_8 * v2_final_drive_ratio * 60.0,
+                                                    v2_idle_rpm,
+                                                    v2_max_rpm,
+                                                )
+
+                    torque_factor = wp.float32(1.0)
+                    if rpm <= v2_torque_peak_rpm:
+                        low_span = wp.max(v2_torque_peak_rpm - v2_idle_rpm, 1.0)
+                        low_ratio = wp.clamp((rpm - v2_idle_rpm) / low_span, 0.0, 1.0)
+                        torque_factor = v2_torque_low_rpm_factor + (1.0 - v2_torque_low_rpm_factor) * low_ratio
+                    else:
+                        high_span = wp.max(v2_max_rpm - v2_torque_peak_rpm, 1.0)
+                        high_ratio = wp.clamp((rpm - v2_torque_peak_rpm) / high_span, 0.0, 1.0)
+                        torque_factor = 1.0 - (1.0 - v2_torque_high_rpm_factor) * high_ratio
+
+                    power_force = v2_engine_power_w * v2_drivetrain_efficiency * torque_factor / wp.max(
+                        speed,
+                        v2_power_min_speed_mps,
+                    )
+                    drive_limit = wp.min(
+                        wp.min(v2_max_drive_g * gravity, power_force / wp.max(vehicle_mass, 1.0e-6)),
+                        longitudinal_capacity,
+                    )
+                    brake_limit = wp.min(v2_max_brake_g * gravity, longitudinal_capacity)
+                    if wheel_lock:
+                        brake_limit = brake_limit * 0.82
+
+                    longitudinal_accel = throttle * drive_limit - brake * brake_limit
+                    if throttle <= 1.0e-6 and brake <= 1.0e-6:
+                        longitudinal_accel = longitudinal_accel - v2_rolling_resistance_mps2
+                    longitudinal_accel = longitudinal_accel - v2_drag_coefficient * speed * speed
+                    tire_saturation = wp.clamp(
+                        wp.max(wp.abs(front_slip), wp.abs(rear_slip)) / wp.max(v2_slip_angle_peak_rad, 1.0e-6),
+                        0.0,
+                        3.0,
+                    )
+                    longitudinal_accel = longitudinal_accel - v2_tire_scrub_drag * wp.max(tire_saturation - 1.0, 0.0)
+                    speed = wp.clamp(speed + longitudinal_accel * dt, 0.0, v2_max_speed_mps)
+                else:
+                    effective_steering = steering / (1.0 + steering_speed_sensitivity * speed * speed)
+                    grip = wp.clamp(grip_g + aero_grip_per_mps2 * speed * speed, grip_g, max_grip_g)
+                    max_total_accel = grip * gravity
+                    requested_lateral = wp.float32(0.0)
+                    if wp.abs(effective_steering) > 1.0e-6 and speed > 1.0e-6:
+                        requested_yaw = speed / wp.max(wheelbase_m, 1.0e-6) * wp.tan(effective_steering)
+                        requested_lateral = wp.abs(speed * requested_yaw)
+                    lateral_accel = wp.min(requested_lateral, max_total_accel)
+                    longitudinal_capacity = wp.sqrt(wp.max(max_total_accel * max_total_accel - lateral_accel * lateral_accel, 0.0))
+                    if longitudinal_capacity < wp.float32(1.0e-2):
+                        longitudinal_capacity = wp.float32(0.0)
+                    drive_static_limit = wp.min(engine_accel_mps2, max_drive_g * gravity)
+                    brake_static_limit = wp.min(brake_accel_mps2, max_brake_g * gravity)
+                    drive_limit = wp.min(drive_static_limit, longitudinal_capacity)
+                    brake_limit = wp.min(brake_static_limit, longitudinal_capacity)
+                    longitudinal_accel = throttle * drive_limit - brake * brake_limit
+                    if throttle <= 1.0e-6 and brake <= 1.0e-6:
+                        longitudinal_accel = longitudinal_accel - rolling_resistance_mps2
+                    longitudinal_accel = longitudinal_accel - drag_coefficient * speed * speed
+                    speed = wp.clamp(speed + longitudinal_accel * dt, 0.0, max_speed_mps)
+                    if wp.abs(effective_steering) > 1.0e-6 and speed > 1.0e-6:
+                        yaw_rate = speed / wp.max(wheelbase_m, 1.0e-6) * wp.tan(effective_steering)
+                        lateral_accel_after = wp.abs(speed * yaw_rate)
+                        grip_after = wp.clamp(grip_g + aero_grip_per_mps2 * speed * speed, grip_g, max_grip_g)
+                        max_lateral_after = grip_after * gravity
+                        if lateral_accel_after > max_lateral_after:
+                            yaw_rate = yaw_rate * max_lateral_after / wp.max(lateral_accel_after, 1.0e-6)
                 heading_raw = state_heading_rad[row] + yaw_rate * dt + pi
                 heading = heading_raw - two_pi * wp.floor(heading_raw / two_pi) - pi
                 distance_px = speed * dt * inv_mpp
@@ -3478,6 +4000,8 @@ def persistent_controller_open_rollout_warp_batch(
         raise ValueError("feature_ids must be a CUDA int64 tensor.")
     if int(feature_ids.numel()) != int(controller_weights.shape[2]):
         raise ValueError("feature_ids length must match controller feature count.")
+    if params.physics_model == "v2" and len(params.v2_gear_ratios) != 8:
+        raise ValueError("Persistent Warp V2 rollout expects exactly 8 gear ratios.")
     if last_segment_idx.shape != state.x.shape or final_action_id.shape != state.x.shape:
         raise ValueError("last_segment_idx and final_action_id must match state batch shape.")
     if sim_steps_per_row.shape != state.x.shape or sim_steps_per_row.dtype != torch.int64:
@@ -3492,6 +4016,13 @@ def persistent_controller_open_rollout_warp_batch(
     sim_steps_per_row.zero_()
     wp = require_warp()
     accumulator_inputs = [wp.from_torch(getattr(accumulator, field.name)) for field in fields(GpuScoreAccumulator)]
+    gear_ratios = tuple(float(value) for value in params.v2_gear_ratios)
+    physics_v2_enabled = params.physics_model == "v2"
+    max_steer_deg = params.v2_max_steer_deg if physics_v2_enabled else params.max_steer_deg
+    steer_response = params.v2_steer_response if physics_v2_enabled else params.steer_response
+    steering_speed_sensitivity = (
+        params.v2_steering_speed_sensitivity if physics_v2_enabled else params.steering_speed_sensitivity
+    )
     wp.launch(
         _persistent_controller_open_rollout_kernel(),
         dim=state.size,
@@ -3570,8 +4101,8 @@ def persistent_controller_open_rollout_warp_batch(
             int(sim_config.no_progress_limit_steps),
             float(target_progress_m),
             float(params.wheelbase_m),
-            float(params.max_steer_deg) * math.pi / 180.0,
-            float(params.steer_response),
+            float(max_steer_deg) * math.pi / 180.0,
+            float(steer_response),
             float(params.engine_accel_mps2),
             float(params.brake_accel_mps2),
             float(params.drag_coefficient),
@@ -3581,9 +4112,59 @@ def persistent_controller_open_rollout_warp_batch(
             float(params.max_grip_g),
             float(params.max_drive_g),
             float(params.max_brake_g),
-            float(params.steering_speed_sensitivity),
+            float(steering_speed_sensitivity),
             float(params.max_speed_mps),
             float(params.dt),
+            physics_v2_enabled,
+            float(params.mass),
+            float(params.v2_front_weight_distribution),
+            float(params.v2_cg_height_m),
+            float(params.v2_track_width_m),
+            float(params.v2_front_axle_distance_m),
+            float(params.v2_rear_axle_distance_m),
+            float(params.v2_front_cornering_stiffness_n_per_rad),
+            float(params.v2_rear_cornering_stiffness_n_per_rad),
+            float(params.v2_front_peak_mu),
+            float(params.v2_rear_peak_mu),
+            float(params.v2_mechanical_grip_low_speed_scale),
+            float(params.v2_mechanical_grip_high_speed_scale),
+            float(params.v2_mechanical_grip_transition_mps),
+            float(params.v2_tire_shape_c),
+            math.radians(float(params.v2_slip_angle_peak_deg)),
+            float(params.v2_rear_slip_steer_coupling),
+            float(params.v2_post_peak_falloff),
+            float(params.v2_load_sensitivity),
+            float(params.v2_aero_downforce_n_per_mps2),
+            float(params.v2_aero_balance_front),
+            float(params.v2_engine_power_w),
+            float(params.v2_drivetrain_efficiency),
+            float(params.v2_power_min_speed_mps),
+            float(params.v2_max_drive_g),
+            float(params.v2_max_brake_g),
+            float(params.v2_brake_lock_threshold),
+            float(params.v2_brake_lock_min_speed_mps),
+            float(params.v2_brake_lock_steer_loss),
+            float(params.v2_drag_coefficient),
+            float(params.v2_rolling_resistance_mps2),
+            float(params.v2_max_speed_mps),
+            gear_ratios[0],
+            gear_ratios[1],
+            gear_ratios[2],
+            gear_ratios[3],
+            gear_ratios[4],
+            gear_ratios[5],
+            gear_ratios[6],
+            gear_ratios[7],
+            float(params.v2_final_drive_ratio),
+            float(params.v2_wheel_radius_m),
+            float(params.v2_idle_rpm),
+            float(params.v2_shift_up_rpm),
+            float(params.v2_max_rpm),
+            float(params.v2_torque_peak_rpm),
+            float(params.v2_torque_low_rpm_factor),
+            float(params.v2_torque_high_rpm_factor),
+            float(params.v2_tire_scrub_drag),
+            float(params.v2_surface_mu),
             float(sim_config.reward.speed_target_min_kph),
             float(sim_config.reward.speed_target_max_kph),
             float(sim_config.reward.speed_target_heading_scale),

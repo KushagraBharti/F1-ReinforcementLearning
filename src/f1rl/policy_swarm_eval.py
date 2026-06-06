@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from f1rl.config import LEARNED_DIR, SimConfig
+from f1rl.config import LEARNED_DIR, SimConfig, dataclass_to_dict
 from f1rl.learned_policy import load_policy_checkpoint
 from f1rl.sim import MonzaSim
 
@@ -81,8 +81,8 @@ def run_policy_swarm_eval(
     start_heading_noise_deg: float,
     start_speed_noise_kph: float,
 ) -> Path:
-    if physics_model != "v1":
-        raise ValueError("Current policy swarm eval only supports physics_model='v1'.")
+    if physics_model not in {"v1", "v2"}:
+        raise ValueError("physics_model must be one of: v1, v2")
     torch_device = torch.device(device if device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu"))
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_paths = _find_checkpoints(policy_dir, checkpoints)
@@ -93,6 +93,7 @@ def run_policy_swarm_eval(
         action_mode="continuous",
         action_set="racing",
         observation_profile=observation_profile,
+        physics_model=physics_model,
     )
     for checkpoint_index, checkpoint_path in enumerate(checkpoint_paths):
         actor, normalizer, metadata = load_policy_checkpoint(checkpoint_path, device=torch_device)
@@ -190,6 +191,9 @@ def run_policy_swarm_eval(
                 "checkpoint_index": checkpoint_index,
                 "checkpoint": str(checkpoint_path),
                 "policy_metadata": metadata,
+                "physics_model": physics_model,
+                "physics_version": sim_config.physics_version,
+                "physics_calibration_id": sim_config.physics_calibration_id,
                 "swarm_size": swarm_size,
                 "full_telemetry_count": min(swarm_size, full_telemetry_limit),
                 "valid_lap_count": len(valid_times),
@@ -201,6 +205,10 @@ def run_policy_swarm_eval(
     manifest = {
         "kind": "f1rl_policy_swarm_manifest",
         "backend": "cpu_policy_swarm_eval",
+        "physics_model": physics_model,
+        "physics_version": sim_config.physics_version,
+        "physics_calibration_id": sim_config.physics_calibration_id,
+        "sim_config": dataclass_to_dict(sim_config),
         "deterministic": deterministic,
         "start_noise": {
             "position_noise_m": start_position_noise_m,

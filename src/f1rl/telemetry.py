@@ -93,6 +93,20 @@ class StepTelemetry:
     termination_reason: str
     reward_total: float
     reward_components: dict[str, float]
+    physics_model: str = "v1"
+    physics_version: str | None = None
+    physics_calibration_id: str | None = None
+    gear: int | None = None
+    rpm: float | None = None
+    surface_mu: float | None = None
+    front_slip_angle_deg: float | None = None
+    rear_slip_angle_deg: float | None = None
+    front_load_n: float | None = None
+    rear_load_n: float | None = None
+    front_lateral_force_n: float | None = None
+    rear_lateral_force_n: float | None = None
+    tire_saturation: float | None = None
+    wheel_lock: bool | None = None
 
 
 @dataclass(slots=True)
@@ -136,6 +150,9 @@ class EpisodeSummary:
     final_ghost_gap_m: float | None
     corner_count: int
     corner_summaries: list[dict[str, float]]
+    physics_model: str = "v1"
+    physics_version: str | None = None
+    physics_calibration_id: str | None = None
 
 
 def _sector_times(
@@ -146,16 +163,21 @@ def _sector_times(
 ) -> tuple[list[float | None], list[float]]:
     if not steps:
         return [None] * sector_count, [0.0] * sector_count
+    start_distance = max(steps[0].monotonic_progress_m - max(steps[0].progress_delta_m, 0.0), 0.0)
     total_distance = max(step.monotonic_progress_m for step in steps)
-    if total_distance <= 1e-6:
+    if total_distance <= 1e-6 or total_distance <= start_distance:
         return [None] * sector_count, [0.0] * sector_count
     lap_length = lap_length_m or max(steps[-1].monotonic_progress_m, total_distance)
     thresholds = [lap_length * (idx + 1) / sector_count for idx in range(sector_count)]
     times: list[float | None] = []
     speeds: list[float] = []
     previous_time = 0.0
-    previous_distance = 0.0
+    previous_distance = start_distance
     for threshold in thresholds:
+        if threshold <= start_distance:
+            times.append(None)
+            speeds.append(0.0)
+            continue
         crossing = next((step for step in steps if step.monotonic_progress_m >= threshold), None)
         if crossing is None:
             times.append(None)
@@ -258,6 +280,7 @@ class TelemetryWriter:
             self._steps_file.close()
         elapsed = self._steps[-1].sim_time_s if self._steps else 0.0
         speeds = [step.speed_kph for step in self._steps]
+        distance_traveled_m = sum(max(step.progress_delta_m, 0.0) for step in self._steps)
         abs_deviations = [abs(step.racing_line_deviation_m) for step in self._steps]
         lateral_g_values = [abs(step.lateral_g) for step in self._steps]
         longitudinal_g_values = [step.longitudinal_g for step in self._steps]
@@ -268,6 +291,7 @@ class TelemetryWriter:
         sector_times, sector_speeds = _sector_times(self._steps, lap_length_m=self.lap_length_m)
         braking_zones = _braking_zones(self._steps)
         corner_summaries = _corner_summaries(self._steps)
+        final_step = self._steps[-1] if self._steps else None
         reward_totals = {key: 0.0 for key in REWARD_COMPONENT_KEYS}
         for step in self._steps:
             for key in REWARD_COMPONENT_KEYS:
@@ -295,7 +319,7 @@ class TelemetryWriter:
             checkpoints_reached=max((step.checkpoint_index for step in self._steps), default=0),
             checkpoints_passed=max((step.checkpoints_passed for step in self._steps), default=0),
             missed_checkpoint_count=max((step.missed_checkpoint_count for step in self._steps), default=0),
-            distance_traveled_m=self._steps[-1].monotonic_progress_m if self._steps else 0.0,
+            distance_traveled_m=float(distance_traveled_m),
             avg_speed_kph=float(sum(speeds) / len(speeds)) if speeds else 0.0,
             max_speed_kph=float(max(speeds)) if speeds else 0.0,
             collision_count=sum(1 for step in self._steps if step.collided),
@@ -319,6 +343,9 @@ class TelemetryWriter:
             final_ghost_gap_m=float(ghost_gaps[-1]) if ghost_gaps else None,
             corner_count=len(corner_summaries),
             corner_summaries=corner_summaries,
+            physics_model=final_step.physics_model if final_step is not None else "v1",
+            physics_version=final_step.physics_version if final_step is not None else None,
+            physics_calibration_id=final_step.physics_calibration_id if final_step is not None else None,
         )
         self.summary_path.write_text(json.dumps(asdict(summary), indent=2), encoding="utf-8")
         return summary

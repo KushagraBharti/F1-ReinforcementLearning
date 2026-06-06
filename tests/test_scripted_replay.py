@@ -1,8 +1,9 @@
+import argparse
 import gzip
 import json
 from pathlib import Path
 
-from f1rl.replay import ReplayControls, run_replay, run_replay_paths
+from f1rl.replay import ReplayControls, _gif_replay_times, parse_args, run_replay, run_replay_paths
 from f1rl.scripted import run_scripted
 
 
@@ -30,12 +31,31 @@ def test_replay_controls_clamp_speed_and_queue_skips() -> None:
     assert controls.take_generation_skip()
 
 
+def test_gif_replay_times_use_speed_and_include_final_frame() -> None:
+    times = _gif_replay_times(10.0, speed=4.0, fps=2)
+
+    assert times == [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
+
+
+def test_replay_export_gif_args() -> None:
+    args = parse_args(["trace.jsonl", "--export-gif", "out.gif", "--speed", "4", "--gif-fps", "12"])
+
+    assert isinstance(args, argparse.Namespace)
+    assert args.export_gif == Path("out.gif")
+    assert args.speed == 4
+    assert args.gif_fps == 12
+
+
 def test_scripted_and_replay_smoke() -> None:
-    run_scripted(steps=8, seed=11, telemetry=True)
+    run_scripted(steps=8, seed=11, telemetry=True, physics_model="v2")
     # Use the newest scripted telemetry from artifacts.
     from f1rl.config import ARTIFACTS_DIR
 
     steps_path = sorted(ARTIFACTS_DIR.glob("scripted-*/steps.jsonl"))[-1]
+    first_row = json.loads(steps_path.read_text(encoding="utf-8").splitlines()[0])
+    assert first_row["physics_model"] == "v2"
+    assert first_row["physics_version"].startswith("physics_v2.")
+    assert first_row["physics_calibration_id"]
     assert run_replay(steps_path, headless=True) == 0
 
 

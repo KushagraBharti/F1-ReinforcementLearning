@@ -11,7 +11,7 @@ import math
 import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from dataclasses import fields
+from dataclasses import fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -438,6 +438,9 @@ def _replay_row(
             "steps": len(telemetry_rows),
             "elapsed_s": final.get("sim_time_s", math.inf),
             "backend": "cpu_postcheck",
+            "physics_model": sim_config.physics_model,
+            "physics_version": sim_config.physics_version,
+            "physics_calibration_id": sim_config.physics_calibration_id,
             "postcheck_selection_reason": reason,
         }
         if telemetry_path is not None:
@@ -496,6 +499,9 @@ def _replay_row(
         "gpu_final_progress_m": row.get("final_progress_m"),
         "termination_reason": cpu_row.get("termination_reason"),
         "gpu_termination_reason": row.get("termination_reason"),
+        "physics_model": cpu_row.get("physics_model"),
+        "physics_version": cpu_row.get("physics_version"),
+        "physics_calibration_id": cpu_row.get("physics_calibration_id"),
         "path": str(telemetry_path) if telemetry_path is not None else None,
     }
     return cpu_row, manifest_row
@@ -527,6 +533,7 @@ def postcheck_evolution_run(
     cpu_rerank: bool = False,
     workers: int = 1,
     telemetry_compression: str = "gzip",
+    physics_model: str | None = None,
 ) -> Path:
     run_dir = run_dir.resolve()
     checkpoint_path = run_dir / CHECKPOINT_NAME
@@ -537,7 +544,12 @@ def postcheck_evolution_run(
         raise FileNotFoundError(f"Missing attempts for postcheck: {attempts_path}")
     checkpoint = _load_json(checkpoint_path)
     config = _config_from_mapping(dict(checkpoint.get("config", {})))
+    if physics_model is not None:
+        if physics_model not in {"v1", "v2"}:
+            raise ValueError("physics_model must be one of: v1, v2")
+        config = replace(config, physics_model=physics_model)
     gates = _gates_from_mapping(dict(checkpoint.get("gates", {})))
+    metadata_sim_config = _sim_config_for_generation(config, 0)
     state_library_raw = checkpoint.get("state_library")
     state_library = Path(str(state_library_raw)) if state_library_raw is not None else None
     attempts = _load_jsonl(attempts_path)
@@ -747,6 +759,9 @@ def postcheck_evolution_run(
         "source_run": str(run_dir),
         "telemetry_selection": "postcheck",
         "telemetry_compression": telemetry_compression,
+        "physics_model": config.physics_model,
+        "physics_version": metadata_sim_config.physics_version,
+        "physics_calibration_id": metadata_sim_config.physics_calibration_id,
         "backend": "cpu_postcheck",
         "trace_count": len(manifest_rows),
         "traces": manifest_rows,
@@ -755,6 +770,9 @@ def postcheck_evolution_run(
     summary = {
         "kind": "evolution_postcheck_summary",
         "source_run": str(run_dir),
+        "physics_model": config.physics_model,
+        "physics_version": metadata_sim_config.physics_version,
+        "physics_calibration_id": metadata_sim_config.physics_calibration_id,
         "attempts_path": str(attempts_path),
         "postchecked_attempts": str(run_dir / "postchecked_attempts.jsonl"),
         "selected_telemetry_manifest": str(telemetry_dir / "manifest.json"),
@@ -815,6 +833,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Parallel CPU workers for the compact deferred pool replay pass.",
     )
     parser.add_argument("--telemetry-compression", choices=("none", "gzip"), default="gzip")
+    parser.add_argument("--physics-model", choices=("v1", "v2"))
     return parser.parse_args(argv)
 
 
@@ -827,6 +846,7 @@ def main(argv: list[str] | None = None) -> int:
         cpu_rerank=bool(args.cpu_rerank),
         workers=max(1, int(args.workers)),
         telemetry_compression=args.telemetry_compression,
+        physics_model=args.physics_model,
     )
     summary = _load_json(summary_path)
     print(

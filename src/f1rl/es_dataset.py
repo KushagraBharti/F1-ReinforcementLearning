@@ -504,8 +504,8 @@ def export_dataset(
     balanced_buckets: bool,
     source_json: Path | None = None,
 ) -> Path:
-    if physics_model != "v1":
-        raise ValueError("Current learned-policy dataset export only supports physics_model='v1'.")
+    if physics_model not in {"v1", "v2"}:
+        raise ValueError("physics_model must be one of: v1, v2")
     payload = _load_run_payload(run_dir)
     config = _config_from_mapping(payload["config"])
     gates = _gates_from_mapping(payload["gates"])
@@ -538,6 +538,13 @@ def export_dataset(
         for source_id, row in enumerate(source_rows):
             generation = int(row.get("generation", 0))
             sim_config = _sim_config_for_generation(config, generation)
+            sim_config.physics_model = physics_model
+            if physics_model == "v2":
+                sim_config.physics_version = sim_config.physics_v2.version
+                sim_config.physics_calibration_id = sim_config.physics_v2.calibration_id
+            else:
+                sim_config.physics_version = "physics_v1.0.0"
+                sim_config.physics_calibration_id = None
             sim_config.observation_profile = observation_profile
             snapshot = _source_snapshot_for_row(row, sim_config=sim_config, config=config)
             arrays, replay_summary = _run_transition_replay(
@@ -567,6 +574,8 @@ def export_dataset(
                 "genome_hash": _genome_hash(row),
                 "lineage_root": _lineage_root(row.get("lineage", {})),
                 "physics_model": physics_model,
+                "physics_version": sim_config.physics_version,
+                "physics_calibration_id": sim_config.physics_calibration_id,
                 "sim_config_hash": sim_hash,
                 "track_hash": track_hash,
                 "snapshot": snapshot_to_dict(snapshot),
@@ -596,6 +605,8 @@ def export_dataset(
         },
         "postcheck_status": "cpu_replayed_export",
         "physics_model": physics_model,
+        "physics_version": sim_config_payloads[0].get("physics_version") if sim_config_payloads else None,
+        "physics_calibration_id": sim_config_payloads[0].get("physics_calibration_id") if sim_config_payloads else None,
         "sim_config": sim_config_payloads[0] if sim_config_payloads else None,
         "sim_config_hashes": sorted(sim_config_hashes),
         "track_hashes": sorted(track_hashes),

@@ -20,8 +20,10 @@ from f1rl.config import (
     ARTIFACTS_DIR,
     CONTINUOUS_ACTION_SCHEMES,
     OBSERVATION_PROFILES,
+    PHYSICS_MODELS,
     SimConfig,
     build_sim_config,
+    dataclass_to_dict,
     disable_scaffold_rewards,
     disable_training_assists,
     multidiscrete_action_nvec,
@@ -199,6 +201,9 @@ def _run_sim_policy(
         metrics["ppo_observation_profile"] = resolved_config.observation_profile
         metrics["ppo_continuous_action_scheme"] = resolved_config.continuous_action_scheme
         metrics["ppo_deterministic"] = ppo_deterministic
+    metrics["physics_model"] = resolved_config.physics_model
+    metrics["physics_version"] = resolved_config.physics_version
+    metrics["physics_calibration_id"] = resolved_config.physics_calibration_id
     return metrics
 
 
@@ -325,6 +330,7 @@ def run_benchmark(
     launch_guard_progress_m: float = 0.0,
     launch_guard_min_speed_kph: float = 0.0,
     launch_guard_throttle: float = 0.22,
+    physics_model: str = "v1",
     metadata_mode: str = "auto",
     disable_scaffold: bool = False,
     disable_assists: bool = False,
@@ -336,6 +342,7 @@ def run_benchmark(
     run_root.mkdir(parents=True, exist_ok=True)
     fallback_config = build_sim_config(
         max_steps=max_steps,
+        physics_model=physics_model,
         action_mode=action_mode,
         action_set=action_set,
         continuous_action_scheme=continuous_action_scheme,
@@ -382,11 +389,15 @@ def run_benchmark(
                 "device": device,
                 "telemetry": telemetry,
                 "telemetry_every": telemetry_every,
+                "physics_model": effective_config.physics_model,
+                "physics_version": effective_config.physics_version,
+                "physics_calibration_id": effective_config.physics_calibration_id,
                 "metadata_mode": metadata_mode,
                 "disable_scaffold_rewards": disable_scaffold,
                 "disable_training_assists": disable_assists,
                 "ppo_deterministic": ppo_deterministic,
                 "requested_sim_config": {
+                    "physics_model": physics_model,
                     "action_mode": action_mode,
                     "action_set": action_set,
                     "continuous_action_scheme": continuous_action_scheme,
@@ -395,6 +406,7 @@ def run_benchmark(
                     "launch_guard_min_speed_kph": launch_guard_min_speed_kph,
                     "launch_guard_throttle": launch_guard_throttle,
                 },
+                "effective_sim_config": dataclass_to_dict(effective_config),
                 "ppo_eval_config": ppo_config.report() if ppo_config is not None else None,
             },
             indent=2,
@@ -439,6 +451,9 @@ def run_benchmark(
         "run_id": run_id,
         "policies": summary_rows,
         "episodes": rows,
+        "physics_model": effective_config.physics_model,
+        "physics_version": effective_config.physics_version,
+        "physics_calibration_id": effective_config.physics_calibration_id,
         "ppo_eval_config": ppo_config.report() if ppo_config is not None else None,
         "disable_scaffold_rewards": disable_scaffold,
         "disable_training_assists": disable_assists,
@@ -470,6 +485,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--launch-guard-progress-m", type=float, default=0.0)
     parser.add_argument("--launch-guard-min-speed-kph", type=float, default=0.0)
     parser.add_argument("--launch-guard-throttle", type=float, default=0.22)
+    parser.add_argument("--physics-model", choices=sorted(PHYSICS_MODELS), default="v1")
     parser.add_argument("--metadata-mode", choices=["auto", "require", "ignore"], default="auto")
     parser.add_argument("--disable-scaffold-rewards", action="store_true")
     parser.add_argument("--disable-training-assists", action="store_true")
@@ -497,6 +513,7 @@ def main(argv: list[str] | None = None) -> int:
         launch_guard_progress_m=args.launch_guard_progress_m,
         launch_guard_min_speed_kph=args.launch_guard_min_speed_kph,
         launch_guard_throttle=args.launch_guard_throttle,
+        physics_model=args.physics_model,
         metadata_mode=args.metadata_mode,
         disable_scaffold=args.disable_scaffold_rewards,
         disable_assists=args.disable_training_assists,

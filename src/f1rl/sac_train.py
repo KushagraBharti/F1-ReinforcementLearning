@@ -189,6 +189,7 @@ def _make_envs(
     n_envs: int,
     *,
     observation_profile: str,
+    physics_model: str,
     max_steps: int,
     seed: int,
     start_position_noise_m: float,
@@ -204,6 +205,7 @@ def _make_envs(
                 action_mode="continuous",
                 action_set="racing",
                 observation_profile=observation_profile,
+                physics_model=physics_model,
             )
         )
         obs, _ = sim.reset(
@@ -376,9 +378,19 @@ def train_sac(
     eval_every: int,
     swarm_every: int,
     swarm_size: int,
+    physics_model: str,
     seed: int,
 ) -> Path:
     data = load_dataset(dataset)
+    dataset_physics_model = str(data.manifest.get("physics_model", "v1"))
+    if physics_model == "dataset":
+        physics_model = dataset_physics_model
+    if physics_model not in {"v1", "v2"}:
+        raise ValueError("physics_model must be 'dataset', 'v1', or 'v2'")
+    if dataset_physics_model in {"v1", "v2"} and physics_model != dataset_physics_model:
+        raise ValueError(
+            f"SAC physics_model={physics_model!r} does not match dataset physics_model={dataset_physics_model!r}."
+        )
     obs_dim = int(data.arrays["obs"].shape[1])
     torch_device = torch.device(device if device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu"))
     torch.manual_seed(seed)
@@ -440,6 +452,9 @@ def train_sac(
         "observation_profile": data.manifest.get("observation_profile"),
         "observation_dim": obs_dim,
         "observation_feature_schema": data.manifest.get("observation_feature_schema"),
+        "physics_model": physics_model,
+        "physics_version": data.manifest.get("physics_version"),
+        "physics_calibration_id": data.manifest.get("physics_calibration_id"),
         "device": str(torch_device),
         "timesteps": timesteps,
         "n_envs": n_envs,
@@ -488,9 +503,33 @@ def train_sac(
         ),
         encoding="utf-8",
     )
+
+    def _checkpoint_metadata(
+        *,
+        stage: str,
+        step: int | None = None,
+        updates: int | None = None,
+        metrics: dict[str, float] | None = None,
+    ) -> dict[str, Any]:
+        metadata: dict[str, Any] = {
+            "stage": stage,
+            "config": config,
+            "physics_model": config["physics_model"],
+            "physics_version": config["physics_version"],
+            "physics_calibration_id": config["physics_calibration_id"],
+        }
+        if step is not None:
+            metadata["step"] = step
+        if updates is not None:
+            metadata["updates"] = updates
+        if metrics is not None:
+            metadata["metrics"] = metrics
+        return metadata
+
     envs, observations = _make_envs(
         n_envs,
         observation_profile=data.manifest["observation_profile"],
+        physics_model=physics_model,
         max_steps=max_steps,
         seed=seed,
         start_position_noise_m=rollout_start_position_noise_m,
@@ -508,6 +547,49 @@ def train_sac(
     rollout_rng = np.random.default_rng(seed + 900_000)
 
     with metrics_path.open("a", encoding="utf-8") as metrics_file:
+        initial_checkpoint_path = output_dir / "checkpoints" / "sac_step_00000000.pt"
+        initial_metadata = _checkpoint_metadata(stage="sac", step=0, updates=updates, metrics=last_metrics)
+        save_policy_checkpoint(initial_checkpoint_path, actor=actor, normalizer=normalizer, metadata=initial_metadata)
+        initial_eval_dir = output_dir / "cpu_eval" / "step_00000000"
+        initial_eval_summary = evaluate_policy(
+            policy=initial_checkpoint_path,
+            output_dir=initial_eval_dir,
+            episodes=1,
+            deterministic=True,
+            normal_start=True,
+            observation_profile=data.manifest["observation_profile"],
+            physics_model=physics_model,
+            write_telemetry="gzip",
+            max_steps=max_steps,
+            seed=seed + 49_000,
+            device=device,
+        )
+        initial_fastest = initial_eval_summary.get("fastest_valid_lap_s")
+        if initial_fastest is not None and float(initial_fastest) < best_lap:
+            best_lap = float(initial_fastest)
+            save_policy_checkpoint(
+                best_policy,
+                actor=actor,
+                normalizer=normalizer,
+                metadata=initial_metadata | {"eval_summary": initial_eval_summary},
+            )
+        metrics_file.write(
+            json.dumps(
+                {
+                    "step": 0,
+                    "updates": updates,
+                    "replay_size": replay.size,
+                    "mean_episode_return": 0.0,
+                    "mean_episode_progress_m": 0.0,
+                    "eval_fastest_valid_lap_s": initial_fastest,
+                    "eval_valid_lap_count": initial_eval_summary.get("valid_lap_count"),
+                    **last_metrics,
+                }
+            )
+            + "\n"
+        )
+        metrics_file.flush()
+
         for step in range(0, timesteps, max(1, n_envs)):
             actor.eval()
             actions = _sample_policy_actions(
@@ -586,7 +668,12 @@ def train_sac(
                 updates += 1
             if (step + n_envs) % max(eval_every, 1) < n_envs or step + n_envs >= timesteps:
                 checkpoint_path = output_dir / "checkpoints" / f"sac_step_{step + n_envs:08d}.pt"
-                metadata = {"stage": "sac", "step": step + n_envs, "updates": updates, "config": config, "metrics": last_metrics}
+                metadata = _checkpoint_metadata(
+                    stage="sac",
+                    step=step + n_envs,
+                    updates=updates,
+                    metrics=last_metrics,
+                )
                 save_policy_checkpoint(checkpoint_path, actor=actor, normalizer=normalizer, metadata=metadata)
                 eval_dir = output_dir / "cpu_eval" / f"step_{step + n_envs:08d}"
                 eval_summary = evaluate_policy(
@@ -596,7 +683,7 @@ def train_sac(
                     deterministic=True,
                     normal_start=True,
                     observation_profile=data.manifest["observation_profile"],
-                    physics_model="v1",
+                    physics_model=physics_model,
                     write_telemetry="gzip",
                     max_steps=max_steps,
                     seed=seed + 50_000 + step,
@@ -613,7 +700,7 @@ def train_sac(
                         swarm_size=swarm_size,
                         checkpoints="best",
                         observation_profile=data.manifest["observation_profile"],
-                        physics_model="v1",
+                        physics_model=physics_model,
                         deterministic=True,
                         max_steps=max_steps,
                         seed=seed + 700_000 + step,
@@ -638,9 +725,9 @@ def train_sac(
                 metrics_file.write(json.dumps(row) + "\n")
                 metrics_file.flush()
     final_policy = output_dir / "final_policy.pt"
-    save_policy_checkpoint(final_policy, actor=actor, normalizer=normalizer, metadata={"stage": "sac", "config": config})
+    save_policy_checkpoint(final_policy, actor=actor, normalizer=normalizer, metadata=_checkpoint_metadata(stage="sac"))
     if not best_policy.exists():
-        save_policy_checkpoint(best_policy, actor=actor, normalizer=normalizer, metadata={"stage": "sac", "config": config})
+        save_policy_checkpoint(best_policy, actor=actor, normalizer=normalizer, metadata=_checkpoint_metadata(stage="sac"))
     print(f"sac_train_complete best_policy={best_policy} best_lap_s={best_lap if math.isfinite(best_lap) else None}")
     return best_policy
 
@@ -680,6 +767,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--eval-every", type=int, default=512)
     parser.add_argument("--swarm-every", type=int, default=0)
     parser.add_argument("--swarm-size", type=int, default=0)
+    parser.add_argument("--physics-model", choices=("dataset", "v1", "v2"), default="dataset")
     parser.add_argument("--seed", type=int, default=23)
     return parser.parse_args(argv)
 
@@ -720,6 +808,7 @@ def main(argv: list[str] | None = None) -> int:
         eval_every=args.eval_every,
         swarm_every=args.swarm_every,
         swarm_size=args.swarm_size,
+        physics_model=args.physics_model,
         seed=args.seed,
     )
     return 0

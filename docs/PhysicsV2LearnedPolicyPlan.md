@@ -32,6 +32,70 @@ The v2 project is a separate benchmark category:
 
 Do not mix success claims across categories.
 
+## Current Implementation Checkpoint
+
+Status as of 2026-06-06:
+
+- V1 is preserved as the default `physics_model`.
+- V2 is explicitly selectable with `physics_model=v2`.
+- V2 metadata is threaded through `SimConfig`, step telemetry, episode summaries, scripted runs, benchmark runs, SB3/GPU PPO smoke metadata, evolution summaries, selected telemetry manifests, postcheck manifests/summaries, dataset manifests, policy eval summaries/manifests, policy swarm manifests, and SAC run config.
+- CPU V2 includes initial tire-slip, load-transfer, power-limited drive, brake-lock tendency, and FastF1-median-aligned automatic gear/RPM diagnostics.
+- PyTorch GPU V2 implements the same initial contract and has focused CPU/GPU parity tests.
+- FastF1 calibration reporting now includes V1 and V2 estimates, separate error terms from the checked-in Monza 2024 VER reference CSV/summary, focused sustained-corner diagnostics, and optional multi-lap section-distribution comparison.
+- `src/f1rl/fastf1_calibration.py` provides offline `summarize`, `summarize-multi`, and `compare` commands, plus live FastF1 `fetch` and `fetch-multi` paths for the calibration extra.
+- Current calibration id is `monza_2022_2024_fastf1_multilap_v2_manual_balance_fix`; current V2 report path is `artifacts\calibration\fastf1-v2-manual-balance-fix-20260606.json`.
+- Current FastF1 calibration data includes the checked-in 2024 Italian GP Qualifying VER fastest lap (`79.662s`, `5745.669m`, max speed `348.0 kph`, mean speed `259.914 kph`, gear range `2..8`) plus `60` selected clean dry Q/FP2/FP3 laps from Monza `2024`, `2023`, and `2022` for VER/NOR/PIA/LEC/SAI/HAM/RUS where available.
+- Multi-lap artifacts live under `artifacts\calibration\fastf1-multilap-20260605` and keep raw `get_car_data()`, raw `get_pos_data()`, processed `get_telemetry().add_distance()`, per-lap summaries, `manifest.json`, and `section_distribution_summary.json`.
+- OpenF1 cross-checks live under `artifacts\calibration\openf1-monza-crosscheck-20260605`; `manifest.json` contains `42` selected Monza 2024/2023 Q/FP2/FP3 laps, `3` explicit 2022 skips because OpenF1 returned 404, lap p50 `80.8025s`, max-speed p90 `349.0 kph`, and speed-trap p90 `345.0 kph`. This is independent sanity evidence, not the primary calibration target.
+- Current V2 calibration metrics: terminal-speed error `+3.0 kph`, acceleration trace p95 MAE about `1.15 m/s^2`, braking-zone distance MAE about `15.5m`, robust corner lateral-g margin min about `-0.45g`, robust margin mean about `+0.21g`, sustained-corner reference control pass rate `0.333`, max sustained-corner p95 lateral error about `17.95m`, minimum sustained p75/p90 margins `-2.173/-2.811`, gear match rate `1.0`, mean absolute RPM error under `9`. Raw point curvature/lateral-g spikes from interpolated FastF1 position data remain visible in the JSON report and are not hidden.
+- Multi-lap sustained-section clusters are distance-based. Current p50 start/end and speed/lateral-g distributions: section 01 `2424.9..2590.4m`, speed p50/p90 `215.3/222.9 kph`, lateral-g p90 p50/p90 `5.15/5.85`; section 02 `2780.8..2885.5m`, `198.3/205.1 kph`, `4.74/5.29g`; section 03 `3952.9..4035.8m`, `216.0/249.8 kph`, `3.73/4.51g`; section 04 `5052.7..5317.4m`, `228.9/235.7 kph`, `5.35/6.15g`.
+- Focused sustained-corner diagnostic starts before each section and reports reference-speed and controlled-speed runs at `150/180/200/220/230/240/250 kph`, including lateral error, heading error, steering saturation, actual/reference curvature, lateral-g, slip angles, front/rear lateral force, throttle/brake, tire saturation, and track-limit/off-track state.
+- Manual mode now supports focused section starts with `--start-section sustained_corner_01|02|03`, `--start-section-lead-in-m`, `--start-progress-m`, and `--start-speed-kph`. Section starts align the FastF1 ghost to the matching reference time/distance and manual reset reuses the same start.
+- Manual mode now swaps left/right keyboard steering in the renderer to match the observed on-screen response, and the HUD is right-aligned in free screen space instead of covering the left-side driving line.
+- Mid-lap/manual-section telemetry summaries now report run-local `distance_traveled_m`; lap sectors already passed before the run start are left blank rather than producing invalid sector speeds.
+- QC telemetry summaries now include `sustained_corner_diagnostics` for manual section runs: speed, ghost gap, lateral error, heading error, steering saturation, lateral-g, slip angles, front/rear lateral force, throttle/brake, tire saturation, off-track/collision flags, and a `manual_review_pass` flag.
+- Manual mode accepts `--physics-model v2` and a headless smoke passed.
+- Scripted, benchmark, SB3 PPO smoke, and GPU PPO smoke entrypoints accept `--physics-model v2`; tiny CLI smokes passed and emitted V2 metadata.
+- Tiny V2 fused GPU parity smoke under the manual-approved balance retune wrote `artifacts\runs\v2-manual-balance-fix-gpu-parity-smoke-20260606` with v2.0.10 metadata, `gpu_parity_status=passed`, max CPU/GPU progress delta about `0.00020m`, and `0` reason/valid-lap mismatches.
+- Tiny V2 persistent-controller parity smoke wrote `artifacts\runs\v2-recalibration-persistent-controller-parity-smoke-20260605` with `gpu_kernel_backend=warp_persistent_controller_open`, `gpu_parity_status=passed`, `0` CPU replay reason mismatches, and `0` valid-lap mismatches.
+- `tests/test_v2_metadata_contracts.py` now proves V2 metadata on CPU evolution summaries/checkpoints/bridge/selected telemetry, CPU postcheck summaries/manifests/rows, ES dataset manifests/source rows, BC/SAC policy checkpoints, policy eval manifests, policy swarm manifests, loaded telemetry rows, and the V1-labeled transfer export guard. `tests/test_policy_io.py` also covers V2 PPO eval config reconstruction from `run_metadata.json`.
+- The `127.183s` scripted lap is reclassified as a conservative V2 scripted smoke/debug baseline only, not `scripted_threshold`; it is archived with the other superseded V2 bulk artifacts.
+- Any V2 `1000x5` or `1000x10` ES artifacts created before this recalibration are exploratory/pre-recalibration only and must not be used for target, dataset, threshold, or promotion decisions.
+- Post-retune validation passed on 2026-06-06 for this manual-approved gate: manual headless V2 ghost section smoke wrote `artifacts\runs\manual-headless-20260606-012833-seed7-300975100`, flying-start smoke wrote `artifacts\runs\manual-headless-20260606-012839-seed7-378636300`, `ruff check .`, `pyright src/f1rl`, full `pytest -q`, `f1-hardware-check --json --warp-smoke`, focused V2 pytest, and V2 fused GPU parity smoke all passed.
+- V2 manual handoff checklist: `artifacts\runs\qc-20260606-012846\manual_qc_checklist.md`.
+- Manual mode is approved for v2.0.10 as of 2026-06-06. v2.0.3 through v2.0.9 failed or were superseded for handling/longitudinal feel. v2.0.10 keeps the manually approved high-speed cornering balance, slightly eases low-speed grip from v2.0.9, raises acceleration, and softens braking.
+- V2 `scripted_threshold` is established from the fastest selected FastF1 Monza calibration lap, not from the old scripted debug lap or the slower simulator reference controller: `79.327s` from 2024 Monza Qualifying NOR lap 11, McLaren, SOFT, track status `1`. Local summary copy: `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json`; original calibration tree: `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`. The V2 ES target is CPU-verified `<=86.327s` (`scripted_threshold + 7s`).
+- CPU V2 reference-control baseline `artifacts\runs\reference-control-20260606-022941-seed7-987680600` replay-loaded as valid (`116.2167s`, zero collisions/off-track), but it is not the threshold; the original run is in the D-drive archive.
+- V2 staged GPU ES target is met. Run `artifacts\runs\v2-gpu-es-fastf1-1000x5-15000-20260606` was staged from `1000x5` through `1000x50` with `max_steps=15000`. Final CPU postcheck/rerank used `candidate_pool_size=512`; selected parity passed with `0` selected reason mismatches and `0` selected valid-lap mismatches. The best trusted selected V2 lap is generation `46`, candidate `724`, CPU-verified `77.6833s`; local replay copy: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\gpu_es_selected_cpu_rerank\postcheck-cpu_rerank_top_score-rank-000-gen-046-candidate-00724-steps.jsonl.gz`.
+- Raw GPU proposal parity is still not clean at broad-pool scale: the final pool had `13` reason mismatches and `12` valid-lap mismatches. This does not invalidate the selected winner, but it reinforces that raw GPU winners are proposal data only and CPU postcheck/rerank is mandatory.
+- V2 dataset export completed at `artifacts\datasets\v2-es-policy-dataset-fastf1-1000x50-20260606`: `16` CPU-replayed source candidates, `50128` transitions, `8` valid laps, fastest source lap `77.65s`, mean valid lap `85.925s`, physics `physics_v2.0.10-fastf1-manual-balance-fix`.
+- V2 learned-policy target is met. The initial dominance-control BC/SAC attempt failed around the first chicane because the dataset contains simultaneous throttle/brake behavior; retraining with `control-mode independent` fixed closed-loop reproduction. BC source-3 CPU-evaluated at `77.6833s`. SAC now evaluates and preserves the initial BC policy at step `0`; promoted SAC workflow checkpoint CPU-evaluated at `77.6833s`, below the FastF1 threshold `79.327s`. Original checkpoints/evals are in the D-drive archive; local replay copy: `artifacts\highlights\v2-fastf1-final-20260606\telemetry\learned_policy_promotion\policy-eval-episode-000-steps.jsonl.gz`.
+- Final V2 highlights are local under `artifacts\highlights\v2-fastf1-final-20260606`: `1006` replay traces total (`5` CPU-reranked GPU ES traces, `1` promoted learned-policy trace, `1000` deterministic best-policy swarm entries), plus exact-pygame `4x` GIFs at `artifacts\highlights\v2-fastf1-final-20260606\gifs\gpu-es-cpu-rerank-best-4x.gif` and `artifacts\highlights\v2-fastf1-final-20260606\gifs\learned-policy-promotion-4x.gif`.
+
+Manual handoff command:
+
+```powershell
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --flying-start
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_01 --start-section-lead-in-m 120
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_02 --start-section-lead-in-m 120
+uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_03 --start-section-lead-in-m 120
+uv run --no-sync python -m f1rl.qc --telemetry artifacts\runs\manual-headless-20260606-012833-seed7-300975100 --output-dir artifacts\runs --max-telemetry-files 1
+uv run --no-sync python -m f1rl.openf1_crosscheck --years 2024,2023,2022 --sessions Q,FP2,FP3 --drivers VER,NOR,PIA,LEC,SAI,HAM,RUS --output-dir artifacts\calibration\openf1-monza-crosscheck-20260605 --request-delay-s 1.0
+```
+
+Latest section-start smoke: `artifacts\runs\manual-headless-20260606-012833-seed7-300975100`. Latest QC report before threshold recording: `artifacts\runs\qc-20260606-012846`; its automated `manual_gate` block reports `scripted_threshold_status=unset` because it predates the FastF1 threshold correction, and the user manually approved v2.0.10 on 2026-06-06. The QC section-smoke diagnostic is metadata/checklist evidence only because the headless manual smoke runs straight; use the local copied report `artifacts\highlights\v2-fastf1-final-20260606\calibration\fastf1-v2-manual-balance-fix-20260606.json` for handling-balance metrics.
+
+FastF1 threshold and CPU controller baseline after manual approval:
+
+```powershell
+uv run --no-sync python -m f1rl.reference_agent --mode control --physics-model v2 --steps 9000 --seed 7
+uv run --no-sync f1-replay artifacts\runs\reference-control-20260606-022941-seed7-987680600\steps.jsonl --headless
+```
+
+The threshold source is FastF1 `79.327s` from `artifacts\highlights\v2-fastf1-final-20260606\calibration\summary.json` locally, with the original source preserved in the D-drive archive. The CPU controller baseline wrote `artifacts\runs\reference-control-20260606-022941-seed7-987680600`, replay-loaded headlessly, and records `lap_time_s=116.2167`; it is baseline evidence only. Earlier post-manual attempts are superseded failed diagnostics: `artifacts\runs\reference-control-20260606-014926-seed7-381937500` failed `off_track` at `14.0s`, and `artifacts\runs\scripted-20260606-014937-seed7-461099600` failed `collision` at `104.0s`. These original bulk run artifacts are now archived on `D:\`.
+
+Large V2 ES, dataset export, BC, SAC workflow training, CPU learned-policy promotion, local highlight curation, exact-pygame `4x` GIF export, D-drive bulk offload, and final validation have now passed their target gates. Remaining goal work is commit and push. The old `127.183s` debug lap remains invalid as a threshold.
+
 ## Operating Plan
 
 The future goal agent should execute the v2 work in this order:
@@ -710,7 +774,7 @@ Implementation sequence:
 2. Implement PyTorch batch v2 physics first.
 3. Add CPU/GPU parity tests against the PyTorch path.
 4. Implement fused/Warp v2 kernels only after PyTorch parity is stable.
-5. Add Warp parity tests.
+5. Add Warp parity tests. Current V2 open-step Warp parity and V2 persistent-controller Warp parity are implemented and smoke-tested.
 6. Add production GPU ES support with `--physics-model v2`.
 
 Do not optimize before correctness.
@@ -756,8 +820,10 @@ Commands:
 
 ```powershell
 uv run --no-sync python -m f1rl.fastf1_calibration fetch --year 2024 --event Monza --session Q --driver VER
-uv run --no-sync python -m f1rl.fastf1_calibration summarize assets\reference\fastf1\monza_2024_Q_VER
-uv run --no-sync python -m f1rl.fastf1_calibration compare --physics-model v2 --calibration-id monza_2024_Q_VER
+uv run --no-sync python -m f1rl.fastf1_calibration summarize assets\reference\monza_2024_Q_VER_telemetry.csv --output artifacts\calibration\fastf1-summary.json
+uv run --no-sync python -m f1rl.fastf1_calibration fetch-multi --years 2024,2023,2022 --sessions Q,FP2,FP3 --drivers VER,NOR,PIA,LEC,SAI,HAM,RUS --output-dir artifacts\calibration\fastf1-multilap-20260605 --max-laps-per-driver 1
+uv run --no-sync python -m f1rl.fastf1_calibration summarize-multi --output-dir artifacts\calibration\fastf1-multilap-20260605
+uv run --no-sync python -m f1rl.fastf1_calibration compare --physics-model v2 --multi-summary artifacts\calibration\fastf1-multilap-20260605\section_distribution_summary.json --output artifacts\calibration\fastf1-v2-manual-balance-fix-20260606.json
 uv run --no-sync python -m f1rl.calibration --json
 ```
 
@@ -774,6 +840,15 @@ assets/reference/fastf1/
     distance_speed_trace.csv
     corner_targets.json
     braking_targets.json
+artifacts/calibration/fastf1-multilap-20260605/
+  manifest.json
+  section_distribution_summary.json
+  monza_<year>_<session>/<driver>_lap<lap>/
+    car_data_raw.csv
+    pos_data_raw.csv
+    telemetry_processed_add_distance.csv
+    lap_metadata.json
+    summary.json
 ```
 
 If parquet adds dependency friction, use CSV/JSON first.
@@ -958,8 +1033,8 @@ PPO remains part of the repo, but it is not the lead path.
 
 V2 should still support:
 
-- CPU PPO smoke under `physics_model=v2`;
-- GPU PPO smoke under `physics_model=v2`;
+- CPU PPO smoke under `physics_model=v2` (tiny CLI smoke passed);
+- GPU PPO smoke under `physics_model=v2` (tiny CPU-device CLI smoke passed);
 - policy eval/replay under `physics_model=v2`.
 
 Do not resume blind PPO tuning as the main route. Use v2 ES and v2 SAC as the primary path.

@@ -17,6 +17,17 @@ GRAY = (80, 80, 80)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 GHOST_BLUE = (45, 170, 255)
+HUD_MARGIN_PX = 18
+HUD_LINE_SPACING_PX = 19
+
+
+def _hud_origin(
+    window_size: tuple[int, int],
+    line_sizes: list[tuple[int, int]],
+) -> tuple[int, int]:
+    max_width = max((width for width, _height in line_sizes), default=0)
+    x = max(HUD_MARGIN_PX, int(window_size[0]) - max_width - HUD_MARGIN_PX)
+    return x, HUD_MARGIN_PX
 
 
 @dataclass(slots=True)
@@ -146,21 +157,21 @@ class PygameRenderer:
         left = keys[self.pygame.K_a] or keys[self.pygame.K_LEFT]
         right = keys[self.pygame.K_d] or keys[self.pygame.K_RIGHT]
         if throttle and left:
-            return 5
-        if throttle and right:
             return 6
+        if throttle and right:
+            return 5
         if brake and left:
-            return 7
-        if brake and right:
             return 8
+        if brake and right:
+            return 7
         if throttle:
             return 1
         if brake:
             return 2
         if left:
-            return 3
-        if right:
             return 4
+        if right:
+            return 3
         return 0
 
     def reset_pressed(self) -> bool:
@@ -258,12 +269,13 @@ class PygameRenderer:
                 )
         if extra_lines:
             lines.extend(extra_lines)
-        for idx, text in enumerate(lines):
-            surface = self.font.render(text, True, (0, 0, 0))
+        rendered_lines = [(text, self.font.render(text, True, (0, 0, 0))) for text in lines]
+        hud_x, hud_y = _hud_origin(self.size, [surface.get_size() for _text, surface in rendered_lines])
+        for idx, (_text, surface) in enumerate(rendered_lines):
             back = self.pygame.Surface(surface.get_size())
             back.fill(WHITE)
-            x = 18
-            y = 18 + idx * 19
+            x = hud_x
+            y = hud_y + idx * HUD_LINE_SPACING_PX
             self.screen.blit(back, (x, y))
             self.screen.blit(surface, (x, y))
         if human:

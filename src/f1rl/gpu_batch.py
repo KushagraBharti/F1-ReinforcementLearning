@@ -241,7 +241,11 @@ class GpuMonzaBatch:
         self.track = track
         self.sim_config = sim_config
         self.feature_names = feature_names
-        self.params: GpuCarParams = gpu_car_params_from_cpu(sim_config.car)
+        self.params: GpuCarParams = gpu_car_params_from_cpu(
+            sim_config.car,
+            physics_model=sim_config.physics_model,
+            physics_v2=sim_config.physics_v2,
+        )
         self.collision_check = collision_check
         self.collision_chunk_size = max(1, int(collision_chunk_size))
         self.collision_mode = str(collision_mode)
@@ -1568,6 +1572,9 @@ def gpu_rollout_rows(
     target_progress_m: float,
     max_steps: int,
     genome_to_dict: Any,
+    physics_model: str = "v1",
+    physics_version: str | None = None,
+    physics_calibration_id: str | None = None,
     candidate_index_offset: int = 0,
     row_detail: str = "full",
 ) -> list[dict[str, Any]]:
@@ -1663,6 +1670,9 @@ def gpu_rollout_rows(
                     "start_speed_kph": float(start_speed_kph[index]),
                     "genome": genome_to_dict(candidate.genome),
                     "lineage": dict(candidate.lineage),
+                    "physics_model": physics_model,
+                    "physics_version": physics_version,
+                    "physics_calibration_id": physics_calibration_id,
                     "best_progress_m": float(best_progress[index]),
                     "final_progress_m": float(final_progress[index]),
                     "remaining_m": max(0.0, float(target_progress_m) - float(best_progress[index])),
@@ -1758,6 +1768,9 @@ def gpu_rollout_rows(
                 "termination_reason": reasons[index],
                 "action_id": final_action_id,
                 "action_name": final_action_name,
+                "physics_model": physics_model,
+                "physics_version": physics_version,
+                "physics_calibration_id": physics_calibration_id,
             }
         )
         target_reached = float(best_progress[index]) >= float(target_progress_m)
@@ -1776,6 +1789,9 @@ def gpu_rollout_rows(
             "start_speed_kph": float(start_speed_kph[index]),
             "genome": genome_to_dict(candidate.genome),
             "lineage": dict(candidate.lineage),
+            "physics_model": physics_model,
+            "physics_version": physics_version,
+            "physics_calibration_id": physics_calibration_id,
             "best_progress_m": float(best_progress[index]),
             "final_progress_m": float(final_progress[index]),
             "remaining_m": max(0.0, float(target_progress_m) - float(best_progress[index])),

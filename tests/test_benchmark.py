@@ -15,6 +15,7 @@ def test_random_benchmark_writes_required_artifacts(tmp_path, monkeypatch) -> No
         device="cpu",
         telemetry="selected",
         telemetry_every=1,
+        physics_model="v2",
     )
 
     assert (root / "config.json").exists()
@@ -24,6 +25,10 @@ def test_random_benchmark_writes_required_artifacts(tmp_path, monkeypatch) -> No
     assert (root / "selected_telemetry" / "random-episode-000-steps.jsonl").exists()
 
     summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    assert config["physics_model"] == "v2"
+    assert config["requested_sim_config"]["physics_model"] == "v2"
+    assert summary["physics_model"] == "v2"
     assert summary["policies"][0]["policy"] == "random"
     assert "completion_rate" in summary["policies"][0]
     assert "best_progress_m" in summary["policies"][0]
@@ -37,6 +42,7 @@ def test_random_benchmark_writes_required_artifacts(tmp_path, monkeypatch) -> No
         if line.strip()
     ]
     assert rows[0]["policy"] == "random"
+    assert rows[0]["physics_model"] == "v2"
     assert "steps_per_second" in rows[0]
 
 

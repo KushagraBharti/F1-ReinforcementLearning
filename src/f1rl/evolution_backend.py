@@ -1087,6 +1087,9 @@ class GpuEvolutionBackend:
                         target_progress_m=float(gates.target_progress_m),
                         max_steps=sim_config.max_steps,
                         genome_to_dict=genome_to_dict,
+                        physics_model=sim_config.physics_model,
+                        physics_version=sim_config.physics_version,
+                        physics_calibration_id=sim_config.physics_calibration_id,
                         candidate_index_offset=start,
                         row_detail=self.settings.attempts_mode,
                     )

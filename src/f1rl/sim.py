@@ -938,6 +938,8 @@ class MonzaSim:
             steer=steer,
             params=self.config.car,
             meters_per_pixel=self.track.meters_per_pixel,
+            physics_model=self.config.physics_model,
+            physics_v2=self.config.physics_v2,
         )
         self.last_action_id = int(action_id)
         self.last_throttle = float(throttle)
@@ -1203,6 +1205,28 @@ class MonzaSim:
             termination_reason=self.termination_reason,
             reward_total=reward,
             reward_components=components,
+            physics_model=self.config.physics_model,
+            physics_version=self.config.physics_version,
+            physics_calibration_id=self.config.physics_calibration_id,
+            gear=int(self.state.gear) if self.config.physics_model == "v2" else None,
+            rpm=float(self.state.rpm) if self.config.physics_model == "v2" else None,
+            surface_mu=float(self.state.surface_mu) if self.config.physics_model == "v2" else None,
+            front_slip_angle_deg=float(np.rad2deg(self.state.front_slip_angle_rad))
+            if self.config.physics_model == "v2"
+            else None,
+            rear_slip_angle_deg=float(np.rad2deg(self.state.rear_slip_angle_rad))
+            if self.config.physics_model == "v2"
+            else None,
+            front_load_n=float(self.state.front_load_n) if self.config.physics_model == "v2" else None,
+            rear_load_n=float(self.state.rear_load_n) if self.config.physics_model == "v2" else None,
+            front_lateral_force_n=float(self.state.front_lateral_force_n)
+            if self.config.physics_model == "v2"
+            else None,
+            rear_lateral_force_n=float(self.state.rear_lateral_force_n)
+            if self.config.physics_model == "v2"
+            else None,
+            tire_saturation=float(self.state.tire_saturation) if self.config.physics_model == "v2" else None,
+            wheel_lock=bool(self.state.wheel_lock) if self.config.physics_model == "v2" else None,
         )
         self.last_telemetry = telemetry
         return SimStep(
@@ -1245,4 +1269,7 @@ class MonzaSim:
             "collided": bool(collided),
             "off_track": bool(off_track),
             "termination_reason": self.termination_reason,
+            "physics_model": self.config.physics_model,
+            "physics_version": self.config.physics_version,
+            "physics_calibration_id": self.config.physics_calibration_id,
         }

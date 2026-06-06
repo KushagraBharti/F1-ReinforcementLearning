@@ -11,8 +11,8 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from f1rl.calibration import calibration_report
-from f1rl.config import ARTIFACTS_DIR
+from f1rl.calibration import calibration_report, reference_trace_features
+from f1rl.config import ARTIFACTS_DIR, MONZA_LENGTH_METERS
 from f1rl.scripted import ScriptedController
 from f1rl.section_analysis import analyze_steps
 from f1rl.sim import MonzaSim
@@ -23,6 +23,28 @@ def _mean(values: list[float]) -> float:
     return float(sum(values) / len(values)) if values else 0.0
 
 
+def _quantile(values: list[float], quantile: float) -> float | None:
+    clean = sorted(value for value in values if value == value)
+    if not clean:
+        return None
+    if len(clean) == 1:
+        return clean[0]
+    position = (len(clean) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(clean) - 1)
+    fraction = position - lower
+    return float(clean[lower] * (1.0 - fraction) + clean[upper] * fraction)
+
+
+def _abs_optional_values(rows: list[dict[str, Any]], key: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        value = row.get(key)
+        if value is not None:
+            values.append(abs(float(value)))
+    return values
+
+
 def _reward_totals(steps: list[dict[str, Any]]) -> dict[str, float]:
     totals = {key: 0.0 for key in REWARD_COMPONENT_KEYS}
     for step in steps:
@@ -30,6 +52,122 @@ def _reward_totals(steps: list[dict[str, Any]]) -> dict[str, float]:
         for key in REWARD_COMPONENT_KEYS:
             totals[key] += float(components.get(key, 0.0))
     return totals
+
+
+def _reference_section_to_sim_progress(distance_m: float, reference_distance_m: float) -> float:
+    return float(distance_m / max(reference_distance_m, 1e-9) * MONZA_LENGTH_METERS)
+
+
+def sustained_corner_diagnostics(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not steps:
+        return []
+    trace = reference_trace_features()
+    reference_distance_m = float(trace["distance_m"])
+    diagnostics: list[dict[str, Any]] = []
+    for target in trace["sustained_corner_targets"]:
+        start_progress_m = _reference_section_to_sim_progress(float(target["start_distance_m"]), reference_distance_m)
+        end_progress_m = _reference_section_to_sim_progress(float(target["end_distance_m"]), reference_distance_m)
+        rows = [
+            row
+            for row in steps
+            if start_progress_m <= float(row.get("monotonic_progress_m", 0.0)) % MONZA_LENGTH_METERS <= end_progress_m
+        ]
+        if not rows:
+            diagnostics.append(
+                {
+                    "section": str(target["name"]),
+                    "rows": 0,
+                    "sim_start_progress_m": start_progress_m,
+                    "sim_end_progress_m": end_progress_m,
+                    "reference_start_distance_m": float(target["start_distance_m"]),
+                    "reference_end_distance_m": float(target["end_distance_m"]),
+                    "reference_mean_speed_kph": float(target["mean_speed_kph"]),
+                    "reference_lateral_g_p90": float(target["lateral_g_p90"]),
+                }
+            )
+            continue
+        speeds = [float(row.get("speed_kph", 0.0)) for row in rows]
+        ref_speeds = [float(row["reference_speed_kph"]) for row in rows if row.get("reference_speed_kph") is not None]
+        speed_errors = [
+            float(row.get("speed_kph", 0.0)) - float(row["reference_speed_kph"])
+            for row in rows
+            if row.get("reference_speed_kph") is not None
+        ]
+        lateral_errors = [
+            abs(float(row.get("lateral_error_m", row.get("racing_line_deviation_m", 0.0)))) for row in rows
+        ]
+        heading_errors = _abs_optional_values(rows, "heading_error_deg")
+        steering = _abs_optional_values(rows, "steering")
+        lateral_g = _abs_optional_values(rows, "lateral_g")
+        front_slip = _abs_optional_values(rows, "front_slip_angle_deg")
+        rear_slip = _abs_optional_values(rows, "rear_slip_angle_deg")
+        front_force = _abs_optional_values(rows, "front_lateral_force_n")
+        rear_force = _abs_optional_values(rows, "rear_lateral_force_n")
+        ghost_gaps = _abs_optional_values(rows, "ghost_gap_m")
+        tire_saturation = _abs_optional_values(rows, "tire_saturation")
+        throttles = [float(row.get("throttle", 0.0)) for row in rows]
+        brakes = [float(row.get("brake", 0.0)) for row in rows]
+        off_track_rate = _mean([1.0 if bool(row.get("off_track", False)) else 0.0 for row in rows])
+        collided_count = sum(1 for row in rows if bool(row.get("collided", False)))
+        steering_saturation_rate = _mean([1.0 if value >= 0.98 else 0.0 for value in steering])
+        lateral_error_p95 = _quantile(lateral_errors, 0.95)
+        steering_saturation_flag = steering_saturation_rate > 0.35
+        lateral_error_flag = lateral_error_p95 is not None and lateral_error_p95 > 4.0
+        off_track_flag = off_track_rate > 0.0 or collided_count > 0
+        front_slip_p90 = _quantile(front_slip, 0.90)
+        rear_slip_p90 = _quantile(rear_slip, 0.90)
+        diagnostics.append(
+            {
+                "section": str(target["name"]),
+                "rows": len(rows),
+                "sim_start_progress_m": start_progress_m,
+                "sim_end_progress_m": end_progress_m,
+                "reference_start_distance_m": float(target["start_distance_m"]),
+                "reference_end_distance_m": float(target["end_distance_m"]),
+                "reference_mean_speed_kph": float(target["mean_speed_kph"]),
+                "reference_min_speed_kph": float(target["min_speed_kph"]),
+                "reference_max_speed_kph": float(target["max_speed_kph"]),
+                "reference_lateral_g_p75": float(target["lateral_g_p75"]),
+                "reference_lateral_g_p90": float(target["lateral_g_p90"]),
+                "entry_progress_m": float(rows[0].get("monotonic_progress_m", 0.0)),
+                "exit_progress_m": float(rows[-1].get("monotonic_progress_m", 0.0)),
+                "mean_speed_kph": _mean(speeds),
+                "min_speed_kph": min(speeds),
+                "max_speed_kph": max(speeds),
+                "mean_reference_speed_kph": _mean(ref_speeds) if ref_speeds else None,
+                "mean_speed_error_kph": _mean(speed_errors) if speed_errors else None,
+                "p95_abs_speed_error_kph": _quantile([abs(value) for value in speed_errors], 0.95),
+                "p95_abs_ghost_gap_m": _quantile(ghost_gaps, 0.95),
+                "p95_abs_lateral_error_m": lateral_error_p95,
+                "max_abs_lateral_error_m": max(lateral_errors) if lateral_errors else None,
+                "p95_abs_heading_error_deg": _quantile(heading_errors, 0.95),
+                "mean_abs_steering": _mean(steering),
+                "steering_saturation_rate": steering_saturation_rate,
+                "lateral_g_p90": _quantile(lateral_g, 0.90),
+                "lateral_g_max": max(lateral_g) if lateral_g else None,
+                "front_slip_angle_p90_deg": front_slip_p90,
+                "rear_slip_angle_p90_deg": rear_slip_p90,
+                "front_minus_rear_slip_p90_deg": (
+                    front_slip_p90 - rear_slip_p90
+                    if front_slip_p90 is not None and rear_slip_p90 is not None
+                    else None
+                ),
+                "front_lateral_force_p90_n": _quantile(front_force, 0.90),
+                "rear_lateral_force_p90_n": _quantile(rear_force, 0.90),
+                "tire_saturation_p90": _quantile(tire_saturation, 0.90),
+                "mean_throttle": _mean(throttles),
+                "mean_brake": _mean(brakes),
+                "off_track_rate": off_track_rate,
+                "collided_count": collided_count,
+                "manual_review_flags": {
+                    "steering_saturation": steering_saturation_flag,
+                    "lateral_error": lateral_error_flag,
+                    "off_track_or_collision": off_track_flag,
+                },
+                "manual_review_pass": not (steering_saturation_flag or lateral_error_flag or off_track_flag),
+            }
+        )
+    return diagnostics
 
 
 def latest_telemetry_path(root: Path = ARTIFACTS_DIR) -> Path | None:
@@ -103,6 +241,7 @@ def summarize_steps(path: Path) -> dict[str, Any]:
         "avg_min_ray_distance_m": _mean(ray_mins) if ray_mins else None,
         "reward_total": sum(float(step.get("reward_total", 0.0)) for step in steps),
         "reward_totals": _reward_totals(steps),
+        "sustained_corner_diagnostics": sustained_corner_diagnostics(steps),
     }
     summary.update(analyze_steps(steps))
     return summary
@@ -207,6 +346,8 @@ def physics_qc() -> dict[str, Any]:
     report = calibration_report()
     targets = report["targets"]
     estimates = report["sim_estimates"]
+    v2 = report["physics_models"]["v2"]
+    v2_errors = v2["error_terms"]
     return {
         "reference_source": targets["source"],
         "reference_lap_time_s": targets["lap_time_s"],
@@ -221,6 +362,18 @@ def physics_qc() -> dict[str, Any]:
         "sim_braking_330_to_100_kph_m": estimates["braking_330_to_100_kph_m"],
         "sim_steering_limited_radius_m": estimates["steering_limited_radius_m"],
         "sim_cornering_capacity": estimates["cornering_capacity"],
+        "v2_physics_version": v2["physics_version"],
+        "v2_physics_calibration_id": v2["physics_calibration_id"],
+        "v2_max_speed_error_kph": v2_errors["max_speed_error_kph"],
+        "v2_speed_trace_accel_p95_mae_mps2": v2_errors["speed_trace_accel_p95_mae_mps2"],
+        "v2_mean_abs_braking_zone_distance_error_m": v2_errors["mean_abs_braking_zone_distance_error_m"],
+        "v2_min_robust_corner_lateral_g_margin": v2_errors["min_robust_corner_lateral_g_margin"],
+        "v2_sustained_corner_reference_control_pass_rate": v2_errors[
+            "sustained_corner_reference_control_pass_rate"
+        ],
+        "v2_max_sustained_corner_reference_p95_abs_lateral_error_m": v2_errors[
+            "max_sustained_corner_reference_p95_abs_lateral_error_m"
+        ],
     }
 
 
@@ -411,11 +564,29 @@ def write_manual_checklist(root: Path) -> Path:
 
 Run these checks before starting the next long RL goal.
 
+## Physics V2 Manual Handoff
+- `uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --flying-start`
+- `uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_01 --start-section-lead-in-m 120`
+- `uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_02 --start-section-lead-in-m 120`
+- `uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --start-section sustained_corner_03 --start-section-lead-in-m 120`
+- Confirm the HUD reports `physics_model=v2` behavior through `physics_v2.0.10-fastf1-manual-balance-fix` and calibration id `monza_2022_2024_fastf1_multilap_v2_manual_balance_fix`.
+- Confirm manual left/right steering now matches the visible car response: pressing left should visually turn the car left and pressing right should visually turn the car right.
+- Confirm the HUD is right-aligned in free screen space and no longer covers the left-side driving line at the manual start.
+- Confirm the FastF1 reference ghost appears immediately, the ghost speed is visible, and the ghost gap changes for driving reasons rather than timer drift.
+- Check the run down to Rettifilo: top-end speed should feel close to the 2024 VER Monza reference, with the ghost reaching about `348 kph` before braking.
+- Check the first major braking zone: heavy braking should be strong but not instant, and the car should still punish late turn-in or full-brake steering.
+- Check medium/high-speed corners such as Lesmo/Ascari/Parabolica qualitatively against the ghost; do not require exact human lap time, but reject obvious arcade grip, impossible rotation, or uncatchable instability.
+- For sustained-corner section runs, verify the car can hold the intended arc without obvious steering saturation or front-end washout.
+- After exiting manual mode, inspect the latest `artifacts\\runs\\manual-*\\episode_summary.json` and confirm `physics_model=v2`, `physics_version=physics_v2.0.10-fastf1-manual-balance-fix`, calibration id `monza_2022_2024_fastf1_multilap_v2_manual_balance_fix`, and non-null ghost-gap fields when `--ghost-reference` was used.
+- Run `uv run --no-sync python -m f1rl.qc --telemetry <manual-run-dir>` and inspect `sustained_corner_diagnostics` in `qc_report.json` for lateral error, steering saturation, slip angles, front/rear lateral force, lateral-g, and off-track/collision flags.
+- Do not establish `scripted_threshold`, run scaled V2 ES/RL, export V2 datasets, or train V2 BC/SAC until this manual handoff is approved.
+
 ## Manual Driving
 - `uv run f1-manual`
 - Confirm the car points forward at spawn.
 - Confirm full throttle visually matches the HUD speed.
 - Confirm braking, steering, and coast feel plausible.
+- Confirm the corrected left/right manual steering mapping remains intuitive with arrow keys and A/D keys.
 - Confirm rays render from the car nose and rotate with the car.
 - Confirm the HUD shows speed, progress, checkpoint/lap state, reward, and reason fields clearly enough for debugging.
 
@@ -444,6 +615,87 @@ Run these checks before starting the next long RL goal.
     return path
 
 
+def manual_gate_readiness(
+    *,
+    physics_report: dict[str, Any],
+    telemetry_summary: dict[str, Any] | None,
+    manual_checklist: Path,
+) -> dict[str, Any]:
+    sustained_rows = []
+    if telemetry_summary is not None:
+        sustained_rows = [
+            row
+            for row in telemetry_summary.get("sustained_corner_diagnostics", [])
+            if int(row.get("rows", 0) or 0) > 0
+        ]
+    observed_pass = None
+    if sustained_rows:
+        observed_pass = all(bool(row.get("manual_review_pass", False)) for row in sustained_rows)
+    return {
+        "gate": "physics_v2_manual_handoff",
+        "status": "awaiting_user_manual_approval",
+        "manual_approval_recorded": False,
+        "scripted_threshold_s": None,
+        "scripted_threshold_status": "unset",
+        "physics_model": "v2",
+        "physics_version": physics_report["v2_physics_version"],
+        "physics_calibration_id": physics_report["v2_physics_calibration_id"],
+        "calibration_summary": {
+            "max_speed_error_kph": physics_report["v2_max_speed_error_kph"],
+            "speed_trace_accel_p95_mae_mps2": physics_report["v2_speed_trace_accel_p95_mae_mps2"],
+            "mean_abs_braking_zone_distance_error_m": physics_report[
+                "v2_mean_abs_braking_zone_distance_error_m"
+            ],
+            "min_robust_corner_lateral_g_margin": physics_report[
+                "v2_min_robust_corner_lateral_g_margin"
+            ],
+            "sustained_corner_reference_control_pass_rate": physics_report[
+                "v2_sustained_corner_reference_control_pass_rate"
+            ],
+            "max_sustained_corner_reference_p95_abs_lateral_error_m": physics_report[
+                "v2_max_sustained_corner_reference_p95_abs_lateral_error_m"
+            ],
+        },
+        "manual_telemetry_path": telemetry_summary.get("path") if telemetry_summary is not None else None,
+        "observed_sustained_sections": [
+            {
+                "section": row["section"],
+                "rows": row["rows"],
+                "manual_review_pass": row["manual_review_pass"],
+                "p95_abs_lateral_error_m": row["p95_abs_lateral_error_m"],
+                "steering_saturation_rate": row["steering_saturation_rate"],
+                "off_track_rate": row["off_track_rate"],
+            }
+            for row in sustained_rows
+        ],
+        "observed_sustained_sections_pass": observed_pass,
+        "manual_checklist_path": str(manual_checklist),
+        "required_manual_commands": [
+            "uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference --flying-start",
+            (
+                "uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference "
+                "--start-section sustained_corner_01 --start-section-lead-in-m 120"
+            ),
+            (
+                "uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference "
+                "--start-section sustained_corner_02 --start-section-lead-in-m 120"
+            ),
+            (
+                "uv run --no-sync python -m f1rl.manual --physics-model v2 --ghost-reference "
+                "--start-section sustained_corner_03 --start-section-lead-in-m 120"
+            ),
+        ],
+        "blocked_until_manual_approval": [
+            "scripted_threshold",
+            "scaled_v2_gpu_es",
+            "v2_dataset_export",
+            "v2_bc",
+            "v2_sac",
+            "v2_highlights_and_gifs",
+        ],
+    }
+
+
 def run_qc(
     *,
     output_root: Path,
@@ -461,20 +713,27 @@ def run_qc(
     telemetry_summary = telemetry_reports[0] if telemetry_reports else None
     failure_table = [compact_failure_row(summary) for summary in telemetry_reports]
     scripted_report = scripted_qc(steps=scripted_steps, seed=seed) if run_scripted else None
+    physics_report = physics_qc()
+    dashboard = write_dashboard(root, resolved_telemetry_paths[0] if resolved_telemetry_paths else None, telemetry_summary)
+    checklist = write_manual_checklist(root)
+    manual_gate = manual_gate_readiness(
+        physics_report=physics_report,
+        telemetry_summary=telemetry_summary,
+        manual_checklist=checklist,
+    )
     report: dict[str, Any] = {
         "run_id": root.name,
         "seed": seed,
         "track": track_qc(),
         "lap_validity": lap_validity_qc(),
-        "physics": physics_qc(),
+        "physics": physics_report,
         "telemetry": telemetry_summary,
         "telemetry_reports": telemetry_reports,
         "failure_table": failure_table,
         "scripted": scripted_report,
+        "manual_gate": manual_gate,
     }
     (root / "qc_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-    dashboard = write_dashboard(root, resolved_telemetry_paths[0] if resolved_telemetry_paths else None, telemetry_summary)
-    checklist = write_manual_checklist(root)
     summary_lines = [
         "# F1RL QC Report",
         "",
@@ -490,6 +749,13 @@ def run_qc(
         f"- observation/action: `{report['track']['observation_dim']}` / `{report['track']['action_dim']}`",
         f"- huge progress jump invalidates lap: `{report['lap_validity']['huge_progress_jump_invalidates_lap']}`",
         f"- wide checkpoint crossing invalidates lap: `{report['lap_validity']['wide_checkpoint_crossing_invalidates_lap']}`",
+        "",
+        "## Physics V2 Manual Gate",
+        f"- status: `{manual_gate['status']}`",
+        f"- threshold: `{manual_gate['scripted_threshold_status']}`",
+        f"- physics: `{manual_gate['physics_version']}`",
+        f"- calibration: `{manual_gate['physics_calibration_id']}`",
+        f"- observed sustained sections pass: `{manual_gate['observed_sustained_sections_pass']}`",
     ]
     if telemetry_summary is not None:
         summary_lines.extend(
