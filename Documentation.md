@@ -361,12 +361,25 @@ Important verified archives:
 - `artifacts-datasets-20260605.tar.zst`: transition datasets, `0.14 GB`.
 - `D:\f1-rl-artifacts\archives\physics-v2-20260606\artifacts-bulk-excluding-v2-final-highlights-20260606.tar.zst`: V2 bulk archive excluding the current local final highlight tree.
 
+## Next-Generation Plans
+
+Active forward-looking design documents live under `docs/`:
+
+- `docs/PhysicsV3-Plan.md`: dynamic single-track vehicle model (lateral velocity state, yaw moment balance, combined-slip tires, honest aero, real track widths) replacing the V2 stabilized-arcade model.
+- `docs/RL2-TrueRL-Plan.md`: from-scratch GPU-vectorized PPO with no demonstrations, no guidance features, stochastic evaluation, and multi-track zero-shot generalization as the headline goal. Includes a post-mortem of why the earlier PPO path failed (Appendix A).
+
+Context for these plans: the current promoted "learned policy" results (V1 `79.750s`, V2 `77.6833s`) are behavior-cloned reproductions of single evolutionary-search trajectories evaluated deterministically; the SAC checkpoints were promoted at `step 0, updates 0`. RL2 defines the standard under which a future result counts as reinforcement learning.
+
 ## Root Documentation Policy
 
 Root markdown is intentionally limited to:
 
 - `README.md`
 - `Documentation.md`
+
+Active plan documents live under:
+
+`docs/`
 
 Archived long-form docs and plans live under:
 
