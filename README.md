@@ -29,10 +29,10 @@ Highlights include:
 
 | Stage | CPU-verified lap |
 |---|---:|
-| Physics V1, CPU evolutionary search | ~89s |
-| Physics V1, GPU evolutionary search | 81.233s |
-| Physics V1, learned policy | 79.750s |
-| Physics V2, GPU evolutionary search | 78.683s |
+| Physics V1, CPU evolutionary search | ~95s |
+| Physics V1, GPU evolutionary search | 84.233s |
+| Physics V1, learned policy | 81.750s |
+| Physics V2, GPU evolutionary search | 89.683s |
 | Physics V2, promoted learned policy | **78.683s** |
 
 <p align="center">
